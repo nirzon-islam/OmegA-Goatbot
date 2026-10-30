@@ -8,7 +8,7 @@ let isPlaying = false;
 module.exports = {
   config: {
     name: "gan",
-    version: "1.0.0",
+    version: "1.0.1",
     role: 0,
     author: "NirZon",
     shortDescription: "Play a random song 🎶",
