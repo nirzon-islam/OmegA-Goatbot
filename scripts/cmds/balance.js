@@ -1,230 +1,250 @@
-const fs = require("fs");
+const fs = require("fs-extra");
 const path = require("path");
-const { createCanvas, loadImage } = require("canvas");
-const axios = require("axios");
+const crypto = require("crypto");
+const { createCanvas } = require("@napi-rs/canvas");
 
-function formatBalance(num) {
-  num = Number(num) || 0;
-  if (num >= 1e12) return (num / 1e12).toFixed(2) + "t";
-  if (num >= 1e9) return (num / 1e9).toFixed(2) + "b";
-  if (num >= 1e6) return (num / 1e6).toFixed(2) + "m";
-  if (num >= 1e3) return (num / 1e3).toFixed(2) + "k";
-  return num.toFixed(0);
+module.exports = {
+config: {
+name: "balance",
+aliases: ["bal"],
+version: "1.0",
+author: "NirZon",
+countDown: 5,
+role: 0,
+shortDescription: "View GOAT BANK virtual card",
+longDescription: "View your personalized virtual bank card and wallet balance.",
+category: "economy",
+guide: {
+en: "{pn}: View your card\n{pn} @tag: View another user's card"
 }
+},
 
-function roundRect(ctx, x, y, w, h, r, fill = false, stroke = false) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-  if (fill) ctx.fill();
-  if (stroke) ctx.stroke();
-}
+onStart: async function ({ message, usersData, event }) {
+try {
+const targets = Object.keys(event.mentions || {}).length
+? Object.keys(event.mentions)
+: [event.senderID];
 
-async function drawCard({ userID, userName, balance }) {
-  const formatted = "$" + formatBalance(balance);
+  const cacheDir = path.join(__dirname, "cache");
+  await fs.ensureDir(cacheDir);
 
-  let avatar = null;
-  try {
-    const picURL = `https://graph.facebook.com/${userID}/picture?height=1500&width=1500&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
-    const response = await axios({ url: picURL, method: "GET", responseType: "arraybuffer" });
-    avatar = await loadImage(response.data);
-  } catch (err) {
-    console.log("Avatar Load Failed:", err.message);
-  }
+  for (const uid of targets) {
+    const userData = await usersData.get(uid);
+    const balance = Number(userData.money || 0);
 
-  const width = 850;
-  const height = 520;
-  const canvas = createCanvas(width, height);
-  const ctx = canvas.getContext("2d");
+    let name = userData.name || "GOAT MEMBER";
 
-  const grad = ctx.createLinearGradient(0, 0, width, height);
-  grad.addColorStop(0, "#0f2027");
-  grad.addColorStop(0.5, "#1c4966");
-  grad.addColorStop(1, "#2a7ab0");
-  ctx.fillStyle = grad;
-  roundRect(ctx, 0, 0, width, height, 30, true);
-
-  const shine = ctx.createLinearGradient(0, 0, width, height);
-  shine.addColorStop(0, "rgba(255,255,255,0.06)");
-  shine.addColorStop(0.4, "rgba(255,255,255,0)");
-  shine.addColorStop(1, "rgba(255,255,255,0.04)");
-  ctx.fillStyle = shine;
-  roundRect(ctx, 0, 0, width, height, 30, true);
-
-  ctx.font = "bold 34px Arial";
-  ctx.fillStyle = "#ffffff";
-  ctx.fillText("GOAT NATIONAL BANK", 60, 80);
-
-  ctx.font = "16px Arial";
-  ctx.fillStyle = "rgba(255,255,255,0.6)";
-  ctx.fillText("PREMIUM ECONOMY CARD", 60, 105);
-
-  const chipGrad = ctx.createLinearGradient(60, 140, 150, 205);
-  chipGrad.addColorStop(0, "#f4d97a");
-  chipGrad.addColorStop(1, "#c9982f");
-  ctx.fillStyle = chipGrad;
-  roundRect(ctx, 60, 145, 90, 60, 10, true);
-
-  ctx.font = "28px monospace";
-  ctx.fillStyle = "#ffffff";
-  ctx.fillText("1234  5678  9012  8456", 60, 250);
-
-  ctx.font = "16px Arial";
-  ctx.fillStyle = "rgba(255,255,255,0.6)";
-  ctx.fillText("VALID THRU", 60, 295);
-  ctx.font = "bold 22px Arial";
-  ctx.fillStyle = "#ffffff";
-  ctx.fillText("12/29", 60, 322);
-
-  ctx.font = "bold 24px Arial";
-  const safeName = userName ? userName.toUpperCase() : "CARD HOLDER";
-  const maxNameWidth = 360;
-  let nameToShow = safeName;
-  while (ctx.measureText(nameToShow).width > maxNameWidth && nameToShow.length > 0) {
-    nameToShow = nameToShow.slice(0, -1);
-  }
-  if (nameToShow !== safeName) nameToShow = nameToShow.trim() + "…";
-  ctx.fillText(nameToShow, 60, 380);
-
-  const boxX = 440, boxY = 240, boxW = 350, boxH = 190;
-  const boxGrad = ctx.createLinearGradient(boxX, boxY, boxX, boxY + boxH);
-  boxGrad.addColorStop(0, "rgba(255,255,255,0.22)");
-  boxGrad.addColorStop(1, "rgba(255,255,255,0.10)");
-  ctx.fillStyle = boxGrad;
-  roundRect(ctx, boxX, boxY, boxW, boxH, 25, true);
-
-  ctx.textAlign = "center";
-  ctx.font = "18px Arial";
-  ctx.fillStyle = "rgba(255,255,255,0.75)";
-  ctx.fillText("AVAILABLE BALANCE", boxX + boxW / 2, boxY + 45);
-
-  let fontSize = 50;
-  const maxTextWidth = boxW - 40;
-  do {
-    ctx.font = `bold ${fontSize}px Arial`;
-    const w = ctx.measureText(formatted).width;
-    if (w <= maxTextWidth) break;
-    fontSize -= 2;
-  } while (fontSize > 18);
-
-  ctx.fillStyle = "#ffffff";
-  ctx.fillText(formatted, boxX + boxW / 2, boxY + 120);
-  ctx.textAlign = "left";
-
-  if (avatar) {
-    const size = 100;
-    const x = width - size - 50;
-    const y = 45;
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
-    ctx.clip();
-    ctx.drawImage(avatar, x, y, size, size);
-    ctx.restore();
-    ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(x + size / 2, y + size / 2, size / 2 + 2, 0, Math.PI * 2);
-    ctx.stroke();
-  }
-
-  return canvas.toBuffer("image/png");
-}
-
-async function sendCard({ api, threadID, messageID, userID, userName, balance }) {
-  const buffer = await drawCard({ userID, userName, balance });
-  const cachePath = path.join(__dirname, "cache");
-  if (!fs.existsSync(cachePath)) fs.mkdirSync(cachePath);
-  const filePath = path.join(cachePath, `balance_${userID}.png`);
-  fs.writeFileSync(filePath, buffer);
-
-  await api.sendMessage({ attachment: fs.createReadStream(filePath) }, threadID, messageID);
-
-  setTimeout(() => { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); }, 10000);
-}
-
-function getTargetID({ event, args }) {
-  if (event.messageReply) return event.messageReply.senderID;
-  if (event.mentions && Object.keys(event.mentions).length > 0) {
-    return Object.keys(event.mentions)[0];
-  }
-  const lastArg = args[args.length - 1];
-  if (lastArg && /^\d{6,}$/.test(lastArg)) return lastArg;
-  return null;
-}
-
-module.exports.config = {
-  name: "balance",
-  aliases: ["bal"],
-  version: "9.0",
-  author: "MOHAMMAD AKASH",
-  countDown: 5,
-  role: 0,
-  shortDescription: "Real Bank Card",
-  category: "economy",
-  usages: "[@mention | reply] | transfer <amount> [@mention | reply]",
-  description: "Show balance card or transfer money to another user"
-};
-
-module.exports.onStart = async function ({ api, event, args, usersData }) {
-  const { threadID, senderID, messageID } = event;
-
-  try {
-    if (args[0] && args[0].toLowerCase() === "transfer") {
-      const amount = parseInt(args[1], 10);
-      if (!amount || amount <= 0) {
-        return api.sendMessage("Please enter a valid amount. Example: /balance transfer 10000 @friend (or reply to their message)", threadID, messageID);
-      }
-
-      const targetID = getTargetID({ event, args: args.slice(2) });
-      if (!targetID) {
-        return api.sendMessage("Who do you want to send money to? Mention someone or reply to their message with this command.", threadID, messageID);
-      }
-      if (targetID === senderID) {
-        return api.sendMessage("You can't transfer money to yourself.", threadID, messageID);
-      }
-
-      const senderData = await usersData.get(senderID);
-      const senderBalance = senderData?.data?.money ?? 100;
-
-      if (senderBalance < amount) {
-        return api.sendMessage(`Insufficient balance. Your current balance: $${formatBalance(senderBalance)}`, threadID, messageID);
-      }
-
-      const receiverData = await usersData.get(targetID);
-      const receiverBalance = receiverData?.data?.money ?? 100;
-
-      await usersData.set(senderID, { money: senderBalance - amount }, "data");
-      await usersData.set(targetID, { money: receiverBalance + amount }, "data");
-
-      const senderName = await usersData.getName(senderID);
-      const receiverName = await usersData.getName(targetID);
-
-      api.sendMessage(
-        `✅ Transfer successful!\n${senderName} ➝ ${receiverName}\nAmount: $${formatBalance(amount)}\n\nYour new balance: $${formatBalance(senderBalance - amount)}`,
-        threadID,
-        messageID
-      );
-      return;
+    if (event.mentions?.[uid]) {
+      name = event.mentions[uid].replace("@", "") || name;
     }
 
-    const targetID = getTargetID({ event, args }) || senderID;
-    const userData = await usersData.get(targetID);
-    const balance = userData?.data?.money ?? 100;
-    const userName = await usersData.getName(targetID);
+    // UID-based permanent 16-digit card number
+    const hash = crypto
+      .createHash("sha256")
+      .update(String(uid))
+      .digest("hex");
 
-    await sendCard({ api, threadID, messageID, userID: targetID, userName, balance });
+    const cardNumber = (
+      BigInt("0x" + hash) % 10000000000000000n
+    ).toString().padStart(16, "0");
 
-  } catch (err) {
-    console.error(err);
-    api.sendMessage("Something went wrong while running this command!", threadID, messageID);
+    // Card tier based on wallet balance
+    let tier;
+
+    if (balance >= 100000) {
+      tier = {
+        name: "GOAT ELITE",
+        subtitle: "ULTIMATE MEMBER",
+        colors: ["#171717", "#75551c", "#f8d879", "#fff0b0"],
+        accent: "#ffe7a0"
+      };
+    } else if (balance >= 50000) {
+      tier = {
+        name: "DIAMOND",
+        subtitle: "DIAMOND MEMBER",
+        colors: ["#090b22", "#30235d", "#9c70ff", "#e2caff"],
+        accent: "#c9a5ff"
+      };
+    } else if (balance >= 20000) {
+      tier = {
+        name: "GOLD",
+        subtitle: "GOLD MEMBER",
+        colors: ["#38200a", "#9a5c13", "#f4bd4f", "#fff0a3"],
+        accent: "#ffdb78"
+      };
+    } else if (balance >= 5000) {
+      tier = {
+        name: "SILVER",
+        subtitle: "SILVER MEMBER",
+        colors: ["#102333", "#235c86", "#72c5f2", "#d9f4ff"],
+        accent: "#9ce0ff"
+      };
+    } else {
+      tier = {
+        name: "STARTER",
+        subtitle: "STARTER MEMBER",
+        colors: ["#20242b", "#444c58", "#929eaa", "#e1e7ed"],
+        accent: "#c6d0dc"
+      };
+    }
+
+    // Create card canvas
+    const canvas = createCanvas(1000, 600);
+    const ctx = canvas.getContext("2d");
+
+    // Background gradient
+    const bg = ctx.createLinearGradient(0, 0, 1000, 600);
+    bg.addColorStop(0, tier.colors[0]);
+    bg.addColorStop(0.55, tier.colors[1]);
+    bg.addColorStop(1, tier.colors[2]);
+
+    ctx.fillStyle = bg;
+    ctx.beginPath();
+    ctx.roundRect(0, 0, 1000, 600, 38);
+    ctx.fill();
+
+    // Decorative circles
+    ctx.globalAlpha = 0.12;
+    ctx.fillStyle = tier.colors[3];
+
+    ctx.beginPath();
+    ctx.arc(900, 80, 230, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(750, 550, 300, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.globalAlpha = 1;
+
+    // Card border
+    ctx.strokeStyle = tier.colors[3];
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.roundRect(12, 12, 976, 576, 32);
+    ctx.stroke();
+
+    // Bank name
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 48px Arial";
+    ctx.fillText("GOAT BANK", 55, 85);
+
+    ctx.fillStyle = tier.accent;
+    ctx.font = "22px Arial";
+    ctx.fillText("VIRTUAL WALLET", 58, 120);
+
+    // Powered by NirZon - text only, no logo
+    ctx.textAlign = "right";
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 25px Arial";
+    ctx.fillText("POWERED BY NIRZON", 945, 75);
+
+    ctx.fillStyle = tier.accent;
+    ctx.font = "bold 22px Arial";
+    ctx.fillText(tier.name, 945, 112);
+
+    ctx.textAlign = "left";
+
+    // Card chip
+    ctx.fillStyle = "#e6c77c";
+    ctx.beginPath();
+    ctx.roundRect(60, 165, 105, 78, 13);
+    ctx.fill();
+
+    ctx.strokeStyle = "#96743b";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(112, 165);
+    ctx.lineTo(112, 243);
+    ctx.moveTo(60, 204);
+    ctx.lineTo(165, 204);
+    ctx.stroke();
+
+    // Contactless symbol
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 6;
+
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      ctx.arc(195, 204, 20 + i * 13, -0.8, 0.8);
+      ctx.stroke();
+    }
+
+    // Card number
+    const formattedNumber = cardNumber.match(/.{1,4}/g).join(" ");
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 43px monospace";
+    ctx.fillText(formattedNumber, 60, 320);
+
+    // Cardholder name
+    ctx.fillStyle = tier.accent;
+    ctx.font = "19px Arial";
+    ctx.fillText("CARD HOLDER", 60, 385);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 34px Arial";
+    ctx.fillText(String(name).toUpperCase().slice(0, 22), 60, 430);
+
+    // Membership
+    ctx.fillStyle = tier.accent;
+    ctx.font = "bold 23px Arial";
+    ctx.fillText(tier.subtitle, 60, 475);
+
+    // Balance panel
+    ctx.fillStyle = "rgba(0,0,0,0.28)";
+    ctx.beginPath();
+    ctx.roundRect(45, 500, 910, 70, 18);
+    ctx.fill();
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "21px Arial";
+    ctx.fillText("AVAILABLE WALLET BALANCE", 70, 530);
+
+    ctx.fillStyle = tier.accent;
+    ctx.font = "bold 32px Arial";
+    ctx.fillText(
+      "$" + balance.toLocaleString("en-US"),
+      70,
+      562
+    );
+
+    // Virtual card label
+    ctx.textAlign = "right";
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 25px Arial";
+    ctx.fillText("GOAT", 925, 455);
+
+    ctx.font = "16px Arial";
+    ctx.fillStyle = tier.accent;
+    ctx.fillText("VIRTUAL CARD", 925, 480);
+
+    ctx.textAlign = "left";
+
+    // Save card image
+    const filePath = path.join(cacheDir, `goat_${uid}.png`);
+
+    await fs.writeFile(filePath, await canvas.encode("png"));
+
+    try {
+      await message.reply({
+        body:
+          `💳 GOAT BANK | ${tier.name}\n` +
+          `👤 Holder: ${name}\n` +
+          `💰 Balance: $${balance.toLocaleString("en-US")}`,
+        attachment: fs.createReadStream(filePath)
+      });
+    } finally {
+      await fs.remove(filePath);
+    }
   }
+
+} catch (error) {
+  console.error("GOAT BANK Error:", error);
+  return message.reply(
+    "❌ Could not generate your virtual card. Please try again."
+  );
+}
+
+}
 };
