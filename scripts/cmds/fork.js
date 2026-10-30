@@ -1,7 +1,7 @@
 exports.config = {
   name: "fork",
   version: "1.0.0",
-  author: "EryXenX",
+  author: "NirZon",
   countDown: 0,
   role: 0,
   shortDescription: "Fork Link",
@@ -33,7 +33,7 @@ exports.onChat = async function({event: z, api: y}){
 https://github.com/EryXenX/GoatBot-Pro.git
 
 🎬 𝗦𝗲𝘁𝘂𝗽 𝗧𝘂𝘁𝗼𝗿𝗶𝗮𝗹👇🏼
-https://youtu.be/gPf_BFhQz_w?si=T1N6sB2DefeTGq2R`,
+Tutorial dileo parbina`,
       t,
       z.messageID
     );
