@@ -1,110 +1,126 @@
-const fs = require("fs");
-const path = require("path");
-const os = require("os");
+const fs = require("fs-extra");
 const axios = require("axios");
-
-const API_BASE = "https://eryxenx.agi.bd/api/alldl";
+const request = require("request");
+const path = require("path");
 
 module.exports = {
-    config: {
-        name: "autolink",
-        version: "3.0.0",
-        author: "EryXenX",
-        countDown: 5,
-        role: 0,
-        shortDescription: "Auto-download & send videos silently (no messages)",
-        category: "media",
-    },
+config: {
+name: "autolink",
+version: "2.0.0",
+author: "NirZon",
+countDown: 5,
+role: 0,
+shortDescription: "Auto-download & send videos silently (no messages)",
+longDescription: "Automatically downloads and sends videos from links silently.",
+category: "media"
+},
 
-    onStart: async function () {},
+onStart: async function () {},
 
-    onChat: async function ({ api, event }) {
-        const threadID = event.threadID;
-        const messageID = event.messageID;
-        const message = event.body || "";
+onChat: async function ({ api, event }) {
+const { threadID, messageID, body } = event;
+if (!body) return;
 
-        const linkMatches = message.match(/(https?:\/\/[^\s]+)/g);
-        if (!linkMatches || linkMatches.length === 0) return;
+const match = body.match(/https?:\/\/[^\s]+/);
+if (!match) return;
 
-        const uniqueLinks = [...new Set(linkMatches)];
-        const supportedLinks = uniqueLinks.filter(detectPlatform);
-        if (supportedLinks.length === 0) return;
+const url = match[0];
 
-        api.setMessageReaction("⏳", messageID, () => {}, true);
+const react = (emoji) =>
+  new Promise(resolve => {
+    api.setMessageReaction(emoji, messageID, () => resolve(), true);
+  });
 
-        let successCount = 0;
-        let failCount = 0;
+let filePath;
 
-        for (const url of supportedLinks) {
-            const filePath = path.join(os.tmpdir(), `autolink_${Date.now()}_${Math.floor(Math.random() * 1e6)}.mp4`);
+try {
+  await react("⏳");
 
-            try {
-                const response = await axios.get(API_BASE, {
-                    params: { url },
-                    responseType: "stream",
-                    timeout: 150000
-                });
+  const apiURL =
+    `https://aminul-rest-api-three.vercel.app/downloader/alldownloader?url=${encodeURIComponent(url)}`;
 
-                await new Promise((resolve, reject) => {
-                    const writer = fs.createWriteStream(filePath);
-                    response.data.pipe(writer);
-                    writer.on("finish", resolve);
-                    writer.on("error", reject);
-                });
+  const res = await axios.get(apiURL, { timeout: 60000 });
 
-                const stats = fs.statSync(filePath);
-                const fileSizeInMB = stats.size / (1024 * 1024);
+  const data = res?.data?.data?.data;
 
-                if (fileSizeInMB > 25) {
-                    fs.unlinkSync(filePath);
-                    failCount++;
-                    continue;
-                }
+  if (!data) {
+    await react("❌");
+    return;
+  }
 
-                const title = extractTitleFromHeaders(response.headers);
+  const { title, high, low } = data;
+  const videoURL = high || low;
 
-                await api.sendMessage(
-                    {
-                        body:
-`📥 ᴠɪᴅᴇᴏ ᴅᴏᴡɴʟᴏᴀᴅᴇᴅ  
-━━━━━━━━━━━━━━━  
-🎬 ᴛɪᴛʟᴇ: ${title || "Video File"}  
-📦 sɪᴢᴇ: ${fileSizeInMB.toFixed(2)} MB  
-━━━━━━━━━━━━━━━`,
-                        attachment: fs.createReadStream(filePath)
-                    },
-                    threadID,
-                    () => fs.unlinkSync(filePath)
-                );
+  if (!videoURL) {
+    await react("❌");
+    return;
+  }
 
-                successCount++;
+  const cacheDir = path.join(__dirname, "cache");
+  await fs.ensureDir(cacheDir);
 
-            } catch (err) {
-                console.error(`[autolink] Failed for ${url}: ${err.message}`);
-                if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-                failCount++;
-            }
-        }
+  filePath = path.join(
+    cacheDir,
+    `autolink_${Date.now()}_${Math.random().toString(36).slice(2)}.mp4`
+  );
 
-        const finalReaction =
-            successCount > 0 && failCount === 0 ? "✅" :
-            successCount > 0 ? "⚠️" : "❌";
+  // Download video
+  await new Promise((resolve, reject) => {
+    const file = fs.createWriteStream(filePath);
 
-        api.setMessageReaction(finalReaction, messageID, () => {}, true);
-    }
-};
+    const stream = request({
+      url: videoURL,
+      timeout: 120000
+    });
 
-function detectPlatform(url) {
-    if (/instagram\.com/i.test(url)) return "instagram";
-    if (/tiktok\.com/i.test(url)) return "tiktok";
-    if (/facebook\.com|fb\.watch/i.test(url)) return "facebook";
-    if (/youtube\.com|youtu\.be/i.test(url)) return "youtube";
-    return null;
+    stream.on("response", response => {
+      if (response.statusCode !== 200) {
+        stream.abort();
+        reject(new Error(`HTTP ${response.statusCode}`));
+      }
+    });
+
+    stream.on("error", err => {
+      file.destroy();
+      reject(err);
+    });
+
+    file.on("error", reject);
+    file.on("finish", () => file.close(resolve));
+
+    stream.pipe(file);
+  });
+
+  const stat = await fs.stat(filePath);
+
+  if (!stat.size) {
+    await react("❌");
+    return;
+  }
+
+  // Send video with title only
+  await new Promise((resolve, reject) => {
+    api.sendMessage(
+      {
+        body: `🎬 𝗧𝗜𝗧𝗟𝗘:\n${title || "Unknown"}`,
+        attachment: fs.createReadStream(filePath)
+      },
+      threadID,
+      (err) => err ? reject(err) : resolve(),
+      messageID
+    );
+  });
+
+  await react("✅");
+
+} catch (err) {
+  console.error("[AUTOLINK ERROR]", err);
+  await react("❌").catch(() => {});
+} finally {
+  if (filePath) {
+    await fs.remove(filePath).catch(() => {});
+  }
 }
 
-function extractTitleFromHeaders(headers) {
-    const disposition = headers["content-disposition"];
-    if (!disposition) return null;
-    const match = disposition.match(/filename="(.+?)\.mp4"/);
-    return match ? match[1].replace(/_/g, " ") : null;
-        }
+}
+};
