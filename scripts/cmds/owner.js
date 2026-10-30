@@ -5,8 +5,8 @@ const path = require("path");
 module.exports = {
   config: {
     name: "owner",
-    version: "1.3.0",
-    author: "Mᴏʜᴀᴍᴍᴀᴅ Aᴋᴀsʜ",
+    version: "2.0.0",
+    author: "NirZon",
     role: 0,
     shortDescription: "Owner information with image",
     category: "Information",
@@ -18,17 +18,20 @@ module.exports = {
   onStart: async function ({ api, event }) {
     const ownerText = 
 `╭─ 👑 Oᴡɴᴇʀ Iɴғᴏ 👑 ─╮
-│ 👤 Nᴀᴍᴇ       : Mᴏʜᴀᴍᴍᴀᴅ Aᴋᴀsʜ
-│ 🧸 Nɪᴄᴋ       : Aᴋᴀsʜ
-│ 🎂 Aɢᴇ        : 18+
-│ 💘 Rᴇʟᴀᴛɪᴏɴ : Sɪɴɢʟᴇ
-│ 🎓 Pʀᴏғᴇssɪᴏɴ : Sᴛᴜᴅᴇɴᴛ
-│ 📚 Eᴅᴜᴄᴀᴛɪᴏɴ : Iɴᴛᴇʀ 2ɴᴅ Yᴇᴀʀ
-│ 🏡 Lᴏᴄᴀᴛɪᴏɴ : 𝐃𝐡𝐚𝐤𝐚 - 𝐆𝐚𝐳𝐢𝐩𝐮𝐫
+│ 👤 Nᴀᴍᴇ       : NɪʀZᴏɴ Isʟᴀᴍ
+│ 🧸 Nɪᴄᴋ       : Nɪʀᴏᴏ
+│ 🎂 Aɢᴇ        : 22+
+│ 💼 Pʀᴏғᴇssɪᴏɴ : Jᴏʙ & Sɪɴɢɪɴɢ
+│ 🏡 Lᴏᴄᴀᴛɪᴏɴ : PɪɴɢɴA, Sᴀʀɪsʜᴀʙᴀʀɪ
+│.......................
+│ 👑 Nᴀᴍᴇ       : RɪʏA Isʟᴀᴍ
+│ 🧸 Nɪᴄᴋ       : Nɪᴢᴜ
+│ 🎂 Aɢᴇ        : 17+
+│ 💼 Pʀᴏғᴇssɪᴏɴ : Sɪɴɢɪɴɢ 
+│ 🏡 Lᴏᴄᴀᴛɪᴏɴ   : PɪɴɢɴA, Sᴀʀɪsʜᴀʙᴀʀɪ 
 ├─ 🔗 Cᴏɴᴛᴀᴄᴛ ─╮
-│ 📘 Facebook  : fb.com/akashx404 
-│ 💬 Messenger: m.me/akashx404 
-│ 📞 WhatsApp  : wa.me/01933165880
+│ 📘 facebook : https://www.facebook.com/61561645647195
+│ 💬 Messanger: https://m.me/61561645647195 
 ╰────────────────╯`;
 
     const cacheDir = path.join(__dirname, "cache");
@@ -36,7 +39,7 @@ module.exports = {
 
     if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir);
 
-    const imgLink = "https://i.imgur.com/1G4ZhU7.jpeg";
+    const imgLink = "https://i.imgur.com/awrrOff.jpeg";
 
     const send = () => {
       api.sendMessage(
