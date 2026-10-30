@@ -8,8 +8,8 @@ const axios = require("axios");
 module.exports = {
   config: {
     name: "welcome",
-    version: "8.0",
-    author: "EryXenX",
+    version: "1.0.0",
+    author: "NirZon",
     category: "events"
   },
 
@@ -17,7 +17,7 @@ module.exports = {
     en: {
       defaultWelcomeMessage: "𝗪𝗲𝗹𝗰𝗼𝗺𝗲 {userName} 🎉\n┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄\n✦ Glad to have you here! Enjoy your stay and make great memories 🌸",
       botAddedMessage:
-        "━━━━━━━━━━━━━━━━━━━\n🤖 ᴛʜᴀɴᴋ ʏᴏᴜ ғᴏʀ ᴀᴅᴅɪɴɢ ᴍᴇ ᴛᴏ ᴛʜᴇ ɢʀᴏᴜᴘ! 💖\n\n⚙️ ʙᴏᴛ ᴘʀᴇꜰɪx : /\n📜 ᴛʏᴘᴇ /help ᴛᴏ sᴇᴇ ᴀʟʟ ᴄᴏᴍᴍᴀɴᴅs\n\n✨ ʟᴇᴛ's ᴍᴀᴋᴇ ᴛʜɪs ɢʀᴏᴜᴘ ᴇᴠᴇɴ ᴍᴏʀᴇ ꜰᴜɴ ᴛᴏɢᴇᴛʜᴇʀ! 😄\n━━━━━━━━━━━━━━━━━━━"
+        "━━━━━━━━━━━━━━━━━━━\n🤖 ᴛʜᴀɴᴋ ʏᴏᴜ ғᴏʀ ᴀᴅᴅɪɴɢ ᴍᴇ ᴛᴏ ᴛʜᴇ ɢʀᴏᴜᴘ! 💖\n\n👑 ʙᴏᴛ ᴏᴡɴᴇʀ : 𝐍𝐢𝐫𝐙𝐨𝐧\n⚙️ ʙᴏᴛ ᴘʀᴇꜰɪx :☞(-)\n•••••••••••••••••••••••••••••••••••••••••\n✨ ʟᴇᴛ's ᴍᴀᴋᴇ ᴛʜɪs ɢʀᴏᴜᴘ ᴇᴠᴇɴ ᴍᴏʀᴇ ꜰᴜɴ ᴛᴏɢᴇᴛʜᴇʀ! 😄\n━━━━━━━━━━━━━━━━━━━"
     }
   },
 
@@ -550,4 +550,5 @@ async function createWelcomeCard({
   const tempPath = path.join(__dirname, `temp_welcome_${Date.now()}.png`);
   await fs.writeFile(tempPath, canvas.toBuffer('image/png'));
   return tempPath;
-}
+    }
+      
