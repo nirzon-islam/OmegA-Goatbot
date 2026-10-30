@@ -3,7 +3,7 @@ const { getTime } = global.utils;
 module.exports = {
   config: {
     name: "antileave",
-    version: "2.5",
+    version: "2.5.1",
     author: "EryXenX",
     category: "events"
   },
