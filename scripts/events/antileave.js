@@ -29,9 +29,9 @@ module.exports = {
       const boldName = userName.split("").map(c => boldMap[c] || c).join("");
 
       const form = {
-        body: `😹 ${boldName} tried to leave...  
-
-🚫 Not allowed here!  
+        body: `😹 ${boldName} haha tried to leave...  
+Without permission🫩
+🚫 Not allowed here!
 🔄 Added back 😇`
       };
 
