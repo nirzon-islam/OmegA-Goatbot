@@ -1,199 +1,176 @@
-const axios = require('axios');
+const delay = (ms) => new Promise(res => setTimeout(res, ms));
 
-const baseApiUrl = async () => {
-return "https://noobs-api.top/dipto";
-};
+const activeFlirts = new Map();
 
-const utils = {
-monospace: (text) => {
-const monospaceMap = {
-'A': '𝗔', 'B': '𝗕', 'C': '𝗖', 'D': '𝗗', 'E': '𝗘', 'F': '𝗙', 'G': '𝗚', 'H': '𝗛', 'I': '𝗜', 'J': '𝗝',
-'K': '𝗞', 'L': '𝗟', 'M': '𝗠', 'N': '𝗡', 'O': '𝗢', 'P': '𝗣', 'Q': '𝗤', 'R': '𝗥', 'S': '𝗦', 'T': '𝗧',
-'U': '𝗨', 'V': '𝗩', 'W': '𝗪', 'X': '𝗫', 'Y': '𝗬', 'Z': '𝗭',
-'a': '𝗮', 'b': '𝗯', 'c': '𝗰', 'd': '𝗱', 'e': '𝗲', 'f': '𝗳', 'g': '𝗴', 'h': '𝗵', 'i': '𝗶', 'j': '𝗷',
-'k': '𝗸', 'l': '𝗹', 'm': '𝗺', 'n': '𝗻', 'o': '𝗼', 'p': '𝗽', 'q': '𝗾', 'r': '𝗿', 's': '𝘀', 't': '𝘁',
-'u': '𝘂', 'v': '𝘃', 'w': '𝘄', 'x': '𝘅', 'y': '𝘆', 'z': '𝘇',
-'0': '𝟶', '1': '𝟭', '2': '𝟮', '3': '𝟯', '4': '𝟰', '5': '𝟱', '6': '𝟲', '7': '𝟳', '8': '𝟴', '9': '𝟵'
-};
-return text.split('').map(char => monospaceMap[char] || char).join('');
-},
-realMention: (name, uid, message) => {
-const finalMessage = `༄ ${name} ★\n\n${message}`;
-return { body: finalMessage, mentions: [{ tag: name, id: uid }] };
-},
-normalMention: (name, uid, message) => {
-return { body: message, mentions: [{ tag: name, id: uid }] };
-},
-getRandomGreeting: () => {
-const greetings = [""];
-return greetings[Math.floor(Math.random() * greetings.length)];
-}
-};
-
-module.exports.config = {
-name: "bby",
-aliases: ["baby", " Hey", "Kire", "bot"],
-version: "2.0.1",
-author: "NirZon",
-countDown: 0,
+module.exports = {
+config: {
+name: "flirt",
+version: "1.0.0",
 role: 0,
-description: "better than all sim simi api owner by 'dipto' vai",
-category: "Chatting",
-guide: {
-en: "{pn} [anyMessage] OR\nteach [YourMessage] - [Reply1], [Reply2], [Reply3]... OR\nteach [react] [YourMessage] - [react1], [react2], [react3]... OR\nremove [YourMessage] OR\nrm [YourMessage] - [indexNumber] OR\nmsg [YourMessage] OR\nlist OR \nall OR\nedit [YourMessage] - [NewMessage]"
-}
-};
+author: "NirZon",
+description: "Sender name diye flirting messages pathabe",
+category: "fun",
+usages: "flirt @mention | flirt stop",
+cooldowns: 5,
+},
 
-module.exports.onStart = async ({ api, event, args, usersData }) => {
-const link = `${await baseApiUrl()}/baby`;
-const xalman = args.join(" ").toLowerCase();
-const uid = event.senderID;
-const senderName = (await usersData.getName(uid)) || "User";
+onStart: async function({
+message,
+event,
+args,
+api,
+usersData
+}) {
+const senderID = event.senderID;
+
+// Stop a running flirt session
+if (args[0]?.toLowerCase() === "stop") {
+  const running = activeFlirts.get(senderID);
+
+  if (!running) {
+    return message.reply("😅 Tomar flirt off kore dilam..!");
+  }
+
+  running.stop = true;
+  return message.reply("🛑 Flirt stop request received!");
+}
+
+// Prevent duplicate sessions by the same sender
+if (activeFlirts.has(senderID)) {
+  return message.reply(
+    "⏳ Tomar flirt already cholche! Bondho korte `flirt stop` dao."
+  );
+}
+
 try {
-// FIX: শুধু "bby" লিখলে এখানে আর আলাদা মেসেজ যাবে না।
-// রিপ্লাইটা onChat থেকেই যাবে (একটাই রিপ্লাই)।
-if (!args[0]) {
-return;
-}
+  const mention = Object.keys(event.mentions || {})[0];
 
-if (args[0] === 'remove') {
-const fina = xalman.replace("remove ", "");
-const dat = (await axios.get(`${link}?remove=${encodeURIComponent(fina)}&senderID=${uid}`)).data.message;
-return api.sendMessage(dat, event.threadID, event.messageID);
-}
+  if (!mention) {
+    return message.reply(
+      "😅 Jar jonno message jabe take -flirt likhe @mention koro..!"
+    );
+  }
 
-if (args[0] === 'rm' && xalman.includes('-')) {
-const [fi, f] = xalman.replace("rm ", "").split(/\s*-\s*/);
-const da = (await axios.get(`${link}?remove=${encodeURIComponent(fi)}&index=${f}`)).data.message;
-return api.sendMessage(da, event.threadID, event.messageID);
-}
+  const name = event.mentions[mention];
 
-if (args[0] === 'list') {
-if (args[1] === 'all') {
-const data = (await axios.get(`${link}?list=all`)).data;
-const limit = parseInt(args[2]) || 100;
-const limited = data?.teacher?.teacherList?.slice(0, limit);
-const teachers = await Promise.all(limited.map(async (item) => {
-const number = Object.keys(item)[0];
-const value = item[number];
-const name = await usersData.getName(number).catch(() => number) || "Not found";
-return { name, value };
-}));
-teachers.sort((a, b) => b.value - a.value);
-const output = teachers.map((t, i) => `${i + 1}/ ${t.name}: ${t.value}`).join('\n');
-return api.sendMessage(`Total Teach = ${data.length}\n👑 | List of Teachers of baby\n${output}`, event.threadID, event.messageID);
-} else {
-const d = (await axios.get(`${link}?list=all`)).data;
-return api.sendMessage(`❇️ | Total Teach = ${d.length || "api off"}\n♻️ | Total Response = ${d.responseLength || "api off"}`, event.threadID, event.messageID);
-}
-}
+  const arraytag = [
+    {
+      id: mention,
+      tag: name
+    }
+  ];
 
-if (args[0] === 'msg') {
-const fuk = xalman.replace("msg ", "");
-const d = (await axios.get(`${link}?list=${encodeURIComponent(fuk)}`)).data.data;
-return api.sendMessage(`Message ${fuk} = ${d}`, event.threadID, event.messageID);
-}
+  let senderName = "Unknown";
 
-if (args[0] === 'edit') {
-const parts = xalman.split(/\s*-\s*/);
-if (parts.length < 2) return api.sendMessage('❌ | Invalid format! Use edit [YourMessage] - [NewReply]', event.threadID, event.messageID);
-const dA = (await axios.get(`${link}?edit=${encodeURIComponent(args[1])}&replace=${encodeURIComponent(parts[1])}&senderID=${uid}`)).data.message;
-return api.sendMessage(`changed ${dA}`, event.threadID, event.messageID);
-}
+  try {
+    const senderInfo = await usersData.get(senderID);
+    senderName = senderInfo?.name || "Unknown";
+  } catch (err) {
+    console.error("Sender name error:", err);
+  }
 
-if (args[0] === 'teach' && args[1] === 'react') {
-const parts = xalman.replace("teach react ", "").split(/\s*-\s*/);
-if (parts.length < 2) return api.sendMessage('❌ | Invalid format! Use: teach react message - ❤️, 😀', event.threadID, event.messageID);
-const msg = parts[0].trim();
-const reacts = parts[1].trim();
-const res = await axios.get(`${link}?teach=${encodeURIComponent(msg)}&react=${encodeURIComponent(reacts)}`);
-return api.sendMessage(`✅ Reacts added: ${res.data.message}`, event.threadID, event.messageID);
-}
+  const messages = [
+    `${senderName} tomake valobashe ${name}..❤️`,
+    `${senderName} sobsomoy tomar pashe ache ${name}..🫶`,
+    `${senderName} tomake khub miss kore ${name}..😘`,
+    `${senderName} tomake niye vabe ${name}..🌸`,
+    `${senderName} chay tumi sobsomoy hasho ${name}..😊`,
+    `${senderName} er kache tumi onek special ${name}..💝`,
+    `${senderName} tomar jonno sob korte raji ${name}..💌`,
+    `${senderName} tomar kotha sobsomoy vabe ${name}..🥰`,
+    `${senderName} sudhu tomakei chay ${name}..💖`,
+    `${senderName} tomake chara kichu vabte pare na ${name}..😍`,
+    `${senderName} tomake sarajibon valobasbe ${name}..💛`,
+    `${senderName} tomar jonno opekkha korche ${name}..🌹`,
+    `${senderName} er mone tumi onek sundor ${name}..🌸`,
+    `${senderName} sobsomoy tomar hashi dekhte chay ${name}..😄`,
+    `${senderName} tomake kache pete chay ${name}..🫶`,
+    `${senderName} sobsomoy tomar khoj rakhe ${name}..❤️`,
+    `${senderName} tomake niye sopno dekhe ${name}..🌙`,
+    `${senderName} tomar valobasha chay ${name}..💖`,
+    `${senderName} tomake aj o mone korche ${name}..💌`,
+    `${senderName} sobsomoy tonar kothai vabche ${name}..🥰`,
+    `${senderName} tomake sarakkhon mone rakhe ${name}..💛`,
+    `${senderName} tomar songe somoy katate chay ${name}..🌹`,
+    `${senderName} tomake prio mone kore ${name}..💝`,
+    `${senderName} sudhu matro tomar jonnoi ache ${name}..🫶`,
+    `${senderName} tomar sathe haste chay ${name}..😄`,
+    `${senderName} tomar khushi chay ${name}..❤️`,
+    `${senderName} tomake sobsomoy miss kore ${name}..💌`,
+    `${senderName} tomar jonno dua korche ${name}..🌸`,
+    `${senderName} tomake pronoy kore dekhte chay ${name}..💖`,
+    `${senderName} tomar kache sobsomoy firbe ${name}..💛`,
+    `${senderName} er tomake vabtei valo lage ${name}..🥰`,
+    `${senderName} tomar songe sopno vag korte chay ${name}..🌙`,
+    `${senderName} tomake kokhono vuobe na ${name}..💝`,
+    `${senderName} er kache tomar hashi tai shokti ${name}..😄`,
+    `${senderName} tomar jonno sobsomoy opekkha korbe ${name}..🌹`,
+    `${senderName} tomar valobasha chirokal chaibe ${name}..❤️`,
+    `${senderName} er tonar kotha bar bar mone pore ${name}..💌`,
+    `${senderName} tomake buke joriye nite chay ${name}..💖`,
+    `${senderName} tomar jonno tar hridoy khule rekheche ${name}..💛`,
+    `${senderName} tomake chirokal mone rakhbe ${name}..🥰`,
+    `${senderName} er tonar valobasha prappo ${name}..🌸`,
+    `${senderName} sobsomoy tomar pashe thakbe ${name}..🌙`,
+    `${senderName} tomake niye protidin chinta kore ${name}..💝`,
+    `${senderName} tomake onek beshi valobashe ${name}..💌`,
+    `${senderName} tomake always happy rakhte chay ${name}..😄`,
+    `${senderName} tomar jonno sob kichu korte pare ${name}..🌹`,
+    `${senderName} tomar songe protiti muhurto upovog korte chay ${name} 🫶`,
+    `${senderName} tomay onek sukh dibe ${name}..❤️`,
+    `${senderName} tomar valobashay purno ${name}..💖`
+  ];
 
-if (args[0] === 'teach' && args[1] === 'amar') {
-const parts = xalman.split(/\s*-\s*/);
-if (parts.length < 2) return api.sendMessage('❌ | Invalid format! Use: teach amar message - reply', event.threadID, event.messageID);
-const msg = parts[0].replace("teach amar ", "").trim();
-const reply = parts[1].trim();
-const res = await axios.get(`${link}?teach=${encodeURIComponent(msg)}&senderID=${uid}&reply=${encodeURIComponent(reply)}&key=intro`);
-return api.sendMessage(`✅ Intro reply added: ${res.data.message}`, event.threadID, event.messageID);
-}
+  const run = {
+    stop: false
+  };
 
-if (args[0] === 'teach' && args[1] !== 'amar' && args[1] !== 'react') {
-const parts = xalman.split(/\s*-\s*/);
-if (parts.length < 2) return api.sendMessage('❌ | Invalid format! Use: teach message - reply1, reply2', event.threadID, event.messageID);
-const msg = parts[0].replace("teach ", "").trim();
-const replies = parts[1].trim();
-const res = await axios.get(`${link}?teach=${encodeURIComponent(msg)}&reply=${encodeURIComponent(replies)}&senderID=${uid}&threadID=${event.threadID}`);
-const teacherName = (await usersData.get(res.data.teacher)).name || "Unknown";
-const outputMessage = utils.monospace(`✅ Replies added: ${res.data.message}\n👤 Teacher: ${teacherName}\n📚 Total Teachs: ${res.data.teachs}`);
-return api.sendMessage(outputMessage, event.threadID, event.messageID);
-}
+  activeFlirts.set(senderID, run);
 
-const resData = (await axios.get(`${link}?text=${encodeURIComponent(xalman)}&senderID=${uid}`)).data.reply;
-const replyText = utils.monospace(resData);
-api.sendMessage(replyText, event.threadID, (error, info) => {
-global.GoatBot.onReply.set(info.messageID, { commandName: this.config.name, type: "reply", messageID: info.messageID, author: event.senderID, apiUrl: link });
-}, event.messageID);
-} catch (e) {
-console.log(e);
-api.sendMessage("Check console for error", event.threadID, event.messageID);
-}
-};
+  try {
+    await message.reply(
+      `😎 starting my engine "NirZon style normal flirting" only for ${name}-...`
+    );
 
-module.exports.onReply = async ({ api, event, Reply }) => {
-try {
-if (event.type == "message_reply") {
-const a = (await axios.get(`${await baseApiUrl()}/baby?text=${encodeURIComponent(event.body?.toLowerCase())}&senderID=${event.senderID}`)).data.reply;
-const replyText = utils.monospace(a);
-await api.sendMessage(replyText, event.threadID, (error, info) => {
-global.GoatBot.onReply.set(info.messageID, { commandName: this.config.name, type: "reply", messageID: info.messageID, author: event.senderID });
-}, event.messageID);
-}
+    for (const msg of messages) {
+      if (run.stop) {
+        break;
+      }
+
+      await delay(3000);
+
+      if (run.stop) {
+        break;
+      }
+
+      await message.reply({
+        body: msg,
+        mentions: arraytag
+      });
+    }
+
+    if (run.stop) {
+      await message.reply("🛑 Flirt delivery stopped!");
+    } else {
+      await message.reply(
+        `💘 finally fuel ended ${name}-er proti valobasha delivery complete 😅`
+      );
+    }
+  } finally {
+    if (activeFlirts.get(senderID) === run) {
+      activeFlirts.delete(senderID);
+    }
+  }
 } catch (err) {
-return api.sendMessage(`Error: ${err.message}`, event.threadID, event.messageID);
-}
-};
+  console.error("Flirt command error:", err);
 
-module.exports.onChat = async ({ api, event, usersData }) => {
-try {
-const body = event.body ? event.body.toLowerCase() : "";
-if (body.startsWith("baby") || body.startsWith("bbz") || body.startsWith("mikasa") || body.startsWith("hinata") || body.startsWith("xadika") || body.startsWith("bby") || body.startsWith("bot") || body.startsWith("jan") || body.startsWith("babu") || body.startsWith("alya")) {
-const arr = body.replace(/^\S+\s*/, "");
-const uid = event.senderID;
-const senderName = (await usersData.getName(uid)) || "User";
-const baseReplies = [
-"_তোর তো বিয়ে হয় নাই বেবি পাইলি কই-🤦🏻", "_পরকিয়া করছোছ নাকি শালা-🥲🤧", "_তোকে ছাড়া বড় মন খারাপ লাগে 💔", "_তোরে খুব মিস করছি জানিস? 🥺",
-"_ডিসটার্ব করিস না 𝗡𝗶𝗿𝗭𝗼𝗻 আদর করতেছে-🌚💋", "_এত ডাকিস না এমন থাপ্পর দিমু পেন্টে মুইতা দিবি-😾👋🏻", "_বেবি ডাকিস না 🍼 খাওয়া-😒👍🏻",
-"_কি ডাকোস কেন টাকা শেষ নাকি-🌚🤌🏻", "_পিনিক ধরেছে যখন আমায় না ডেকে লেবু খান তখন🍋🐸",  "_ভিডিও কল দিব নাকি সোনা 🌚🫦", "_আম্মু ডাক শালা 😾🦶🏻",
-"_বেবি না ডাইকা BF কে খুজে দে-🙃🫶🏻", "_ডাকিস না 𝗡𝗶𝗿𝗭𝗼𝗻 এর সাথে মিটিংয়ে আছি 😒🖐🏻", "_বস ডাক বস 😾✌🏻", "_বেবি ডাকিস না পরে কোলে উঠে দুদু খেতে মন চাইবে🌚💋",
-"_Amake dakcho baby? 🙂🤌", "_Tomake Chara kichu Valo lage na 🥲🥹", "_Tomar naam ki 😒", "_Amake dakcho ken? Prem korba amar sathe?🫣",
-"_Sudhu baby Dake 🥲 Keu Valobashi bole na 😞💔", "_Prem Kore mon dila nah 😭", "_Tomar jonnoi to eto sajuguju kora 🥺",
-"_Just Ekbar bolo bhalobashi\nami sob diye dibo 🫠💔", "_Tumi chara ei chat e r keu nai amar 🥹", "_Hayeee eto sundor kore keu dake nai age 🙈",
-"_Tomake miss korchilam, ekhon e dakle 🥰", "_Tomake miss korchilam, ekhon e dakle 🥰", "_Prem na korle ken dako bar bar 😤",
-"_Ami to tomar e opekkhay chilam 👉👈", "_Ekhane khali tumar jonno e boshe achi 🥺", "_Bar bar dakle to premei porbo mone hocche 😳",
-"_Emon kore dakle to gole jai ami 🫠", "_Tomar dak sunle onno kicu mone thake na 🙈"
-];
-
-if (!arr) {
-const randomReply = baseReplies[Math.floor(Math.random() * baseReplies.length)];
-const mentionObj = utils.realMention(senderName, uid, randomReply);
-await api.sendMessage(mentionObj, event.threadID, (error, info) => {
-if (info) {
-global.GoatBot.onReply.set(info.messageID, { commandName: this.config.name, type: "reply", messageID: info.messageID, author: event.senderID });
-}
-}, event.messageID);
-return;
+  try {
+    await message.reply("❌ Something is error, please try again");
+  } catch (replyErr) {
+    console.error("Flirt error reply failed:", replyErr);
+  }
 }
 
-const a = (await axios.get(`${await baseApiUrl()}/baby?text=${encodeURIComponent(arr)}&senderID=${event.senderID}`)).data.reply;
-const replyText = utils.monospace(a);
-await api.sendMessage(replyText, event.threadID, (error, info) => {
-global.GoatBot.onReply.set(info.messageID, { commandName: this.config.name, type: "reply", messageID: info.messageID, author: event.senderID });
-}, event.messageID);
-}
-} catch (err) {
-console.error("onChat Error:", err);
 }
 };
 
