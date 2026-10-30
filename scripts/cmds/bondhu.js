@@ -8,7 +8,7 @@ const BOTTOM_SLOT = { x: 2, y: 377, w: 354, h: 341 };
 module.exports = {
 	config: {
 		name: "bondhu",
-    aliases: ["bondu"],
+    aliases: ["bondu", "bondhu"],
 		version: "1.0.2",
 		author: "EryXenX",
 		countDown: 5,
