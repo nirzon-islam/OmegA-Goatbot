@@ -1,68 +1,60 @@
 module.exports = {
-	config: {
-		name: "kick",
-		version: "1.3",
-		author: "NTKhang",
-		countDown: 5,
-		role: 1,
-		description: {
-			vi: "Kick thành viên khỏi box chat",
-			en: "Kick member out of chat box"
-		},
-		category: "owner",
-		guide: {
-			vi: "   {pn} @tags: dùng để kick những người được tag",
-			en: "   {pn} @tags: use to kick members who are tagged"
-		}
-	},
+  config: {
+    name: "kick",
+    version: "1.4.1",
+    author: "Fixed by EryXenX",
+    countDown: 5,
+    role: 1,
+    description: {
+      en: "Kick member out of chat box"
+    },
+    category: "box chat",
+    guide: {
+      en: " {pn} @tags or reply to kick"
+    }
+  },
+  langs: {
+    en: { needAdmin: "Bot is not admin, please add bot as admin" },
+    bn: { needAdmin: "Bot admin e nei, age bot ke admin banan" }
+  },
+  onStart: async function ({ message, event, args, threadsData, api, getLang }) {
+    // live admin check
+    try {
+      const threadInfo = await api.getThreadInfo(event.threadID);
+      const adminIDs = threadInfo.adminIDs.map(a => a.id || a);
+      const botID = api.getCurrentUserID();
+      
+      if (!adminIDs.includes(botID)) {
+        return message.reply(getLang("needAdmin"));
+      }
+    } catch (e) {
+      // fallback to old method if getThreadInfo fails
+      const adminIDs = await threadsData.get(event.threadID, "adminIDs");
+      if (!adminIDs || !adminIDs.includes(api.getCurrentUserID())) {
+        return message.reply(getLang("needAdmin"));
+      }
+    }
 
-	langs: {
-		vi: {
-			needAdmin: "Vui lòng thêm quản trị viên cho bot trước khi sử dụng tính năng này"
-		},
-		en: {
-			needAdmin: "Please add admin for bot before using this feature"
-		},
-		tl: {
-			needAdmin: "Mangyaring magdagdag ng admin para sa bot bago gamitin ang feature na ito"
-		},
-		hi: {
-			needAdmin: "Is feature ka upyog karne se pehle bot ke liye admin add karein"
-		},
-		ar: {
-			needAdmin: "الرجاء إضافة مسؤول للبوت قبل استخدام هذه الميزة"
-		},
-		bn: {
-			needAdmin: "এই ফিচার ব্যবহার করার আগে bot এ admin যোগ করুন"
-		}
-	},
+    async function kickAndCheckError(uid) {
+      try {
+        await api.removeUserFromGroup(uid, event.threadID);
+      } catch (e) {
+        return message.reply(getLang("needAdmin"));
+      }
+    }
 
-	onStart: async function ({ message, event, args, threadsData, api, getLang }) {
-		const adminIDs = await threadsData.get(event.threadID, "adminIDs");
-		if (!adminIDs.includes(api.getCurrentUserID()))
-			return message.reply(getLang("needAdmin"));
-		async function kickAndCheckError(uid) {
-			try {
-				await api.removeUserFromGroup(uid, event.threadID);
-			}
-			catch (e) {
-				message.reply(getLang("needAdmin"));
-				return "ERROR";
-			}
-		}
-		if (!args[0]) {
-			if (!event.messageReply)
-				return message.SyntaxError();
-			await kickAndCheckError(event.messageReply.senderID);
-		}
-		else {
-			const uids = Object.keys(event.mentions);
-			if (uids.length === 0)
-				return message.SyntaxError();
-			if (await kickAndCheckError(uids.shift()) === "ERROR")
-				return;
-			for (const uid of uids)
-				api.removeUserFromGroup(uid, event.threadID);
-		}
-	}
-};
+    if (!args[0] && !event.messageReply) {
+      return message.SyntaxError();
+    }
+
+    if (event.messageReply) {
+      await kickAndCheckError(event.messageReply.senderID);
+    } else {
+      const uids = Object.keys(event.mentions);
+      if (uids.length === 0) return message.SyntaxError();
+      for (const uid of uids) {
+        await kickAndCheckError(uid);
+      }
+    }
+  }
+}
