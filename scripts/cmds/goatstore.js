@@ -1,58 +1,28 @@
 // code from goatstore
-// api: https://store.agi.bd
+// api: https://omega-goatstore.onrender.com
 const fs = require("fs");
 const path = require("path");
 const axios = require("axios");
 
-const API_URL_JSON = "https://raw.githubusercontent.com/abdullahrx07/X-api/main/MaRiA/baseApiUrl.json";
-const HARD_FALLBACK_BASE = "https://store.agi.bd";
+const HARD_FALLBACK_BASE = "https://omega-goatstore.onrender.com";
 function envOverride() {
   const v = process.env.STORE_API_BASE;
   return v && v.startsWith("http") ? v.replace(/\/$/, "") : null;
 }
 let _apiBase = null;
-let _apiBaseFetchedAt = 0;
-const API_BASE_TTL_MS = 5 * 60 * 1000;
 
 async function getApiBase() {
-  const override = envOverride();
-  if (override) return override;
-  const now = Date.now();
-  if (_apiBase && now - _apiBaseFetchedAt < API_BASE_TTL_MS) return _apiBase;
-  try {
-    const res = await axios.get(API_URL_JSON, { timeout: 8000 });
-    const store = res.data && (res.data.store || res.data.Store);
-    if (store && typeof store === "string" && store.startsWith("http")) {
-      _apiBase = store.replace(/\/$/, "");
-      _apiBaseFetchedAt = now;
-      return _apiBase;
-    }
-  } catch (_) {
-    // Remote base-URL lookup is best-effort: fall through to the hardcoded base.
-  }
-  if (!_apiBase) _apiBase = HARD_FALLBACK_BASE;
-  _apiBaseFetchedAt = now;
-  return _apiBase;
+  return envOverride() || HARD_FALLBACK_BASE;
 }
 
 async function storeGet(pathSuffix, config) {
-  const primaryBase = await getApiBase();
-  try {
-    return await axios.get(`${primaryBase}${pathSuffix}`, config);
-  } catch (err) {
-    if (primaryBase === HARD_FALLBACK_BASE) throw err;
-    return await axios.get(`${HARD_FALLBACK_BASE}${pathSuffix}`, config);
-  }
+  const base = await getApiBase();
+  return await axios.get(`${base}${pathSuffix}`, config);
 }
 
 async function storePost(pathSuffix, data, config) {
-  const primaryBase = await getApiBase();
-  try {
-    return await axios.post(`${primaryBase}${pathSuffix}`, data, config);
-  } catch (err) {
-    if (primaryBase === HARD_FALLBACK_BASE) throw err;
-    return await axios.post(`${HARD_FALLBACK_BASE}${pathSuffix}`, data, config);
-  }
+  const base = await getApiBase();
+  return await axios.post(`${base}${pathSuffix}`, data, config);
 }
 
 const premium = (function () {
@@ -644,7 +614,7 @@ async function doSelfUpdateSilent(api, threadID, selfUpdate) {
 
   if (api && threadID) {
     const msg =
-      `♻️ Auto-Updated GoatStore!\n` +
+      `♻️ Auto-Updated OmegA Store!\n` +
       `╭─‣ Version : v${cmdData.version || selfUpdate.latestVersion}\n` +
       `├‣ ID : ${cmdData.id}\n` +
       `╰────────────◊\n` +
@@ -713,10 +683,10 @@ async function sendListPage(api, threadID, senderID, kind, page, limit = 10, pre
     const res = await storeGet(`/miraistore/list?limit=${limit}&offset=${offset}&framework=goat&kind=${kind}&clientFp=${encodeURIComponent(senderID || "")}`);
     const data = res.data;
     if (!Array.isArray(data.commands) || !data.commands.length)
-      return api.sendMessage("❌ No results found for this page.", threadID);
+      return api.sendMessage("❌ OmegA Store • No results found for this page.", threadID);
 
     const totalPages = Math.ceil(data.total / limit);
-    const label = kind === "event" ? "GoatBot Events" : "GoatBot Commands";
+    const label = kind === "event" ? "OmegA Store Events" : "OmegA Store Commands";
     let msg = `📂 ${label} — Page ${page}/${totalPages} (${data.total} total)\n\n`;
         data.commands.forEach(cmd => { if (premium.isFiltered(cmd.name, cmd.author, senderID)) return; msg += listBlock(cmd); });
     if (totalPages > 1) msg += `⏤͟͟͞͞  Page ${page}/${totalPages}\n╭‣ React or reply p ${page + 1 <= totalPages ? page + 1 : page} for nxt pg\n`;
@@ -732,18 +702,30 @@ async function sendListPage(api, threadID, senderID, kind, page, limit = 10, pre
   } catch (_) { api.sendMessage("❌ List API error.", threadID); }
 }
 
+
+// Search strictly by file/command name and aliases only.
+function matchesNameOrAliases(item, query) {
+  const q = String(query || "").trim().toLowerCase();
+  if (!q) return true;
+  const name = String(item?.name || "").toLowerCase();
+  const raw = item?.aliases ?? item?.alias ?? [];
+  const aliases = Array.isArray(raw) ? raw : String(raw).split(/[,|]/);
+  return name.includes(q) || aliases.some(a => String(a || "").trim().toLowerCase().includes(q));
+}
+
 function searchTitle(query, filterOpts) {
-  if (filterOpts.author) return `👤 Author: ${filterOpts.author}`;
-  if (filterOpts.category && !query) return `📂 Category: ${filterOpts.category}`;
-  if (filterOpts.framework && !query) return `📂 Category: ${filterOpts.framework}`;
-  if (filterOpts.kind === "event" && !query) return `📂 Events`;
-  return `🔍 Search: "${query}"`;
+  if (filterOpts.author) return `👤 OmegA Store • Author: ${filterOpts.author}`;
+  if (filterOpts.category && !query) return `📂 OmegA Store • Category: ${filterOpts.category}`;
+  if (filterOpts.framework && !query) return `📂 OmegA Store • Category: ${filterOpts.framework}`;
+  if (filterOpts.kind === "event" && !query) return `📂 OmegA Store • Events`;
+  return `🔍 OmegA Store • Search: "${query}"`;
 }
 
 async function sendSearchPage(api, threadID, senderID, query, page, limit = 5, prefix = "!", filterOpts = {}) {
-  const offset = (page - 1) * limit;
   try {
-    let qs = `/miraistore/search?limit=${limit}&offset=${offset}`;
+    // Fetch candidates, then discard matches found only in metadata.
+    const fetchLimit = 100;
+    let qs = `/miraistore/search?limit=${fetchLimit}&offset=0`;
     if (filterOpts.author) qs += `&author=${encodeURIComponent(filterOpts.author)}`;
     else qs += `&q=${encodeURIComponent(query || "")}`;
     if (filterOpts.framework) qs += `&framework=${filterOpts.framework}`;
@@ -752,21 +734,22 @@ async function sendSearchPage(api, threadID, senderID, query, page, limit = 5, p
     qs += `&clientFp=${encodeURIComponent(senderID || "")}`;
 
     const res = await storeGet(qs);
-    const data = res.data;
-    if (!Array.isArray(data.commands) || !data.commands.length)
-      return api.sendMessage(`❌ No results found${query ? ` for "${query}"` : ""}.`, threadID);
+    let commands = Array.isArray(res.data?.commands) ? res.data.commands : [];
+    if (!filterOpts.author && query) commands = commands.filter(cmd => matchesNameOrAliases(cmd, query));
+    commands = commands.filter(cmd => !premium.isFiltered(cmd.name, cmd.author, senderID));
+    if (!commands.length) return api.sendMessage(`❌ No results found${query ? ` for "${query}"` : ""}.`, threadID);
 
-    const total = data.total || data.commands.length;
+    const total = commands.length;
     const totalPages = Math.max(1, Math.ceil(total / limit));
+    if (page > totalPages) return api.sendMessage("❌ No results found for this page.", threadID);
+    const pageCommands = commands.slice((page - 1) * limit, page * limit);
     const title = searchTitle(query, filterOpts);
-
     let msg = `${title} (${total} found)\n\n`;
-    data.commands.forEach(cmd => { if (premium.isFiltered(cmd.name, cmd.author, senderID)) return; msg += resultBlock(cmd); });
+    pageCommands.forEach(cmd => { msg += resultBlock(cmd); });
     if (totalPages > 1) msg += `⏤͟͟͞͞  Page ${page}/${totalPages}\n╭‣ React or reply p ${page + 1 <= totalPages ? page + 1 : page} for nxt pg\n`;
     msg += `╰‣ reply in <id> for install`;
 
-    const finalMsg = msg.trim();
-    const sent = await api.sendMessage(finalMsg, threadID);
+    const sent = await api.sendMessage(msg.trim(), threadID);
     const h = {
       commandName: "goatstore", messageID: sent.messageID, query,
       authorQuery: filterOpts.author || null, framework: filterOpts.framework || null,
@@ -787,7 +770,7 @@ async function renderListPageInto(messageID, kind, page, limit, senderID = null)
   if (!Array.isArray(data.commands) || !data.commands.length) return null;
 
   const totalPages = Math.ceil(data.total / limit);
-  const label = kind === "event" ? "GoatBot Events" : "GoatBot Commands";
+  const label = kind === "event" ? "OmegA Store Events" : "OmegA Store Commands";
   let msg = `📂 ${label} — Page ${page}/${totalPages} (${data.total} total)\n\n`;
   data.commands.forEach(cmd => { if (premium.isFiltered(cmd.name, cmd.author, senderID)) return; msg += listBlock(cmd); });
   if (totalPages > 1) msg += `⏤͟͟͞͞  Page ${page}/${totalPages}\n╭‣ React or reply p ${page + 1 <= totalPages ? page + 1 : page} for nxt pg\n`;
@@ -796,8 +779,8 @@ async function renderListPageInto(messageID, kind, page, limit, senderID = null)
 }
 
 async function renderSearchPageInto(query, page, limit, filterOpts = {}, senderID = null) {
-  const offset = (page - 1) * limit;
-  let qs = `/miraistore/search?limit=${limit}&offset=${offset}`;
+  const fetchLimit = 100;
+  let qs = `/miraistore/search?limit=${fetchLimit}&offset=0`;
   if (filterOpts.author) qs += `&author=${encodeURIComponent(filterOpts.author)}`;
   else qs += `&q=${encodeURIComponent(query || "")}`;
   if (filterOpts.framework) qs += `&framework=${filterOpts.framework}`;
@@ -806,15 +789,18 @@ async function renderSearchPageInto(query, page, limit, filterOpts = {}, senderI
   qs += `&clientFp=${encodeURIComponent(senderID || "")}`;
 
   const res = await storeGet(qs);
-  const data = res.data;
-  if (!Array.isArray(data.commands) || !data.commands.length) return null;
+  let commands = Array.isArray(res.data?.commands) ? res.data.commands : [];
+  if (!filterOpts.author && query) commands = commands.filter(cmd => matchesNameOrAliases(cmd, query));
+  commands = commands.filter(cmd => !premium.isFiltered(cmd.name, cmd.author, senderID));
+  if (!commands.length) return null;
 
-  const total = data.total || data.commands.length;
+  const total = commands.length;
   const totalPages = Math.max(1, Math.ceil(total / limit));
+  if (page > totalPages) return null;
+  const pageCommands = commands.slice((page - 1) * limit, page * limit);
   const title = searchTitle(query, filterOpts);
-
   let msg = `${title} (${total} found)\n\n`;
-  data.commands.forEach(cmd => { if (premium.isFiltered(cmd.name, cmd.author, senderID)) return; msg += resultBlock(cmd); });
+  pageCommands.forEach(cmd => { msg += resultBlock(cmd); });
   if (totalPages > 1) msg += `⏤͟͟͞͞  Page ${page}/${totalPages}\n╭‣ React or reply p ${page + 1 <= totalPages ? page + 1 : page} for nxt pg\n`;
   msg += `╰‣ reply in <id> for install`;
   return { text: msg.trim(), totalPages };
@@ -917,12 +903,12 @@ module.exports = {
   config: {
     name: "goatstore",
     aliases: ["gs", "cmdstore", "commandstore"],
-    version: "19.10.0",
-    author: "rX",
+    version: "3.0.0",
+    author: "NirZon",
     countDown: 3,
     role: 2,
-    shortDescription: "GoatBot Store — Search, AutoUpdate, Install, Upload, AutoSync",
-    longDescription: "Browse, install, upload, and autosync GoatBot commands and events from the MiraiStore API. Auto-detects your cmds/events folder naming. The bare-menu shows only the daily-use commands — every subcommand lives here in the guide.",
+    shortDescription: "OmegA Store — Search, AutoUpdate, Install, Upload, AutoSync",
+    longDescription: "Browse, install, upload, and autosync commands and events from OmegA Store. Auto-detects your cmds/events folder naming. The bare-menu shows only the daily-use commands — every subcommand lives here in the guide.",
     category: "system",
     guide: {
       en:
@@ -1044,7 +1030,7 @@ module.exports = {
         ? await renderListPageInto(messageID, listType, nextPage, limit, senderID)
         : await renderSearchPageInto(query, nextPage, limit, { author: authorQuery, framework, kind, category }, senderID);
 
-      if (!rendered) return api.sendMessage("❌ No results found for this page.", threadID);
+      if (!rendered) return api.sendMessage("❌ OmegA Store • No results found for this page.", threadID);
 
       if (editCount >= MAX_EDITS_PER_MESSAGE) {
         const sent = await api.sendMessage(rendered.text, threadID);
@@ -1072,7 +1058,7 @@ module.exports = {
     if (guard.blocked) {
       return api.sendMessage(
         `⚠️ Abnormal activity detected on your account.\n` +
-        `GoatStore access is suspended for ${formatDuration(guard.remainingSeconds || 0)}.`,
+        `OmegA Store access is suspended for ${formatDuration(guard.remainingSeconds || 0)}.`,
         threadID
       );
     }
@@ -1209,7 +1195,7 @@ module.exports = {
       const updates = await getTodayUpdates(senderID);
 
       if (updates.length && !userSeenNoti.get(senderID)) {
-        let n = `🔔 [ NOTIFICATION ]\nToday ${updates.length} GoatBot update(s)!\n━━━━━━━━━━━━━━━━━━\n`;
+        let n = `🔔 [ OmegA STORE NOTIFICATION ]\nToday ${updates.length} OmegA Store update(s)!\n━━━━━━━━━━━━━━━━━━\n`;
         updates.forEach(f => { if (premium.isFiltered(f.name, f.author, senderID)) return; n += ` ‣ ${f.name} (ID: ${f.id})\n`; });
         n += `\n(Type "${prefix}gs n" for details or "${prefix}gs" again for menu)`;
         userSeenNoti.set(senderID, true);
@@ -1217,12 +1203,35 @@ module.exports = {
       }
 
       const menuMsg =
-        `📦 GoatStore\n\nUsage:\n` +
-        `• ${prefix}gs <id | file name> \n` +
-        `• ${prefix}gs install <id> \n` +
-        `• ${prefix}gs upload <fileName> \n` +
-        `• ${prefix}gs trend — Trending\n` +
-        `• ${prefix}gs sync — Sync your files`;
+        `╭━━━━━━━━━━━━━━━━━━━━╮\n` +
+        `       📦 𝗢𝗠𝗘𝗚𝗔 𝗦𝗧𝗢𝗥𝗘\n` +
+        `      ✦ PUBLIC COMMAND HUB ✦\n` +
+        `╰━━━━━━━━━━━━━━━━━━━━╯\n` +
+        `╭─ 🔎 𝗘𝗫𝗣𝗟𝗢𝗥𝗘 𝗦𝗧𝗢𝗥𝗘\n` +
+        `┊ ${prefix}gs <name/id>  › Search command\n` +
+        `┊ ${prefix}gs list [page]  › Command list\n` +
+        `┊ ${prefix}gs list event [page]  › Event list\n` +
+        `┊ ${prefix}gs -e <name>  › Search events\n` +
+        `┊ ${prefix}gs -a <author>  › Author files\n` +
+        `┊ ${prefix}gs -c <category>  › Category\n` +
+        `╰━━━━━━━━━━━━━━━━━━━━╯\n\n` +
+        `╭─ ⚡ 𝗜𝗡𝗦𝗧𝗔𝗟𝗟 & 𝗧𝗥𝗘𝗡𝗗𝗜𝗡𝗚\n` +
+        `┊ ${prefix}gs install <id>  › Install command\n` +
+        `┊ ${prefix}gs -e install <id>  › Install event\n` +
+        `┊ ${prefix}gs like <id>  › Like a command\n` +
+        `┊ ${prefix}gs trend  › Trending commands\n` +
+        `┊ ${prefix}gs n  › Today's updates\n` +
+        `╰━━━━━━━━━━━━━━━━━━━━╯\n\n` +
+        `╭─ 🛠️ 𝗨𝗣𝗟𝗢𝗔𝗗 & 𝗠𝗔𝗡𝗔𝗚𝗘\n` +
+        `┊ ${prefix}gs upload <file>  › Upload command\n` +
+        `┊ ${prefix}gs -e upload <file>  › Upload event\n` +
+        `┊ ${prefix}gs sync  › Manual file sync\n` +
+        `┊ ${prefix}gs dirs  › Detect bot folders\n` +
+        `╰━━━━━━━━━━━━━━━━━━━━╯\n\n` +
+        `💡 𝗤𝗨𝗜𝗖𝗞 𝗧𝗜𝗣\n` +
+        `Reply "in" to a search result to install it.\n` +
+        `Use ${prefix}gs help for the full command guide.\n\n` +
+        `       🌐 Powered by OmegA Store`;
       await api.sendMessage(menuMsg, threadID);
       return;
     }
@@ -1230,8 +1239,8 @@ module.exports = {
     if (sub === "n" || sub === "notification") {
       const updates = await getTodayUpdates(senderID);
       if (!updates.length)
-        return api.sendMessage("📅 No GoatBot updates today.", threadID);
-      let msg = `📂 Today's GoatBot Updates\n━━━━━━━━━━━━━━━━━━\n`;
+        return api.sendMessage("📅 No OmegA Store updates today.", threadID);
+      let msg = `📂 Today's OmegA Store Updates\n━━━━━━━━━━━━━━━━━━\n`;
       updates.forEach(cmd => {
         if (premium.isFiltered(cmd.name, cmd.author, senderID)) return;
         msg += `╭─‣ ${cmd.name}\n├‣ ID: ${cmd.id}\n├‣ Type: ${typeBadge(cmd)}\n├‣ Author: ${cmd.author}\n╰────────────◊\n\n`;  });
@@ -1291,8 +1300,8 @@ module.exports = {
         try {
           const res = await storeGet(`/miraistore/list?limit=20&framework=goat&kind=event&clientFp=${encodeURIComponent(senderID || "")}`);
           const events = res.data.commands || [];
-          if (!events.length) return api.sendMessage("❌ No GoatBot events found in store.", threadID);
-          let msg = `📂 GoatBot Store Events (${res.data.total})\n\n`;
+          if (!events.length) return api.sendMessage("❌ No OmegA Store events found.", threadID);
+          let msg = `📂 OmegA Store Events (${res.data.total})\n\n`;
           events.forEach(cmd => {
             if (premium.isFiltered(cmd.name, cmd.author, senderID)) return;
             msg += `╭─‣ ${cmd.name}\n├‣ ID : ${cmd.id}\n├‣ Author : ${authorLine(cmd)}\n╰────────────◊\n\n`;
@@ -1304,10 +1313,12 @@ module.exports = {
       }
 
       try {
-        const res = await storeGet(`/miraistore/search?q=${encodeURIComponent(action)}&limit=5&framework=goat&kind=event&clientFp=${encodeURIComponent(senderID || "")}`);
-        const events = res.data.commands || [];
-        if (!events.length) return api.sendMessage(`❌ No GoatBot event found: "${action}"`, threadID);
-        let msg = `📂 GoatBot Events matching "${action}"\n\n`;
+        const res = await storeGet(`/miraistore/search?q=${encodeURIComponent(action)}&limit=100&offset=0&framework=goat&kind=event&clientFp=${encodeURIComponent(senderID || "")}`);
+        const events = (res.data.commands || [])
+          .filter(cmd => matchesNameOrAliases(cmd, action))
+          .filter(cmd => !premium.isFiltered(cmd.name, cmd.author, senderID));
+        if (!events.length) return api.sendMessage(`❌ No OmegA Store event found: "${action}"`, threadID);
+        let msg = `📂 OmegA Store Events matching "${action}"\n\n`;
         events.forEach(cmd => {
           if (premium.isFiltered(cmd.name, cmd.author, senderID)) return;
           msg += `╭─‣ ${cmd.name}\n├‣ ID : ${cmd.id}\n├‣ Author : ${authorLine(cmd)}\n╰────────────◊\n\n`;
@@ -1339,7 +1350,7 @@ module.exports = {
       try {
         if (!list) return api.sendMessage("❌ Trending API error.", threadID);
         if (!list.length) return api.sendMessage("❌ No trending files.", threadID);
-        let msg = `🔥 Top Trending 🔥\n\n`;
+        let msg = `🔥 OmegA Store • Top Trending 🔥\n\n`;
         list.forEach((cmd, i) => {
           if (premium.isFiltered(cmd.name, cmd.author, senderID)) return;
           msg +=
