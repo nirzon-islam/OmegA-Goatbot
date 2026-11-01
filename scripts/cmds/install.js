@@ -2,1426 +2,727 @@ const axios = require("axios");
 const fs = require("fs-extra");
 const path = require("path");
 const cheerio = require("cheerio");
-const { exec } = require("child_process");
+const { execFile } = require("child_process");
 const Module = require("module");
 
 const { GoatBot } = global;
 
-function getDomain(url) {
-    try {
-        return new URL(url).hostname
-            .replace(/^www\./, "")
-            .toLowerCase();
-    }
-    catch {
-        return null;
-    }
+const VERSION = "1.0.0";
+const AUTHOR = "NirZon";
+
+function isURL(value) {
+	try {
+		new URL(value);
+		return true;
+	}
+	catch {
+		return false;
+	}
 }
 
-function isURL(str) {
-    try {
-        new URL(str);
-        return true;
-    }
-    catch {
-        return false;
-    }
+function getDomain(url) {
+	try {
+		return new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+	}
+	catch {
+		return null;
+	}
 }
 
 function extractUrlFromText(text) {
-    const match = String(text || "").match(
-        /https?:\/\/[^\s<>"']+/i
-    );
-
-    if (!match)
-        return null;
-
-    return match[0].replace(/[),.!?]+$/, "");
+	const match = String(text || "").match(/https?:\/\/[^\s<>"']+/i);
+	return match ? match[0].replace(/[),.!?]+$/, "") : null;
 }
 
 function normalizeFileName(fileName) {
-    let name = String(fileName || "").trim();
-
-    name = path.basename(name);
-
-    if (!name.toLowerCase().endsWith(".js"))
-        name += ".js";
-
-    return name;
+	let name = path.basename(String(fileName || "").trim());
+	if (!name.toLowerCase().endsWith(".js"))
+		name += ".js";
+	return name;
 }
 
 function extractCommandName(code) {
-    if (typeof code !== "string")
-        return null;
+	if (typeof code !== "string")
+		return null;
 
-    const patterns = [
-        /name\s*:\s*["'`]([^"'`]+)["'`]/i,
-        /name\s*:\s*`([^`]+)`/i
-    ];
+	const match = code.match(/\bname\s*:\s*["'`]([^"'`]+)["'`]/i);
+	if (!match || !/^[a-zA-Z0-9_-]+$/.test(match[1].trim()))
+		return null;
 
-    for (const pattern of patterns) {
-        const match = code.match(pattern);
-
-        if (match && match[1]) {
-            const name = match[1].trim();
-
-            if (
-                /^[a-zA-Z0-9_\-]+$/.test(name)
-            ) {
-                return `${name}.js`;
-            }
-        }
-    }
-
-    return null;
+	return `${match[1].trim()}.js`;
 }
 
 function cleanCodeResponse(code, contentType = "") {
-    if (typeof code !== "string")
-        return null;
+	if (typeof code !== "string")
+		return null;
 
-    let result = code.trim();
+	let result = code.trim();
 
-    if (
-        contentType.includes("text/html") &&
-        !result.includes("module.exports") &&
-        !result.includes("exports.")
-    ) {
-        const $ = cheerio.load(result);
+	if (contentType.includes("text/html") &&
+		!result.includes("module.exports") &&
+		!result.includes("exports.")) {
+		const $ = cheerio.load(result);
+		result = $("pre").first().text().trim() || $("#content").text().trim();
+	}
 
-        const pre = $("pre").first().text().trim();
+	result = result
+		.replace(/^```(?:javascript|js|node)?\s*/i, "")
+		.replace(/\s*```$/i, "")
+		.trim();
 
-        if (pre)
-            result = pre;
-        else {
-            const content = $("#content").text().trim();
-
-            if (content)
-                result = content;
-        }
-    }
-
-    if (
-        result.startsWith("```") &&
-        result.endsWith("```")
-    ) {
-        result = result
-            .replace(/^```(?:javascript|js)?\s*/i, "")
-            .replace(/\s*```$/i, "")
-            .trim();
-    }
-
-    return result;
+	return result || null;
 }
 
 async function fetchCodeFromUrl(url) {
-    const domain = getDomain(url);
+	const domain = getDomain(url);
+	if (!domain)
+		return null;
 
-    if (!domain)
-        return null;
+	let fixedUrl = url;
 
-    let fixedUrl = url;
+	if (domain === "pastebin.com" && !url.includes("/raw/")) {
+		const id = new URL(url).pathname.split("/").filter(Boolean)[0];
+		if (id)
+			fixedUrl = `https://pastebin.com/raw/${id}`;
+	}
 
-    if (
-        domain === "pastebin.com" &&
-        !url.includes("/raw/")
-    ) {
-        const parsed = new URL(url);
+	if (domain === "github.com" && url.includes("/blob/")) {
+		fixedUrl = url
+			.replace("https://github.com/", "https://raw.githubusercontent.com/")
+			.replace("/blob/", "/");
+	}
 
-        const parts = parsed.pathname
-            .split("/")
-            .filter(Boolean);
+	if (domain === "gist.github.com" && !url.includes("/raw")) {
+		fixedUrl = `${url.replace(/\/$/, "")}/raw`;
+	}
 
-        if (parts[0]) {
-            fixedUrl =
-                `https://pastebin.com/raw/${parts[0]}`;
-        }
-    }
+	try {
+		const response = await axios.get(fixedUrl, {
+			timeout: 30000,
+			maxContentLength: 5 * 1024 * 1024,
+			maxBodyLength: 5 * 1024 * 1024,
+			responseType: "text",
+			validateStatus: status => status >= 200 && status < 400
+		});
 
-    if (
-        domain === "github.com" &&
-        url.includes("/blob/")
-    ) {
-        fixedUrl = url
-            .replace(
-                "https://github.com/",
-                "https://raw.githubusercontent.com/"
-            )
-            .replace("/blob/", "/");
-    }
+		const body = typeof response.data === "string"
+			? response.data
+			: String(response.data);
 
-    if (
-        domain === "gist.github.com" &&
-        !url.includes("raw")
-    ) {
-        fixedUrl =
-            `${url.replace(/\/$/, "")}/raw`;
-    }
-
-    try {
-        const response = await axios.get(
-            fixedUrl,
-            {
-                timeout: 30000,
-                maxContentLength: 5 * 1024 * 1024,
-                maxBodyLength: 5 * 1024 * 1024,
-                responseType: "text",
-                validateStatus: status =>
-                    status >= 200 &&
-                    status < 400
-            }
-        );
-
-        let code =
-            typeof response.data === "string"
-                ? response.data
-                : String(response.data);
-
-        code = cleanCodeResponse(
-            code,
-            response.headers?.["content-type"] || ""
-        );
-
-        return code;
-    }
-    catch (error) {
-        return null;
-    }
+		return cleanCodeResponse(body, response.headers?.["content-type"] || "");
+	}
+	catch {
+		return null;
+	}
 }
 
-function runCommand(command, options = {}) {
-    return new Promise((resolve, reject) => {
-        exec(
-            command,
-            {
-                ...options,
-                windowsHide: true,
-                maxBuffer: 1024 * 1024 * 10
-            },
-            (error, stdout, stderr) => {
-                if (error) {
-                    error.stdout = stdout;
-                    error.stderr = stderr;
-                    return reject(error);
-                }
-
-                resolve({
-                    stdout,
-                    stderr
-                });
-            }
-        );
-    });
+function runCommand(file, args, options = {}) {
+	return new Promise((resolve, reject) => {
+		execFile(file, args, {
+			...options,
+			windowsHide: true,
+			maxBuffer: 10 * 1024 * 1024
+		}, (error, stdout, stderr) => {
+			if (error) {
+				error.stdout = stdout;
+				error.stderr = stderr;
+				return reject(error);
+			}
+			resolve({ stdout, stderr });
+		});
+	});
 }
 
 function getRequiredPackages(code) {
-    const packages = new Set();
+	const packages = new Set();
+	const patterns = [
+		/require\s*\(\s*["'`]([^"'`]+)["'`]\s*\)/g,
+		/import\s+(?:[^"'`]+?\s+from\s+)?["'`]([^"'`]+)["'`]/g
+	];
 
-    const patterns = [
-        /require\s*\(\s*["'`]([^"'`]+)["'`]\s*\)/g,
-        /import\s+(?:[^"'`]+?\s+from\s+)?["'`]([^"'`]+)["'`]/g
-    ];
+	for (const regex of patterns) {
+		let match;
+		while ((match = regex.exec(code)) !== null) {
+			let name = match[1];
+			if (!name || name.startsWith(".") || name.startsWith("/") ||
+				name.startsWith("node:") || path.isAbsolute(name))
+				continue;
 
-    for (const regex of patterns) {
-        let match;
+			if (Module.builtinModules.includes(name))
+				continue;
 
-        while ((match = regex.exec(code)) !== null) {
-            let packageName = match[1];
+			name = name.startsWith("@")
+				? name.split("/").slice(0, 2).join("/")
+				: name.split("/")[0];
 
-            if (!packageName)
-                continue;
+			// Prevent shell/package-name injection and malformed package names.
+			if (/^(?:@[a-z0-9._-]+\/)?[a-z0-9._-]+$/i.test(name))
+				packages.add(name);
+		}
+	}
 
-            if (
-                packageName.startsWith(".") ||
-                packageName.startsWith("/") ||
-                path.isAbsolute(packageName)
-            ) {
-                continue;
-            }
-
-            if (Module.builtinModules.includes(packageName))
-                continue;
-
-            if (
-                packageName.startsWith("node:")
-            ) {
-                continue;
-            }
-
-            if (packageName.startsWith("@")) {
-                packageName =
-                    packageName
-                        .split("/")
-                        .slice(0, 2)
-                        .join("/");
-            }
-            else {
-                packageName =
-                    packageName.split("/")[0];
-            }
-
-            packages.add(packageName);
-        }
-    }
-
-    return [...packages];
+	return [...packages];
 }
 
 async function installMissingPackages(code) {
-    const packages =
-        getRequiredPackages(code);
+	const packages = getRequiredPackages(code);
+	const installed = [];
 
-    if (!packages.length)
-        return [];
+	for (const packageName of packages) {
+		try {
+			require.resolve(packageName, { paths: [process.cwd()] });
+			continue;
+		}
+		catch {
+			// Package is not installed.
+		}
 
-    const installed = [];
+		try {
+			await runCommand("npm", ["install", "--save", packageName], {
+				cwd: process.cwd()
+			});
+			installed.push(packageName);
+		}
+		catch (error) {
+			throw new Error(
+				`Could not install "${packageName}". ` +
+				`${String(error.stderr || error.message).trim()}`
+			);
+		}
+	}
 
-    for (const packageName of packages) {
-        let exists = false;
-
-        try {
-            require.resolve(packageName, {
-                paths: [process.cwd()]
-            });
-
-            exists = true;
-        }
-        catch {
-            exists = false;
-        }
-
-        if (exists)
-            continue;
-
-        try {
-            await runCommand(
-                `npm install ${packageName} --save`,
-                {
-                    cwd: process.cwd()
-                }
-            );
-
-            installed.push(packageName);
-        }
-        catch (error) {
-            throw new Error(
-                `Failed to install package "${packageName}"` +
-                (
-                    error.stderr
-                        ? `\n${String(error.stderr).trim()}`
-                        : ""
-                )
-            );
-        }
-    }
-
-    return installed;
+	return installed;
 }
 
-function validateCommandExport(command) {
-    if (
-        !command ||
-        typeof command !== "object"
-    ) {
-        throw new Error(
-            "Command must export an object."
-        );
-    }
-
-    const config = command.config;
-
-    if (!config)
-        throw new Error(
-            "Command config is undefined."
-        );
-
-    if (
-        typeof config.name !== "string" ||
-        !config.name.trim()
-    ) {
-        throw new Error(
-            "Command config.name is missing."
-        );
-    }
-
-    if (
-        !config.category ||
-        typeof config.category !== "string"
-    ) {
-        throw new Error(
-            `Command "${config.name}" is missing config.category.`
-        );
-    }
-
-    if (
-        typeof command.onStart !== "function"
-    ) {
-        throw new Error(
-            `Command "${config.name}" must have onStart().`
-        );
-    }
-
-    const role =
-        Number(config.role ?? 0);
-
-    if (
-        !Number.isInteger(role) ||
-        role < 0 ||
-        role > 2
-    ) {
-        throw new Error(
-            `Invalid role for "${config.name}". Use 0, 1 or 2.`
-        );
-    }
-
-    config.role = role;
-
-    return true;
+function detectModuleType(command) {
+	const category = String(command?.config?.category || "").toLowerCase();
+	return category === "events" ? "event" : "command";
 }
 
-function removeCommandRegistrations(
-    commandName,
-    command
-) {
-    const lowerName =
-        String(commandName).toLowerCase();
+function validateModuleExport(command) {
+	if (!command || typeof command !== "object")
+		throw new Error("File must export a command/event object.");
 
-    if (
-        GoatBot.commands &&
-        GoatBot.commands.has(lowerName)
-    ) {
-        GoatBot.commands.delete(lowerName);
-    }
+	if (!command.config || typeof command.config !== "object")
+		throw new Error("config is missing.");
 
-    if (GoatBot.aliases) {
-        for (
-            const [alias, target] of
-            GoatBot.aliases.entries()
-        ) {
-            if (
-                String(target).toLowerCase() ===
-                    lowerName ||
-                (
-                    command?.config?.aliases &&
-                    command.config.aliases.includes(alias)
-                )
-            ) {
-                GoatBot.aliases.delete(alias);
-            }
-        }
-    }
+	if (typeof command.config.name !== "string" ||
+		!command.config.name.trim() ||
+		!/^[a-zA-Z0-9_-]+$/.test(command.config.name.trim()))
+		throw new Error("config.name is missing or invalid.");
 
-    if (Array.isArray(GoatBot.onChat)) {
-        GoatBot.onChat =
-            GoatBot.onChat.filter(
-                name =>
-                    String(name).toLowerCase() !==
-                    lowerName
-            );
-    }
+	if (typeof command.config.category !== "string" ||
+		!command.config.category.trim())
+		throw new Error("config.category is missing.");
 
-    if (Array.isArray(GoatBot.onEvent)) {
-        GoatBot.onEvent =
-            GoatBot.onEvent.filter(
-                name =>
-                    String(name).toLowerCase() !==
-                    lowerName
-            );
-    }
+	if (typeof command.onStart !== "function")
+		throw new Error("onStart() is required.");
 
-    if (Array.isArray(GoatBot.onAnyEvent)) {
-        GoatBot.onAnyEvent =
-            GoatBot.onAnyEvent.filter(
-                name =>
-                    String(name).toLowerCase() !==
-                    lowerName
-            );
-    }
+	const type = detectModuleType(command);
 
-    if (Array.isArray(GoatBot.onFirstChat)) {
-        GoatBot.onFirstChat =
-            GoatBot.onFirstChat.filter(
-                item =>
-                    String(item?.commandName)
-                        .toLowerCase() !==
-                    lowerName
-            );
-    }
+	if (type === "command") {
+		const role = Number(command.config.role ?? 0);
+		if (!Number.isInteger(role) || role < 0 || role > 2)
+			throw new Error("Invalid command role. Use 0, 1 or 2.");
+		command.config.role = role;
+	}
 
-    if (Array.isArray(GoatBot.commandFilesPath)) {
-        GoatBot.commandFilesPath =
-            GoatBot.commandFilesPath.filter(
-                item =>
-                    !item?.commandName?.some(
-                        name =>
-                            String(name).toLowerCase() ===
-                            lowerName
-                    )
-            );
-    }
+	return type;
 }
 
-function registerCommand(
-    command,
-    filePath
-) {
-    validateCommandExport(command);
-
-    const commandName =
-        command.config.name.trim();
-
-    const lowerName =
-        commandName.toLowerCase();
-
-    command.location =
-        filePath;
-
-    if (!GoatBot.commands)
-        throw new Error(
-            "GoatBot.commands is not initialized."
-        );
-
-    if (!GoatBot.aliases)
-        throw new Error(
-            "GoatBot.aliases is not initialized."
-        );
-
-    const aliases =
-        Array.isArray(command.config.aliases)
-            ? command.config.aliases
-            : [];
-
-    const validAliases = [];
-
-    for (const alias of aliases) {
-        if (
-            typeof alias !== "string" ||
-            !alias.trim()
-        ) {
-            throw new Error(
-                `Invalid alias in "${commandName}".`
-            );
-        }
-
-        const aliasName =
-            alias.trim().toLowerCase();
-
-        if (
-            aliasName === lowerName
-        ) {
-            throw new Error(
-                `Alias "${alias}" is same as command name.`
-            );
-        }
-
-        const duplicateAlias =
-            aliases.filter(
-                item =>
-                    String(item).toLowerCase() ===
-                    aliasName
-            ).length > 1;
-
-        if (duplicateAlias) {
-            throw new Error(
-                `Duplicate alias "${alias}".`
-            );
-        }
-
-        const existingAlias =
-            GoatBot.aliases.get(aliasName);
-
-        if (
-            existingAlias &&
-            String(existingAlias).toLowerCase() !==
-                lowerName
-        ) {
-            throw new Error(
-                `Alias "${alias}" already belongs to "${existingAlias}".`
-            );
-        }
-
-        validAliases.push(aliasName);
-    }
-
-    GoatBot.commands.set(
-        lowerName,
-        command
-    );
-
-    for (const alias of validAliases) {
-        GoatBot.aliases.set(
-            alias,
-            lowerName
-        );
-    }
-
-    if (
-        typeof command.onChat === "function"
-    ) {
-        if (!Array.isArray(GoatBot.onChat))
-            GoatBot.onChat = [];
-
-        if (
-            !GoatBot.onChat.some(
-                name =>
-                    String(name).toLowerCase() ===
-                    lowerName
-            )
-        ) {
-            GoatBot.onChat.push(lowerName);
-        }
-    }
-
-    if (
-        typeof command.onFirstChat === "function"
-    ) {
-        if (!Array.isArray(GoatBot.onFirstChat))
-            GoatBot.onFirstChat = [];
-
-        GoatBot.onFirstChat.push({
-            commandName: lowerName,
-            threadIDsChattedFirstTime: []
-        });
-    }
-
-    if (
-        typeof command.onEvent === "function"
-    ) {
-        if (!Array.isArray(GoatBot.onEvent))
-            GoatBot.onEvent = [];
-
-        if (
-            !GoatBot.onEvent.some(
-                name =>
-                    String(name).toLowerCase() ===
-                    lowerName
-            )
-        ) {
-            GoatBot.onEvent.push(lowerName);
-        }
-    }
-
-    if (
-        typeof command.onAnyEvent === "function"
-    ) {
-        if (!Array.isArray(GoatBot.onAnyEvent))
-            GoatBot.onAnyEvent = [];
-
-        if (
-            !GoatBot.onAnyEvent.some(
-                name =>
-                    String(name).toLowerCase() ===
-                    lowerName
-            )
-        ) {
-            GoatBot.onAnyEvent.push(lowerName);
-        }
-    }
-
-    if (!Array.isArray(GoatBot.commandFilesPath))
-        GoatBot.commandFilesPath = [];
-
-    GoatBot.commandFilesPath =
-        GoatBot.commandFilesPath.filter(
-            item =>
-                !item?.commandName?.some(
-                    name =>
-                        String(name).toLowerCase() ===
-                        lowerName
-                )
-        );
-
-    GoatBot.commandFilesPath.push({
-        filePath: path.normalize(filePath),
-        commandName: [
-            commandName,
-            ...validAliases
-        ]
-    });
-
-    return command;
+function ensureDirectories() {
+	const root = process.cwd();
+	const commandDir = path.join(root, "scripts", "cmds");
+	const eventDir = path.join(root, "scripts", "events");
+	fs.ensureDirSync(commandDir);
+	fs.ensureDirSync(eventDir);
+	return { commandDir, eventDir };
 }
 
 function clearRequireCache(filePath) {
-    try {
-        const resolved =
-            require.resolve(filePath);
+	try {
+		delete require.cache[require.resolve(filePath)];
+	}
+	catch {
+		// Not cached.
+	}
+}
 
-        delete require.cache[resolved];
-    }
-    catch {
-        // File is not in require cache.
-    }
+function removeCommandRegistrations(commandName, oldCommand) {
+	const lowerName = String(commandName).toLowerCase();
+
+	GoatBot.commands?.delete(lowerName);
+
+	if (GoatBot.aliases) {
+		for (const [alias, target] of GoatBot.aliases.entries()) {
+			if (String(target).toLowerCase() === lowerName ||
+				(oldCommand?.config?.aliases || []).some(item =>
+					String(item).toLowerCase() === String(alias).toLowerCase()))
+				GoatBot.aliases.delete(alias);
+		}
+	}
+
+	for (const listName of ["onChat", "onEvent", "onAnyEvent"]) {
+		if (Array.isArray(GoatBot[listName])) {
+			GoatBot[listName] = GoatBot[listName].filter(
+				name => String(name).toLowerCase() !== lowerName
+			);
+		}
+	}
+
+	if (Array.isArray(GoatBot.onFirstChat)) {
+		GoatBot.onFirstChat = GoatBot.onFirstChat.filter(
+			item => String(item?.commandName).toLowerCase() !== lowerName
+		);
+	}
+
+	if (Array.isArray(GoatBot.commandFilesPath)) {
+		GoatBot.commandFilesPath = GoatBot.commandFilesPath.filter(
+			item => !(item?.commandName || []).some(
+				name => String(name).toLowerCase() === lowerName
+			)
+		);
+	}
+}
+
+function registerCommand(command, filePath) {
+	const name = command.config.name.trim();
+	const key = name.toLowerCase();
+
+	if (!(GoatBot.commands instanceof Map))
+		throw new Error("GoatBot.commands Map is not initialized.");
+
+	if (!(GoatBot.aliases instanceof Map))
+		throw new Error("GoatBot.aliases Map is not initialized.");
+
+	command.location = filePath;
+
+	const aliases = Array.isArray(command.config.aliases)
+		? command.config.aliases
+		: [];
+	const validAliases = [];
+
+	for (const alias of aliases) {
+		if (typeof alias !== "string" || !alias.trim())
+			throw new Error(`Invalid alias in "${name}".`);
+
+		const aliasKey = alias.trim().toLowerCase();
+		if (aliasKey === key)
+			throw new Error(`Alias "${alias}" duplicates command name.`);
+
+		if (aliases.filter(item =>
+			String(item).trim().toLowerCase() === aliasKey).length > 1)
+			throw new Error(`Duplicate alias "${alias}".`);
+
+		const owner = GoatBot.aliases.get(aliasKey);
+		if (owner && String(owner).toLowerCase() !== key)
+			throw new Error(`Alias "${alias}" already belongs to "${owner}".`);
+
+		validAliases.push(aliasKey);
+	}
+
+	GoatBot.commands.set(key, command);
+	for (const alias of validAliases)
+		GoatBot.aliases.set(alias, key);
+
+	if (typeof command.onChat === "function") {
+		GoatBot.onChat ||= [];
+		if (!GoatBot.onChat.some(item => String(item).toLowerCase() === key))
+			GoatBot.onChat.push(key);
+	}
+
+	if (typeof command.onFirstChat === "function") {
+		GoatBot.onFirstChat ||= [];
+		GoatBot.onFirstChat.push({
+			commandName: key,
+			threadIDsChattedFirstTime: []
+		});
+	}
+
+	if (typeof command.onEvent === "function") {
+		GoatBot.onEvent ||= [];
+		if (!GoatBot.onEvent.some(item => String(item).toLowerCase() === key))
+			GoatBot.onEvent.push(key);
+	}
+
+	if (typeof command.onAnyEvent === "function") {
+		GoatBot.onAnyEvent ||= [];
+		if (!GoatBot.onAnyEvent.some(item => String(item).toLowerCase() === key))
+			GoatBot.onAnyEvent.push(key);
+	}
+
+	GoatBot.commandFilesPath ||= [];
+	GoatBot.commandFilesPath = GoatBot.commandFilesPath.filter(
+		item => !(item?.commandName || []).some(
+			itemName => String(itemName).toLowerCase() === key
+		)
+	);
+	GoatBot.commandFilesPath.push({
+		filePath: path.normalize(filePath),
+		commandName: [name, ...validAliases]
+	});
+
+	return command;
+}
+
+function registerEvent(command, filePath) {
+	if (!(GoatBot.eventCommands instanceof Map))
+		throw new Error("GoatBot.eventCommands Map is not initialized.");
+
+	const name = command.config.name.trim();
+	const key = name.toLowerCase();
+	command.location = filePath;
+	GoatBot.eventCommands.set(key, command);
+	return command;
 }
 
 async function callOnLoad(command, api) {
-    if (
-        typeof command.onLoad !== "function"
-    ) {
-        return;
-    }
+	if (typeof command.onLoad !== "function")
+		return;
 
-    await command.onLoad({
-        api,
-        threadModel:
-            global.threadModel,
-        userModel:
-            global.userModel,
-        dashBoardModel:
-            global.dashBoardModel,
-        globalModel:
-            global.globalModel,
-        threadsData:
-            global.db?.threadsData,
-        usersData:
-            global.db?.usersData,
-        dashBoardData:
-            global.db?.dashBoardData,
-        globalData:
-            global.db?.globalData
-    });
+	await command.onLoad({
+		api,
+		threadModel: global.threadModel,
+		userModel: global.userModel,
+		dashBoardModel: global.dashBoardModel,
+		globalModel: global.globalModel,
+		threadsData: global.db?.threadsData,
+		usersData: global.db?.usersData,
+		dashBoardData: global.db?.dashBoardData,
+		globalData: global.db?.globalData
+	});
 }
 
-async function loadInstalledCommand(
-    filePath,
-    api,
-    overwrite = false
-) {
-    const normalizedPath =
-        path.normalize(filePath);
+async function loadInstalledModule(filePath, api, overwrite = false) {
+	clearRequireCache(filePath);
 
-    clearRequireCache(
-        normalizedPath
-    );
+	let command;
+	try {
+		command = require(filePath);
+	}
+	catch (error) {
+		throw new Error(`Module load failed: ${error.stack || error.message}`);
+	}
 
-    let command;
+	const type = validateModuleExport(command);
+	const name = command.config.name.trim();
+	const key = name.toLowerCase();
+	const registry = type === "event" ? GoatBot.eventCommands : GoatBot.commands;
+	const existing = registry?.get(key);
 
-    try {
-        command =
-            require(normalizedPath);
-    }
-    catch (error) {
-        throw new Error(
-            `Command could not be loaded.\n${error.stack || error.message}`
-        );
-    }
+	if (existing && !overwrite)
+		throw new Error(`${type} "${name}" is already loaded.`);
 
-    validateCommandExport(command);
+	if (type === "command" && existing)
+		removeCommandRegistrations(name, existing);
 
-    const commandName =
-        command.config.name.trim();
+	try {
+		if (type === "event")
+			registerEvent(command, filePath);
+		else
+			registerCommand(command, filePath);
 
-    const lowerName =
-        commandName.toLowerCase();
-
-    const existing =
-        GoatBot.commands?.get(lowerName);
-
-    if (
-        existing &&
-        !overwrite
-    ) {
-        throw new Error(
-            `Command "${commandName}" is already loaded.`
-        );
-    }
-
-    if (existing) {
-        removeCommandRegistrations(
-            commandName,
-            existing
-        );
-    }
-
-    try {
-        registerCommand(
-            command,
-            normalizedPath
-        );
-
-        await callOnLoad(
-            command,
-            api
-        );
-
-        return command;
-    }
-    catch (error) {
-        removeCommandRegistrations(
-            commandName,
-            command
-        );
-
-        throw error;
-    }
+		await callOnLoad(command, api);
+		return { command, type, name };
+	}
+	catch (error) {
+		if (type === "event")
+			GoatBot.eventCommands.delete(key);
+		else
+			removeCommandRegistrations(name, command);
+		throw error;
+	}
 }
 
-function ensureCommandDirectory() {
-    const dir =
-        path.join(
-            process.cwd(),
-            "scripts",
-            "cmds"
-        );
-
-    fs.ensureDirSync(dir);
-
-    return dir;
+function getInstallMessage(type, fileName, location, extra = "") {
+	const label = type === "event" ? "Event" : "Command";
+	return (
+		`✅ 𝐈𝐧𝐬𝐭𝐚𝐥𝐥𝐞𝐝: ${fileName}\n` +
+		`📂 𝐓𝐲𝐩𝐞: ${label}\n` +
+		`📍 𝐋𝐨𝐜𝐚𝐭𝐢𝐨𝐧: ${location}\n` +
+		`📌 𝐒𝐭𝐚𝐭𝐮𝐬: 𝐋𝐨𝐚𝐝𝐞𝐝 𝐒𝐮𝐜𝐜𝐞𝐬𝐬𝐟𝐮𝐥𝐥𝐲\n` +
+		`👑 𝐀𝐮𝐭𝐡𝐨𝐫: ${AUTHOR}` +
+		(extra ? `\n${extra}` : "")
+	);
 }
 
-function getInstallMessage(
-    type,
-    fileName,
-    extra = ""
-) {
-    if (type === "success") {
-        return (
-            `✅ 𝐈𝐧𝐬𝐭𝐚𝐥𝐥𝐞𝐝: ${fileName}\n` +
-            `📌 𝐒𝐭𝐚𝐭𝐮𝐬: 𝐑𝐞𝐚𝐝𝐲` +
-            (extra ? `\n${extra}` : "")
-        );
-    }
+function getFailureMessage(fileName, error) {
+	return `❌ 𝐈𝐧𝐬𝐭𝐚𝐥𝐥 𝐟𝐚𝐢𝐥𝐞𝐝: ${fileName || "unknown"}\n⚠️ ${error}`;
+}
 
-    return (
-        `❌ 𝐈𝐧𝐬𝐭𝐚𝐥𝐥 𝐟𝐚𝐢𝐥𝐞𝐝: ${fileName}\n` +
-        `⚠️ ${extra || "Unknown error"}`
-    );
+function makeTempFile(dir, prefix, fileName) {
+	return path.join(dir, `.${prefix}-${Date.now()}-${process.pid}-${fileName}`);
 }
 
 module.exports = {
-    config: {
-        name: "install",
-        version: "1.0.0",
-        author: "𝐌𝐚𝐑𝐮𝐅",
-        countDown: 3,
-        role: 2,
-        hasPrefix: false,
-        description: "Install command via reply, code or URL",
-        category: "owner"
-    },
-
-    onStart: async function ({
-        args,
-        message,
-        event,
-        api
-    }) {
-        let rawCode = "";
-        let fileName = "";
-
-        try {
-            /*
-             * METHOD 1
-             * Reply to code or URL
-             */
-            if (event.messageReply?.body) {
-                const replyText =
-                    event.messageReply.body.trim();
-
-                const url =
-                    extractUrlFromText(replyText);
-
-                if (url) {
-                    rawCode =
-                        await fetchCodeFromUrl(url);
-
-                    if (!rawCode) {
-                        return message.reply(
-                            "❌ 𝐅𝐚𝐢𝐥𝐞𝐝 𝐭𝐨 𝐟𝐞𝐭𝐜𝐡 𝐜𝐨𝐝𝐞 𝐟𝐫𝐨𝐦 𝐔𝐑𝐋."
-                        );
-                    }
-                }
-                else {
-                    rawCode = replyText;
-                }
-
-                fileName =
-                    extractCommandName(rawCode);
-            }
-
-            /*
-             * METHOD 2
-             * install <URL>
-             */
-            else if (
-                args[0] &&
-                isURL(args[0])
-            ) {
-                rawCode =
-                    await fetchCodeFromUrl(
-                        args[0]
-                    );
-
-                if (!rawCode) {
-                    return message.reply(
-                        "❌ 𝐈𝐧𝐯𝐚𝐥𝐢𝐝 𝐨𝐫 𝐮𝐧𝐫𝐞𝐚𝐜𝐡𝐚𝐛𝐥𝐞 𝐔𝐑𝐋."
-                    );
-                }
-
-                fileName =
-                    extractCommandName(rawCode);
-            }
-
-            /*
-             * METHOD 3
-             * install name.js <code>
-             */
-            else if (
-                args.length >= 2
-            ) {
-                fileName =
-                    normalizeFileName(
-                        args[0]
-                    );
-
-                rawCode =
-                    args.slice(1).join(" ");
-            }
-
-            /*
-             * Nothing supplied
-             */
-            if (!rawCode) {
-                return message.reply(
-                    "⚠️ 𝐍𝐨 𝐜𝐨𝐝𝐞 𝐩𝐫𝐨𝐯𝐢𝐝𝐞𝐝.\n\n" +
-                    "𝐔𝐬𝐚𝐠𝐞:\n" +
-                    "• 𝐑𝐞𝐩𝐥𝐲 𝐭𝐨 𝐜𝐨𝐝𝐞/𝐔𝐑𝐋\n" +
-                    "• 𝐢𝐧𝐬𝐭𝐚𝐥𝐥 <𝐔𝐑𝐋>\n" +
-                    "• 𝐢𝐧𝐬𝐭𝐚𝐥𝐥 <𝐧𝐚𝐦𝐞.𝐣𝐬> <𝐜𝐨𝐝𝐞>"
-                );
-            }
-
-            rawCode =
-                cleanCodeResponse(
-                    rawCode
-                );
-
-            if (!rawCode) {
-                return message.reply(
-                    "❌ 𝐂𝐨𝐦𝐦𝐚𝐧𝐝 𝐜𝐨𝐝𝐞 𝐢𝐬 𝐞𝐦𝐩𝐭𝐲."
-                );
-            }
-
-            /*
-             * Validate JavaScript syntax BEFORE writing.
-             */
-            try {
-                new Function(
-                    rawCode
-                );
-            }
-            catch (error) {
-                return message.reply(
-                    `❌ 𝐈𝐧𝐯𝐚𝐥𝐢𝐝 𝐉𝐚𝐯𝐚𝐒𝐜𝐫𝐢𝐩𝐭.\n\n` +
-                    `⚠️ ${error.message}`
-                );
-            }
-
-            /*
-             * Detect filename from command metadata.
-             */
-            if (!fileName) {
-                fileName =
-                    extractCommandName(
-                        rawCode
-                    );
-            }
-
-            if (!fileName) {
-                return message.reply(
-                    "❌ 𝐂𝐨𝐮𝐥𝐝 𝐧𝐨𝐭 𝐝𝐞𝐭𝐞𝐜𝐭 𝐜𝐨𝐦𝐦𝐚𝐧𝐝 𝐧𝐚𝐦𝐞.\n\n" +
-                    "𝐌𝐚𝐤𝐞 𝐬𝐮𝐫𝐞 𝐭𝐡𝐞 𝐜𝐨𝐝𝐞 𝐡𝐚𝐬:\n\n" +
-                    `module.exports.config = {\n` +
-                    `  name: "example"\n` +
-                    `};`
-                );
-            }
-
-            fileName =
-                normalizeFileName(
-                    fileName
-                );
-
-            /*
-             * Prevent unsafe filenames.
-             */
-            if (
-                fileName === "." ||
-                fileName === ".." ||
-                fileName.includes("/") ||
-                fileName.includes("\\") ||
-                !fileName.toLowerCase().endsWith(".js")
-            ) {
-                return message.reply(
-                    "❌ 𝐈𝐧𝐯𝐚𝐥𝐢𝐝 𝐜𝐨𝐦𝐦𝐚𝐧𝐝 𝐟𝐢𝐥𝐞𝐧𝐚𝐦𝐞."
-                );
-            }
-
-            const commandDir =
-                ensureCommandDirectory();
-
-            const filePath =
-                path.join(
-                    commandDir,
-                    fileName
-                );
-
-            /*
-             * Test-load command BEFORE writing.
-             */
-            const tempPath =
-                path.join(
-                    commandDir,
-                    `.install-${Date.now()}-${fileName}`
-                );
-
-            fs.writeFileSync(
-                tempPath,
-                rawCode,
-                "utf8"
-            );
-
-            let testCommand;
-
-            try {
-                clearRequireCache(
-                    tempPath
-                );
-
-                testCommand =
-                    require(tempPath);
-
-                validateCommandExport(
-                    testCommand
-                );
-            }
-            catch (error) {
-                clearRequireCache(
-                    tempPath
-                );
-
-                fs.removeSync(
-                    tempPath
-                );
-
-                return message.reply(
-                    `❌ 𝐂𝐨𝐦𝐦𝐚𝐧𝐝 𝐯𝐚𝐥𝐢𝐝𝐚𝐭𝐢𝐨𝐧 𝐟𝐚𝐢𝐥𝐞𝐝.\n\n` +
-                    `⚠️ ${error.message}`
-                );
-            }
-
-            clearRequireCache(
-                tempPath
-            );
-
-            fs.removeSync(
-                tempPath
-            );
-
-            /*
-             * Filename should match command name.
-             */
-            const detectedFileName =
-                `${testCommand.config.name}.js`;
-
-            if (
-                fileName.toLowerCase() !==
-                detectedFileName.toLowerCase()
-            ) {
-                fileName =
-                    detectedFileName;
-
-                const newFilePath =
-                    path.join(
-                        commandDir,
-                        fileName
-                    );
-
-                /*
-                 * Reassign final path.
-                 */
-                if (
-                    filePath !== newFilePath
-                ) {
-                    // Nothing else needed.
-                }
-            }
-
-            const finalFilePath =
-                path.join(
-                    commandDir,
-                    fileName
-                );
-
-            const commandName =
-                testCommand.config.name.trim();
-
-            const commandKey =
-                commandName.toLowerCase();
-
-            const existingCommand =
-                GoatBot.commands?.get(
-                    commandKey
-                );
-
-            /*
-             * Existing command:
-             * ask for reaction before overwrite.
-             */
-            if (existingCommand) {
-                return message.reply(
-                    `⚠️ ${commandName} 𝐚𝐥𝐫𝐞𝐚𝐝𝐲 𝐞𝐱𝐢𝐬𝐭𝐬.\n\n` +
-                    `𝐑𝐞𝐚𝐜𝐭 𝐭𝐨 𝐭𝐡𝐢𝐬 𝐦𝐞𝐬𝐬𝐚𝐠𝐞 𝐭𝐨 𝐨𝐯𝐞𝐫𝐰𝐫𝐢𝐭𝐞.`,
-                    (err, info) => {
-                        if (err || !info?.messageID) {
-                            return;
-                        }
-
-                        if (!GoatBot.onReaction) {
-                            return;
-                        }
-
-                        GoatBot.onReaction.set(
-                            info.messageID,
-                            {
-                                commandName: "install",
-                                author: event.senderID,
-                                data: {
-                                    rawCode,
-                                    fileName
-                                }
-                            }
-                        );
-                    }
-                );
-            }
-
-            /*
-             * Install missing dependencies.
-             */
-            let installedPackages = [];
-
-            try {
-                installedPackages =
-                    await installMissingPackages(
-                        rawCode
-                    );
-            }
-            catch (error) {
-                return message.reply(
-                    getInstallMessage(
-                        "error",
-                        fileName,
-                        error.message
-                    )
-                );
-            }
-
-            /*
-             * Save command.
-             */
-            fs.ensureDirSync(
-                commandDir
-            );
-
-            fs.writeFileSync(
-                finalFilePath,
-                rawCode,
-                "utf8"
-            );
-
-            /*
-             * Load immediately.
-             */
-            try {
-                await loadInstalledCommand(
-                    finalFilePath,
-                    api,
-                    false
-                );
-            }
-            catch (error) {
-                /*
-                 * If loading failed, don't leave
-                 * a broken command file behind.
-                 */
-                try {
-                    if (
-                        fs.existsSync(
-                            finalFilePath
-                        )
-                    ) {
-                        fs.removeSync(
-                            finalFilePath
-                        );
-                    }
-                }
-                catch {
-                    // Ignore cleanup error.
-                }
-
-                return message.reply(
-                    getInstallMessage(
-                        "error",
-                        fileName,
-                        error.message
-                    )
-                );
-            }
-
-            let extra = "";
-
-            if (
-                installedPackages.length
-            ) {
-                extra =
-                    `📦 𝐃𝐞𝐩𝐞𝐧𝐝𝐞𝐧𝐜𝐢𝐞𝐬: ${installedPackages.join(", ")}`;
-            }
-
-            return message.reply(
-                getInstallMessage(
-                    "success",
-                    fileName,
-                    extra
-                )
-            );
-        }
-        catch (error) {
-            return message.reply(
-                `❌ 𝐈𝐧𝐬𝐭𝐚𝐥𝐥𝐚𝐭𝐢𝐨𝐧 𝐟𝐚𝐢𝐥𝐞𝐝.\n\n` +
-                `⚠️ ${error.message || "Unknown error"}`
-            );
-        }
-    },
-
-    onReaction: async function ({
-        Reaction,
-        event,
-        message,
-        api
-    }) {
-        if (
-            event.userID !==
-            Reaction.author
-        ) {
-            return;
-        }
-
-        const data =
-            Reaction.data || {};
-
-        const rawCode =
-            data.rawCode;
-
-        let fileName =
-            data.fileName;
-
-        if (!rawCode || !fileName) {
-            return message.reply(
-                "❌ 𝐈𝐧𝐬𝐭𝐚𝐥𝐥 𝐝𝐚𝐭𝐚 𝐢𝐬 𝐦𝐢𝐬𝐬𝐢𝐧𝐠."
-            );
-        }
-
-        try {
-            fileName =
-                normalizeFileName(
-                    fileName
-                );
-
-            const commandDir =
-                ensureCommandDirectory();
-
-            let installedPackages = [];
-
-            try {
-                installedPackages =
-                    await installMissingPackages(
-                        rawCode
-                    );
-            }
-            catch (error) {
-                return message.reply(
-                    `❌ 𝐃𝐞𝐩𝐞𝐧𝐝𝐞𝐧𝐜𝐲 𝐢𝐧𝐬𝐭𝐚𝐥𝐥 𝐟𝐚𝐢𝐥𝐞𝐝.\n\n` +
-                    `⚠️ ${error.message}`
-                );
-            }
-
-            const filePath =
-                path.join(
-                    commandDir,
-                    fileName
-                );
-
-            /*
-             * Validate new code before replacing
-             * the currently working command.
-             */
-            const tempPath =
-                path.join(
-                    commandDir,
-                    `.overwrite-${Date.now()}-${fileName}`
-                );
-
-            fs.writeFileSync(
-                tempPath,
-                rawCode,
-                "utf8"
-            );
-
-            let newCommand;
-
-            try {
-                clearRequireCache(
-                    tempPath
-                );
-
-                newCommand =
-                    require(tempPath);
-
-                validateCommandExport(
-                    newCommand
-                );
-            }
-            catch (error) {
-                clearRequireCache(
-                    tempPath
-                );
-
-                fs.removeSync(
-                    tempPath
-                );
-
-                return message.reply(
-                    `❌ 𝐎𝐯𝐞𝐫𝐰𝐫𝐢𝐭𝐞 𝐯𝐚𝐥𝐢𝐝𝐚𝐭𝐢𝐨𝐧 𝐟𝐚𝐢𝐥𝐞𝐝.\n\n` +
-                    `⚠️ ${error.message}`
-                );
-            }
-
-            clearRequireCache(
-                tempPath
-            );
-
-            fs.removeSync(
-                tempPath
-            );
-
-            /*
-             * Make filename follow command name.
-             */
-            fileName =
-                `${newCommand.config.name}.js`;
-
-            const finalPath =
-                path.join(
-                    commandDir,
-                    fileName
-                );
-
-            /*
-             * Backup old command.
-             */
-            const backupPath =
-                `${finalPath}.install-backup`;
-
-            let hadOldFile =
-                fs.existsSync(
-                    finalPath
-                );
-
-            if (hadOldFile) {
-                fs.copyFileSync(
-                    finalPath,
-                    backupPath
-                );
-            }
-
-            try {
-                fs.writeFileSync(
-                    finalPath,
-                    rawCode,
-                    "utf8"
-                );
-
-                await loadInstalledCommand(
-                    finalPath,
-                    api,
-                    true
-                );
-
-                if (
-                    fs.existsSync(
-                        backupPath
-                    )
-                ) {
-                    fs.removeSync(
-                        backupPath
-                    );
-                }
-
-                let extra = "";
-
-                if (
-                    installedPackages.length
-                ) {
-                    extra =
-                        `\n📦 𝐃𝐞𝐩𝐞𝐧𝐝𝐞𝐧𝐜𝐢𝐞𝐬: ${installedPackages.join(", ")}`;
-                }
-
-                return message.reply(
-                    `✅ 𝐎𝐯𝐞𝐫𝐰𝐫𝐢𝐭𝐭𝐞𝐧: ${fileName}\n` +
-                    `📌 𝐒𝐭𝐚𝐭𝐮𝐬: 𝐑𝐞𝐚𝐝𝐲${extra}`
-                );
-            }
-            catch (error) {
-                /*
-                 * Restore old file if reload fails.
-                 */
-                try {
-                    if (
-                        fs.existsSync(
-                            backupPath
-                        )
-                    ) {
-                        fs.copyFileSync(
-                            backupPath,
-                            finalPath
-                        );
-
-                        fs.removeSync(
-                            backupPath
-                        );
-
-                        clearRequireCache(
-                            finalPath
-                        );
-
-                        try {
-                            await loadInstalledCommand(
-                                finalPath,
-                                api,
-                                true
-                            );
-                        }
-                        catch {
-                            // Old command restore failed.
-                        }
-                    }
-                }
-                catch {
-                    // Ignore restore error.
-                }
-
-                return message.reply(
-                    `❌ 𝐎𝐯𝐞𝐫𝐰𝐫𝐢𝐭𝐞 𝐟𝐚𝐢𝐥𝐞𝐝: ${fileName}\n` +
-                    `⚠️ ${error.message}`
-                );
-            }
-        }
-        catch (error) {
-            return message.reply(
-                `❌ 𝐎𝐯𝐞𝐫𝐰𝐫𝐢𝐭𝐞 𝐟𝐚𝐢𝐥𝐞𝐝.\n\n` +
-                `⚠️ ${error.message}`
-            );
-        }
-    }
+	config: {
+		name: "install",
+		version: VERSION,
+		author: AUTHOR,
+		countDown: 3,
+		role: 2,
+		hasPrefix: false,
+		shortDescription: "Automatically install commands and events",
+		longDescription: "Install GoatBot command or event modules from replied code, direct code, or a URL. Automatically detects the module type, saves it in the correct folder, installs missing dependencies, registers it in the running bot, and supports reaction-based overwrite.",
+		description: "Automatically install GoatBot commands and events from code or URL",
+		category: "owner"
+	},
+
+	onStart: async function ({ args, message, event, api }) {
+		let rawCode = "";
+		let fileName = "";
+
+		try {
+			// Method 1: reply to source code or URL.
+			if (event.messageReply?.body) {
+				const replyText = event.messageReply.body.trim();
+				const url = extractUrlFromText(replyText);
+				rawCode = url ? await fetchCodeFromUrl(url) : replyText;
+				if (!rawCode)
+					return message.reply("❌ 𝐂𝐨𝐮𝐥𝐝 𝐧𝐨𝐭 𝐟𝐞𝐭𝐜𝐡 𝐜𝐨𝐝𝐞 𝐟𝐫𝐨𝐦 𝐭𝐡𝐞 𝐔𝐑𝐋.");
+				fileName = extractCommandName(rawCode) || "";
+			}
+			// Method 2: install <URL>
+			else if (args[0] && isURL(args[0])) {
+				rawCode = await fetchCodeFromUrl(args[0]);
+				if (!rawCode)
+					return message.reply("❌ 𝐈𝐧𝐯𝐚𝐥𝐢𝐝 𝐨𝐫 𝐮𝐧𝐫𝐞𝐚𝐜𝐡𝐚𝐛𝐥𝐞 𝐔𝐑𝐋.");
+				fileName = extractCommandName(rawCode) || "";
+			}
+			// Method 3: install <filename.js> <code>
+			else if (args.length >= 2) {
+				fileName = normalizeFileName(args[0]);
+				rawCode = args.slice(1).join(" ");
+			}
+
+			if (!rawCode) {
+				return message.reply(
+					"⚠️ 𝐍𝐨 𝐜𝐨𝐝𝐞 𝐩𝐫𝐨𝐯𝐢𝐝𝐞𝐝.\n\n" +
+					"𝐔𝐬𝐚𝐠𝐞:\n" +
+					"• Reply to code/URL\n" +
+					"• install <URL>\n" +
+					"• install <name.js> <code>"
+				);
+			}
+
+			rawCode = cleanCodeResponse(rawCode);
+			if (!rawCode)
+				return message.reply("❌ 𝐂𝐨𝐝𝐞 𝐢𝐬 𝐞𝐦𝐩𝐭𝐲.");
+
+			// Syntax check only; module execution happens during validation below.
+			try {
+				new Function(rawCode);
+			}
+			catch (error) {
+				return message.reply(`❌ 𝐈𝐧𝐯𝐚𝐥𝐢𝐝 𝐉𝐚𝐯𝐚𝐒𝐜𝐫𝐢𝐩𝐭.\n⚠️ ${error.message}`);
+			}
+
+			if (!fileName)
+				fileName = extractCommandName(rawCode) || "";
+
+			if (!fileName)
+				return message.reply("❌ 𝐂𝐨𝐮𝐥𝐝 𝐧𝐨𝐭 𝐝𝐞𝐭𝐞𝐜𝐭 config.name.");
+
+			fileName = normalizeFileName(fileName);
+			const { commandDir, eventDir } = ensureDirectories();
+
+			// Validate module in a temporary .js file to detect category/type.
+			const tempDir = path.join(process.cwd(), "scripts", "tmp");
+			fs.ensureDirSync(tempDir);
+			const tempPath = makeTempFile(tempDir, "install-check", fileName);
+			fs.writeFileSync(tempPath, rawCode, "utf8");
+
+			let testCommand;
+			let type;
+			try {
+				clearRequireCache(tempPath);
+				testCommand = require(tempPath);
+				type = validateModuleExport(testCommand);
+			}
+			catch (error) {
+				clearRequireCache(tempPath);
+				fs.removeSync(tempPath);
+				return message.reply(`❌ 𝐕𝐚𝐥𝐢𝐝𝐚𝐭𝐢𝐨𝐧 𝐟𝐚𝐢𝐥𝐞𝐝.\n⚠️ ${error.message}`);
+			}
+			clearRequireCache(tempPath);
+			fs.removeSync(tempPath);
+
+			fileName = normalizeFileName(`${testCommand.config.name}.js`);
+			const targetDir = type === "event" ? eventDir : commandDir;
+			const finalPath = path.join(targetDir, fileName);
+			const relativePath = path.relative(process.cwd(), finalPath).split(path.sep).join("/");
+
+			const registry = type === "event" ? GoatBot.eventCommands : GoatBot.commands;
+			const key = testCommand.config.name.trim().toLowerCase();
+			const existing = registry?.get(key);
+
+			if (existing) {
+				return message.reply(
+					`⚠️ ${testCommand.config.name} 𝐚𝐥𝐫𝐞𝐚𝐝𝐲 𝐞𝐱𝐢𝐬𝐭𝐬.\n\n` +
+					`📂 Type: ${type}\n📍 Location: ${relativePath}\n\n` +
+					`React to this message to overwrite.`,
+					(err, info) => {
+						if (err || !info?.messageID || !GoatBot.onReaction)
+							return;
+
+						GoatBot.onReaction.set(info.messageID, {
+							commandName: "install",
+							author: event.senderID,
+							data: { rawCode, fileName, type, relativePath }
+						});
+					}
+				);
+			}
+
+			let installedPackages = [];
+			try {
+				installedPackages = await installMissingPackages(rawCode);
+			}
+			catch (error) {
+				return message.reply(getFailureMessage(fileName, error.message));
+			}
+
+			fs.ensureDirSync(targetDir);
+			fs.writeFileSync(finalPath, rawCode, "utf8");
+
+			try {
+				const loaded = await loadInstalledModule(finalPath, api, false);
+				const extra = installedPackages.length
+					? `📦 𝐃𝐞𝐩𝐞𝐧𝐝𝐞𝐧𝐜𝐢𝐞𝐬: ${installedPackages.join(", ")}`
+					: "";
+				return message.reply(getInstallMessage(loaded.type, fileName, relativePath, extra));
+			}
+			catch (error) {
+				clearRequireCache(finalPath);
+				if (fs.existsSync(finalPath))
+					fs.removeSync(finalPath);
+				return message.reply(getFailureMessage(fileName, error.message));
+			}
+		}
+		catch (error) {
+			return message.reply(getFailureMessage(fileName, error.message || "Unknown error"));
+		}
+	},
+
+	onReaction: async function ({ Reaction, event, message, api }) {
+		if (event.userID !== Reaction.author)
+			return;
+
+		const data = Reaction.data || {};
+		const rawCode = data.rawCode;
+		let fileName = data.fileName;
+
+		if (!rawCode || !fileName)
+			return message.reply("❌ 𝐎𝐯𝐞𝐫𝐰𝐫𝐢𝐭𝐞 𝐝𝐚𝐭𝐚 𝐢𝐬 𝐦𝐢𝐬𝐬𝐢𝐧𝐠.");
+
+		let backupPath = null;
+		let finalPath = null;
+		let hadOldFile = false;
+		let oldRegistryEntry = null;
+
+		try {
+			const { commandDir, eventDir } = ensureDirectories();
+			const tempDir = path.join(process.cwd(), "scripts", "tmp");
+			fs.ensureDirSync(tempDir);
+
+			const tempPath = makeTempFile(tempDir, "overwrite-check", fileName);
+			fs.writeFileSync(tempPath, rawCode, "utf8");
+
+			let newCommand;
+			let type;
+			try {
+				clearRequireCache(tempPath);
+				newCommand = require(tempPath);
+				type = validateModuleExport(newCommand);
+			}
+			catch (error) {
+				clearRequireCache(tempPath);
+				fs.removeSync(tempPath);
+				return message.reply(`❌ 𝐎𝐯𝐞𝐫𝐰𝐫𝐢𝐭𝐞 𝐯𝐚𝐥𝐢𝐝𝐚𝐭𝐢𝐨𝐧 𝐟𝐚𝐢𝐥𝐞𝐝.\n⚠️ ${error.message}`);
+			}
+			clearRequireCache(tempPath);
+			fs.removeSync(tempPath);
+
+			fileName = normalizeFileName(`${newCommand.config.name}.js`);
+			const targetDir = type === "event" ? eventDir : commandDir;
+			finalPath = path.join(targetDir, fileName);
+			const relativePath = path.relative(process.cwd(), finalPath).split(path.sep).join("/");
+			const key = newCommand.config.name.trim().toLowerCase();
+			const registry = type === "event" ? GoatBot.eventCommands : GoatBot.commands;
+			oldRegistryEntry = registry?.get(key) || null;
+
+			let installedPackages = [];
+			try {
+				installedPackages = await installMissingPackages(rawCode);
+			}
+			catch (error) {
+				return message.reply(`❌ 𝐃𝐞𝐩𝐞𝐧𝐝𝐞𝐧𝐜𝐲 𝐢𝐧𝐬𝐭𝐚𝐥𝐥 𝐟𝐚𝐢𝐥𝐞𝐝.\n⚠️ ${error.message}`);
+			}
+
+			backupPath = `${finalPath}.install-backup`;
+			hadOldFile = fs.existsSync(finalPath);
+			if (hadOldFile)
+				fs.copyFileSync(finalPath, backupPath);
+
+			fs.writeFileSync(finalPath, rawCode, "utf8");
+
+			try {
+				const loaded = await loadInstalledModule(finalPath, api, true);
+				if (backupPath && fs.existsSync(backupPath))
+					fs.removeSync(backupPath);
+
+				const extra = installedPackages.length
+					? `📦 𝐃𝐞𝐩𝐞𝐧𝐝𝐞𝐧𝐜𝐢𝐞𝐬: ${installedPackages.join(", ")}`
+					: "";
+				return message.reply(
+					`♻️ 𝐎𝐯𝐞𝐫𝐰𝐫𝐢𝐭𝐭𝐞𝐧: ${fileName}\n` +
+					`📂 𝐓𝐲𝐩𝐞: ${loaded.type === "event" ? "Event" : "Command"}\n` +
+					`📍 𝐋𝐨𝐜𝐚𝐭𝐢𝐨𝐧: ${relativePath}\n` +
+					`📌 𝐒𝐭𝐚𝐭𝐮𝐬: 𝐋𝐨𝐚𝐝𝐞𝐝 𝐒𝐮𝐜𝐜𝐞𝐬𝐬𝐟𝐮𝐥𝐥𝐲\n` +
+					`👑 𝐀𝐮𝐭𝐡𝐨𝐫: ${AUTHOR}` +
+					(extra ? `\n${extra}` : "")
+				);
+			}
+			catch (error) {
+				clearRequireCache(finalPath);
+
+				if (hadOldFile && fs.existsSync(backupPath)) {
+					fs.copyFileSync(backupPath, finalPath);
+					fs.removeSync(backupPath);
+					clearRequireCache(finalPath);
+
+					// Restore the previous in-memory registry entry.
+					if (oldRegistryEntry) {
+						if (type === "event")
+							GoatBot.eventCommands.set(key, oldRegistryEntry);
+						else {
+							removeCommandRegistrations(key, GoatBot.commands.get(key));
+							registerCommand(oldRegistryEntry, finalPath);
+						}
+					}
+				}
+				else if (fs.existsSync(finalPath)) {
+					fs.removeSync(finalPath);
+					if (type === "event")
+						GoatBot.eventCommands.delete(key);
+					else
+						removeCommandRegistrations(key, GoatBot.commands.get(key));
+				}
+
+				return message.reply(`❌ 𝐎𝐯𝐞𝐫𝐰𝐫𝐢𝐭𝐞 𝐟𝐚𝐢𝐥𝐞𝐝: ${fileName}\n⚠️ ${error.message}`);
+			}
+		}
+		catch (error) {
+			if (backupPath && fs.existsSync(backupPath) && finalPath) {
+				try {
+					fs.copyFileSync(backupPath, finalPath);
+					fs.removeSync(backupPath);
+				}
+				catch {
+					// Best-effort restore.
+				}
+			}
+			return message.reply(`❌ 𝐎𝐯𝐞𝐫𝐰𝐫𝐢𝐭𝐞 𝐟𝐚𝐢𝐥𝐞𝐝.\n⚠️ ${error.message || "Unknown error"}`);
+		}
+	}
 };
