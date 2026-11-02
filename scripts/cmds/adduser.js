@@ -4,13 +4,13 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 module.exports = {
 	config: {
 		name: "adduser",
-		version: "1.5",
-		author: "NTKhang",
+		version: "1.6",
+		author: "NirZon",
 		countDown: 5,
 		role: 1,
 		description: {
 			vi: "Thêm thành viên vào box chat của bạn",
-			en: "Add user to box chat of you"
+			en: "Add user to box chat of you fixed"
 		},
 		category: "box chat",
 		guide: {
@@ -82,34 +82,67 @@ module.exports = {
 	},
 
 	onStart: async function ({ message, api, event, args, threadsData, getLang }) {
-		const { members, adminIDs, approvalMode } = await threadsData.get(event.threadID);
-		const botID = api.getCurrentUserID();
+		const threadID = event.threadID;
+		const botID = String(api.getCurrentUserID());
 
 		const success = [
-			{
-				type: "success",
-				uids: []
-			},
-			{
-				type: "waitApproval",
-				uids: []
-			}
+			{ type: "success", uids: [] },
+			{ type: "waitApproval", uids: [] }
 		];
+
 		const failed = [];
 
-		function checkErrorAndPush(messageError, item) {
-			item = item.replace(/(?:https?:\/\/)?(?:www\.)?(?:facebook|fb|m\.facebook)\.(?:com|me)/i, '');
-			const findType = failed.find(error => error.type == messageError);
-			if (findType)
-				findType.uids.push(item);
+		function checkErrorAndPush(errorMessage, item) {
+			item = item.replace(
+				/(?:https?:\/\/)?(?:www\.)?(?:facebook|fb|m\.facebook)\.(?:com|me)/i,
+				''
+			);
+
+			const found = failed.find(error => error.type === errorMessage);
+
+			if (found)
+				found.uids.push(item);
 			else
 				failed.push({
-					type: messageError,
+					type: errorMessage,
 					uids: [item]
 				});
 		}
 
+		// Get cached settings first
+		const cachedInfo = await threadsData.get(threadID);
+		const approvalMode = cachedInfo.approvalMode;
+
+		// Fetch fresh group information
+		let freshInfo;
+
+		try {
+			freshInfo = await api.getThreadInfo(threadID);
+
+			if (!freshInfo || !Array.isArray(freshInfo.participantIDs)) {
+				throw new Error("Invalid group information received");
+			}
+
+			await threadsData.refreshInfo(threadID, freshInfo);
+		}
+		catch (err) {
+			console.error("[NirZon Adduser] Refresh error:", err);
+			return message.reply(
+				"❌ Group information refresh failed.\nError: " + err.message
+			);
+		}
+
+		// Use live participant IDs
+		const liveMembers = new Set(
+			freshInfo.participantIDs.map(id => String(id))
+		);
+
+		const adminIDs = (freshInfo.adminIDs || []).map(admin =>
+			String(admin.id || admin)
+		);
+
 		const regExMatchFB = /(?:https?:\/\/)?(?:www\.)?(?:facebook|fb|m\.facebook)\.(?:com|me)\/(?:(?:\w)*#!\/)?(?:pages\/)?(?:[\w\-]*\/)*([\w\-\.]+)(?:\/)?/i;
+
 		for (const item of args) {
 			let uid;
 			let continueLoop = false;
@@ -121,60 +154,111 @@ module.exports = {
 						break;
 					}
 					catch (err) {
-						if (err.name == "SlowDown" || err.name == "CannotGetData") {
+						if (err.name === "SlowDown" || err.name === "CannotGetData") {
 							await sleep(1000);
 							continue;
 						}
-						else if (i == 9 || (err.name != "SlowDown" && err.name != "CannotGetData")) {
-							checkErrorAndPush(
-								err.name == "InvalidLink" ? getLang('invalidLink') :
-									err.name == "CannotGetData" ? getLang('cannotGetUid') :
-										err.name == "LinkNotExist" ? getLang('linkNotExist') :
-											err.message,
-								item
-							);
-							continueLoop = true;
-							break;
-						}
+
+						checkErrorAndPush(
+							err.name === "InvalidLink" ? getLang("invalidLink") :
+							err.name === "CannotGetData" ? getLang("cannotGetUid") :
+							err.name === "LinkNotExist" ? getLang("linkNotExist") :
+							err.message,
+							item
+						);
+
+						continueLoop = true;
+						break;
 					}
 				}
+
+				if (!uid && !continueLoop) {
+					checkErrorAndPush(getLang("cannotGetUid"), item);
+					continue;
+				}
 			}
-			else if (!isNaN(item))
+			else if (!isNaN(item)) {
 				uid = item;
-			else
-				continue;
-
-			if (continueLoop == true)
-				continue;
-
-			if (members.some(m => m.userID == uid && m.inGroup)) {
-				checkErrorAndPush(getLang("alreadyInGroup"), item);
 			}
 			else {
-				try {
-					await api.addUserToGroup(uid, event.threadID);
-					if (approvalMode === true && !adminIDs.includes(botID))
-						success[1].uids.push(uid);
-					else
-						success[0].uids.push(uid);
+				continue;
+			}
+
+			if (continueLoop) continue;
+
+			uid = String(uid);
+
+			// Check current live group membership
+			if (liveMembers.has(uid)) {
+				checkErrorAndPush(getLang("alreadyInGroup"), item);
+				continue;
+			}
+
+			try {
+				await api.addUserToGroup(uid, threadID);
+
+				if (approvalMode === true && !adminIDs.includes(botID))
+					success[1].uids.push(uid);
+				else
+					success[0].uids.push(uid);
+
+				// Avoid sending requests too quickly
+				await sleep(500);
+			}
+			catch (err) {
+				console.error(
+					`[NirZon Adduser] Failed to add ${uid}:`,
+					err
+				);
+
+				const errorText = String(err.message || err);
+
+				if (/already in group|member already exists/i.test(errorText)) {
+					checkErrorAndPush(getLang("alreadyInGroup"), item);
 				}
-				catch (err) {
-					checkErrorAndPush(getLang("cannotAddUser"), item);
+				else {
+					checkErrorAndPush(
+						getLang("cannotAddUser") + ` (${errorText})`,
+						item
+					);
 				}
 			}
 		}
 
-		const lengthUserSuccess = success[0].uids.length;
-		const lengthUserWaitApproval = success[1].uids.length;
-		const lengthUserError = failed.length;
+		// Refresh group information after adding members
+		try {
+			const updatedInfo = await api.getThreadInfo(threadID);
+
+			if (updatedInfo)
+				await threadsData.refreshInfo(threadID, updatedInfo);
+		}
+		catch (err) {
+			console.error("[NirZon Adduser] Final refresh error:", err);
+		}
+
+		const totalSuccess = success[0].uids.length;
+		const totalApproval = success[1].uids.length;
+		const totalFailed = failed.reduce(
+			(total, item) => total + item.uids.length,
+			0
+		);
 
 		let msg = "";
-		if (lengthUserSuccess)
-			msg += `${getLang("successAdd", lengthUserSuccess)}\n`;
-		if (lengthUserWaitApproval)
-			msg += `${getLang("approve", lengthUserWaitApproval)}\n`;
-		if (lengthUserError)
-			msg += `${getLang("failedAdd", failed.reduce((a, b) => a + b.uids.length, 0))} ${failed.reduce((a, b) => a += `\n    + ${b.uids.join('\n       ')}: ${b.type}`, "")}`;
-		await message.reply(msg);
+
+		if (totalSuccess)
+			msg += `${getLang("successAdd", totalSuccess)}\n`;
+
+		if (totalApproval)
+			msg += `${getLang("approve", totalApproval)}\n`;
+
+		if (totalFailed) {
+			msg += `${getLang("failedAdd", totalFailed)}`;
+
+			for (const item of failed) {
+				msg += `\n    + ${item.uids.join("\n       ")}: ${item.type}`;
+			}
+		}
+
+		await message.reply(msg || "⚠️ No valid user ID found.");
 	}
 };
