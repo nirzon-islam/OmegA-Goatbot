@@ -2,12 +2,12 @@
 module.exports = {
 	config: {
 		name: "kick",
-		version: "1.4.2",
+		version: "1.5.0",
 		author: "NirZon",
 		countDown: 5,
 		role: 1,
 		description: {
-			en: "Kick member out of chat box fix by NirZon"
+			en: "Kick member out of chat box fixed"
 		},
 		category: "box chat",
 		guide: {
@@ -18,71 +18,119 @@ module.exports = {
 	langs: {
 		en: {
 			needAdmin: "⚠️ Bot is not admin. Please add bot as admin.",
-			kickFailed: "❌ Failed to kick user: %1",
-			success: "✅ Successfully removed user: %1"
+			checkFailed: "❌ Could not verify bot admin status: %1",
+			noUser: "⚠️ Please mention or reply to a member.",
+			success: "✅ Successfully removed: %1",
+			failed: "❌ Failed to remove %1: %2"
 		},
 		bn: {
 			needAdmin: "⚠️ Bot admin e nei, age bot ke admin banan.",
-			kickFailed: "❌ Member remove kora jayni: %1",
-			success: "✅ Member remove kora hoyeche: %1"
+			checkFailed: "❌ Admin status check kora jayni: %1",
+			noUser: "⚠️ Kake remove korte chan mention ba reply korun.",
+			success: "✅ Successfully remove kora hoyeche: %1",
+			failed: "❌ Remove kora jayni %1: %2"
 		}
 	},
 
-	onStart: async function ({ message, event, args, threadsData, api, getLang }) {
+	onStart: async function ({
+		message,
+		event,
+		args,
+		threadsData,
+		api,
+		getLang
+	}) {
 		const threadID = event.threadID;
 		const botID = String(api.getCurrentUserID());
-		console.log("BOT ID:", botID);
-console.log("ADMIN IDS:", adminIDs);
 
-		// Always check fresh admin information
+		// 1. Check live group admin status
+		let threadInfo;
+
 		try {
-			const threadInfo = await api.getThreadInfo(threadID);
+			threadInfo = await api.getThreadInfo(threadID);
 
-			const adminIDs = (threadInfo.adminIDs || []).map(a =>
-				String(typeof a === "object" ? a.id : a)
-			);
-
-			if (!adminIDs.includes(botID)) {
-				return message.reply(getLang("needAdmin"));
+			if (!threadInfo || !Array.isArray(threadInfo.adminIDs)) {
+				throw new Error("Invalid admin information received.");
 			}
 		}
 		catch (err) {
-			console.error("[KICK ADMIN CHECK]", err);
+			console.error("[KICK] Admin check failed:", err);
 			return message.reply(
-				"⚠️ Could not verify bot admin status: " + err.message
+				getLang("checkFailed", err.message || "Unknown error")
 			);
 		}
 
-		if (!args[0] && !event.messageReply)
-			return message.SyntaxError();
+		const adminIDs = threadInfo.adminIDs.map(admin =>
+			String(
+				typeof admin === "object" && admin !== null
+					? admin.id
+					: admin
+			)
+		);
 
-		const uids = event.messageReply
-			? [String(event.messageReply.senderID)]
-			: Object.keys(event.mentions);
+		console.log("[KICK] Bot ID:", botID);
+		console.log("[KICK] Admin IDs:", adminIDs);
 
-		if (!uids.length)
-			return message.SyntaxError();
+		if (!adminIDs.includes(botID)) {
+			return message.reply(getLang("needAdmin"));
+		}
 
-		for (const uid of uids) {
+		// 2. Get target members
+		let targetIDs = [];
+
+		if (event.messageReply) {
+			targetIDs = [String(event.messageReply.senderID)];
+		}
+		else {
+			targetIDs = Object.keys(event.mentions || {});
+		}
+
+		targetIDs = [...new Set(targetIDs)];
+
+		if (!targetIDs.length) {
+			return message.reply(getLang("noUser"));
+		}
+
+		// 3. Remove members
+		let successCount = 0;
+
+		for (const uid of targetIDs) {
 			try {
 				await api.removeUserFromGroup(uid, threadID);
-				await message.reply(getLang("success", uid));
+				successCount++;
+
+				await message.reply(
+					getLang("success", uid)
+				);
 			}
 			catch (err) {
-				console.error("[KICK ERROR]", err);
+				console.error("[KICK] Remove failed:", uid, err);
+
 				await message.reply(
-					getLang("kickFailed", err.message || "Unknown error")
+					getLang(
+						"failed",
+						uid,
+						err.message || "Unknown error"
+					)
 				);
 			}
 		}
 
-		// Refresh thread data after kick
-		try {
-			const freshInfo = await api.getThreadInfo(threadID);
-			await threadsData.refreshInfo(threadID, freshInfo);
-		}
-		catch (err) {
-			console.error("[KICK REFRESH ERROR]", err);
+		// 4. Refresh group information
+		if (successCount > 0) {
+			try {
+				const freshInfo = await api.getThreadInfo(threadID);
+
+				await threadsData.refreshInfo(
+					threadID,
+					freshInfo
+				);
+
+				console.log("[KICK] Thread information refreshed.");
+			}
+			catch (err) {
+				console.error("[KICK] Refresh failed:", err);
+			}
 		}
 	}
 };
