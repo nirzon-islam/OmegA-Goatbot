@@ -31,6 +31,8 @@ module.exports = {
 	onStart: async function ({ message, event, args, threadsData, api, getLang }) {
 		const threadID = event.threadID;
 		const botID = String(api.getCurrentUserID());
+		console.log("BOT ID:", botID);
+console.log("ADMIN IDS:", adminIDs);
 
 		// Always check fresh admin information
 		try {
