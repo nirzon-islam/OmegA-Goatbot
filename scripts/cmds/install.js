@@ -7,9 +7,6 @@ const Module = require("module");
 
 const { GoatBot } = global;
 
-const VERSION = "1.0.0";
-const AUTHOR = "NirZon";
-
 function isURL(value) {
 	try {
 		new URL(value);
@@ -144,6 +141,7 @@ function getRequiredPackages(code) {
 		let match;
 		while ((match = regex.exec(code)) !== null) {
 			let name = match[1];
+
 			if (!name || name.startsWith(".") || name.startsWith("/") ||
 				name.startsWith("node:") || path.isAbsolute(name))
 				continue;
@@ -155,7 +153,6 @@ function getRequiredPackages(code) {
 				? name.split("/").slice(0, 2).join("/")
 				: name.split("/")[0];
 
-			// Prevent shell/package-name injection and malformed package names.
 			if (/^(?:@[a-z0-9._-]+\/)?[a-z0-9._-]+$/i.test(name))
 				packages.add(name);
 		}
@@ -173,9 +170,7 @@ async function installMissingPackages(code) {
 			require.resolve(packageName, { paths: [process.cwd()] });
 			continue;
 		}
-		catch {
-			// Package is not installed.
-		}
+		catch {}
 
 		try {
 			await runCommand("npm", ["install", "--save", packageName], {
@@ -243,9 +238,7 @@ function clearRequireCache(filePath) {
 	try {
 		delete require.cache[require.resolve(filePath)];
 	}
-	catch {
-		// Not cached.
-	}
+	catch {}
 }
 
 function removeCommandRegistrations(commandName, oldCommand) {
@@ -307,6 +300,7 @@ function registerCommand(command, filePath) {
 			throw new Error(`Invalid alias in "${name}".`);
 
 		const aliasKey = alias.trim().toLowerCase();
+
 		if (aliasKey === key)
 			throw new Error(`Alias "${alias}" duplicates command name.`);
 
@@ -357,6 +351,7 @@ function registerCommand(command, filePath) {
 			itemName => String(itemName).toLowerCase() === key
 		)
 	);
+
 	GoatBot.commandFilesPath.push({
 		filePath: path.normalize(filePath),
 		commandName: [name, ...validAliases]
@@ -436,12 +431,13 @@ async function loadInstalledModule(filePath, api, overwrite = false) {
 
 function getInstallMessage(type, fileName, location, extra = "") {
 	const label = type === "event" ? "Event" : "Command";
+
 	return (
 		`✅ 𝐈𝐧𝐬𝐭𝐚𝐥𝐥𝐞𝐝: ${fileName}\n` +
 		`📂 𝐓𝐲𝐩𝐞: ${label}\n` +
 		`📍 𝐋𝐨𝐜𝐚𝐭𝐢𝐨𝐧: ${location}\n` +
 		`📌 𝐒𝐭𝐚𝐭𝐮𝐬: 𝐋𝐨𝐚𝐝𝐞𝐝 𝐒𝐮𝐜𝐜𝐞𝐬𝐬𝐟𝐮𝐥𝐥𝐲\n` +
-		`👑 𝐀𝐮𝐭𝐡𝐨𝐫: ${AUTHOR}` +
+		`👑 𝐀𝐮𝐭𝐡𝐨𝐫: NirZon` +
 		(extra ? `\n${extra}` : "")
 	);
 }
@@ -457,14 +453,14 @@ function makeTempFile(dir, prefix, fileName) {
 module.exports = {
 	config: {
 		name: "install",
-		version: VERSION,
-		author: AUTHOR,
+		version: "1.0.0",
+		author: "NirZon",
 		countDown: 3,
 		role: 2,
 		hasPrefix: false,
 		shortDescription: "Automatically install commands and events",
 		longDescription: "Install GoatBot command or event modules from replied code, direct code, or a URL. Automatically detects the module type, saves it in the correct folder, installs missing dependencies, registers it in the running bot, and supports reaction-based overwrite.",
-		description: "Automatically install GoatBot commands and events from code or URL",
+		description: "Automatically install commands and events",
 		category: "owner"
 	},
 
@@ -473,23 +469,24 @@ module.exports = {
 		let fileName = "";
 
 		try {
-			// Method 1: reply to source code or URL.
 			if (event.messageReply?.body) {
 				const replyText = event.messageReply.body.trim();
 				const url = extractUrlFromText(replyText);
 				rawCode = url ? await fetchCodeFromUrl(url) : replyText;
+
 				if (!rawCode)
 					return message.reply("❌ 𝐂𝐨𝐮𝐥𝐝 𝐧𝐨𝐭 𝐟𝐞𝐭𝐜𝐡 𝐜𝐨𝐝𝐞 𝐟𝐫𝐨𝐦 𝐭𝐡𝐞 𝐔𝐑𝐋.");
+
 				fileName = extractCommandName(rawCode) || "";
 			}
-			// Method 2: install <URL>
 			else if (args[0] && isURL(args[0])) {
 				rawCode = await fetchCodeFromUrl(args[0]);
+
 				if (!rawCode)
 					return message.reply("❌ 𝐈𝐧𝐯𝐚𝐥𝐢𝐝 𝐨𝐫 𝐮𝐧𝐫𝐞𝐚𝐜𝐡𝐚𝐛𝐥𝐞 𝐔𝐑𝐋.");
+
 				fileName = extractCommandName(rawCode) || "";
 			}
-			// Method 3: install <filename.js> <code>
 			else if (args.length >= 2) {
 				fileName = normalizeFileName(args[0]);
 				rawCode = args.slice(1).join(" ");
@@ -509,7 +506,6 @@ module.exports = {
 			if (!rawCode)
 				return message.reply("❌ 𝐂𝐨𝐝𝐞 𝐢𝐬 𝐞𝐦𝐩𝐭𝐲.");
 
-			// Syntax check only; module execution happens during validation below.
 			try {
 				new Function(rawCode);
 			}
@@ -526,14 +522,15 @@ module.exports = {
 			fileName = normalizeFileName(fileName);
 			const { commandDir, eventDir } = ensureDirectories();
 
-			// Validate module in a temporary .js file to detect category/type.
 			const tempDir = path.join(process.cwd(), "scripts", "tmp");
 			fs.ensureDirSync(tempDir);
+
 			const tempPath = makeTempFile(tempDir, "install-check", fileName);
 			fs.writeFileSync(tempPath, rawCode, "utf8");
 
 			let testCommand;
 			let type;
+
 			try {
 				clearRequireCache(tempPath);
 				testCommand = require(tempPath);
@@ -544,6 +541,7 @@ module.exports = {
 				fs.removeSync(tempPath);
 				return message.reply(`❌ 𝐕𝐚𝐥𝐢𝐝𝐚𝐭𝐢𝐨𝐧 𝐟𝐚𝐢𝐥𝐞𝐝.\n⚠️ ${error.message}`);
 			}
+
 			clearRequireCache(tempPath);
 			fs.removeSync(tempPath);
 
@@ -575,6 +573,7 @@ module.exports = {
 			}
 
 			let installedPackages = [];
+
 			try {
 				installedPackages = await installMissingPackages(rawCode);
 			}
@@ -590,12 +589,14 @@ module.exports = {
 				const extra = installedPackages.length
 					? `📦 𝐃𝐞𝐩𝐞𝐧𝐝𝐞𝐧𝐜𝐢𝐞𝐬: ${installedPackages.join(", ")}`
 					: "";
+
 				return message.reply(getInstallMessage(loaded.type, fileName, relativePath, extra));
 			}
 			catch (error) {
 				clearRequireCache(finalPath);
 				if (fs.existsSync(finalPath))
 					fs.removeSync(finalPath);
+
 				return message.reply(getFailureMessage(fileName, error.message));
 			}
 		}
@@ -630,6 +631,7 @@ module.exports = {
 
 			let newCommand;
 			let type;
+
 			try {
 				clearRequireCache(tempPath);
 				newCommand = require(tempPath);
@@ -640,6 +642,7 @@ module.exports = {
 				fs.removeSync(tempPath);
 				return message.reply(`❌ 𝐎𝐯𝐞𝐫𝐰𝐫𝐢𝐭𝐞 𝐯𝐚𝐥𝐢𝐝𝐚𝐭𝐢𝐨𝐧 𝐟𝐚𝐢𝐥𝐞𝐝.\n⚠️ ${error.message}`);
 			}
+
 			clearRequireCache(tempPath);
 			fs.removeSync(tempPath);
 
@@ -652,6 +655,7 @@ module.exports = {
 			oldRegistryEntry = registry?.get(key) || null;
 
 			let installedPackages = [];
+
 			try {
 				installedPackages = await installMissingPackages(rawCode);
 			}
@@ -661,6 +665,7 @@ module.exports = {
 
 			backupPath = `${finalPath}.install-backup`;
 			hadOldFile = fs.existsSync(finalPath);
+
 			if (hadOldFile)
 				fs.copyFileSync(finalPath, backupPath);
 
@@ -668,18 +673,20 @@ module.exports = {
 
 			try {
 				const loaded = await loadInstalledModule(finalPath, api, true);
+
 				if (backupPath && fs.existsSync(backupPath))
 					fs.removeSync(backupPath);
 
 				const extra = installedPackages.length
 					? `📦 𝐃𝐞𝐩𝐞𝐧𝐝𝐞𝐧𝐜𝐢𝐞𝐬: ${installedPackages.join(", ")}`
 					: "";
+
 				return message.reply(
 					`♻️ 𝐎𝐯𝐞𝐫𝐰𝐫𝐢𝐭𝐭𝐞𝐧: ${fileName}\n` +
 					`📂 𝐓𝐲𝐩𝐞: ${loaded.type === "event" ? "Event" : "Command"}\n` +
 					`📍 𝐋𝐨𝐜𝐚𝐭𝐢𝐨𝐧: ${relativePath}\n` +
 					`📌 𝐒𝐭𝐚𝐭𝐮𝐬: 𝐋𝐨𝐚𝐝𝐞𝐝 𝐒𝐮𝐜𝐜𝐞𝐬𝐬𝐟𝐮𝐥𝐥𝐲\n` +
-					`👑 𝐀𝐮𝐭𝐡𝐨𝐫: ${AUTHOR}` +
+					`👑 𝐀𝐮𝐭𝐡𝐨𝐫: NirZon` +
 					(extra ? `\n${extra}` : "")
 				);
 			}
@@ -691,7 +698,6 @@ module.exports = {
 					fs.removeSync(backupPath);
 					clearRequireCache(finalPath);
 
-					// Restore the previous in-memory registry entry.
 					if (oldRegistryEntry) {
 						if (type === "event")
 							GoatBot.eventCommands.set(key, oldRegistryEntry);
@@ -703,6 +709,7 @@ module.exports = {
 				}
 				else if (fs.existsSync(finalPath)) {
 					fs.removeSync(finalPath);
+
 					if (type === "event")
 						GoatBot.eventCommands.delete(key);
 					else
@@ -718,10 +725,9 @@ module.exports = {
 					fs.copyFileSync(backupPath, finalPath);
 					fs.removeSync(backupPath);
 				}
-				catch {
-					// Best-effort restore.
-				}
+				catch {}
 			}
+
 			return message.reply(`❌ 𝐎𝐯𝐞𝐫𝐰𝐫𝐢𝐭𝐞 𝐟𝐚𝐢𝐥𝐞𝐝.\n⚠️ ${error.message || "Unknown error"}`);
 		}
 	}
