@@ -1,8 +1,12 @@
 
+const createThreadSync = require("../utils/threadSync");
+
+let threadSync = null;
+
 module.exports = {
 	config: {
 		name: "autoUpdateThreadInfo",
-		version: "1.5.2",
+		version: "1.5.3",
 		author: "NirZon",
 		category: "events"
 	},
@@ -19,7 +23,6 @@ module.exports = {
 			"log:user-nickname"
 		];
 
-		// Ignore unrelated events
 		if (!event || !supportedEvents.includes(event.logMessageType))
 			return;
 
@@ -29,36 +32,28 @@ module.exports = {
 			return;
 
 		try {
+			// Initialize ThreadSync Core Engine once
+			if (!threadSync) {
+				threadSync = createThreadSync({
+					api,
+					threadsData
+				});
+			}
+
 			console.log(
-				`[NirZon ThreadSync] Event detected: ${event.logMessageType} | Thread: ${threadID}`
+				`[ThreadSync] Event detected: ${event.logMessageType} | Thread: ${threadID}`
 			);
 
-			// Fetch latest group information
-			const freshThreadInfo = await api.getThreadInfo(threadID);
-
-			if (!freshThreadInfo) {
-				throw new Error("Facebook returned empty thread information");
-			}
-
-			// Validate essential group information
-			if (
-				!Array.isArray(freshThreadInfo.participantIDs) ||
-				!Array.isArray(freshThreadInfo.adminIDs)
-			) {
-				throw new Error("Invalid participantIDs or adminIDs in API response");
-			}
-
-			// Update database and cached thread information
-			await threadsData.refreshInfo(threadID, freshThreadInfo);
+			const result = await threadSync.syncThread(threadID);
 
 			console.log(
-				`[NirZon ThreadSync] Successfully synced | Thread: ${threadID} | Members: ${freshThreadInfo.participantIDs.length} | Admins: ${freshThreadInfo.adminIDs.length}`
+				`[ThreadSync] Synced successfully | Thread: ${threadID} | Members: ${result.members} | Admins: ${result.admins}`
 			);
 		}
-		catch (err) {
+		catch (error) {
 			console.error(
-				`[NirZon ThreadSync] Sync failed | Event: ${event.logMessageType} | Thread: ${threadID}`,
-				err
+				`[ThreadSync] Sync failed | Thread: ${threadID}`,
+				error
 			);
 		}
 	}
