@@ -1,60 +1,86 @@
+
 module.exports = {
-  config: {
-    name: "kick",
-    version: "1.4.1",
-    author: "Fixed by EryXenX",
-    countDown: 5,
-    role: 1,
-    description: {
-      en: "Kick member out of chat box"
-    },
-    category: "box chat",
-    guide: {
-      en: " {pn} @tags or reply to kick"
-    }
-  },
-  langs: {
-    en: { needAdmin: "Bot is not admin, please add bot as admin" },
-    bn: { needAdmin: "Bot admin e nei, age bot ke admin banan" }
-  },
-  onStart: async function ({ message, event, args, threadsData, api, getLang }) {
-    // live admin check
-    try {
-      const threadInfo = await api.getThreadInfo(event.threadID);
-      const adminIDs = threadInfo.adminIDs.map(a => a.id || a);
-      const botID = api.getCurrentUserID();
-      
-      if (!adminIDs.includes(botID)) {
-        return message.reply(getLang("needAdmin"));
-      }
-    } catch (e) {
-      // fallback to old method if getThreadInfo fails
-      const adminIDs = await threadsData.get(event.threadID, "adminIDs");
-      if (!adminIDs || !adminIDs.includes(api.getCurrentUserID())) {
-        return message.reply(getLang("needAdmin"));
-      }
-    }
+	config: {
+		name: "kick",
+		version: "1.4.2",
+		author: "NirZon",
+		countDown: 5,
+		role: 1,
+		description: {
+			en: "Kick member out of chat box fix by NirZon"
+		},
+		category: "box chat",
+		guide: {
+			en: "{pn} @tags or reply to kick"
+		}
+	},
 
-    async function kickAndCheckError(uid) {
-      try {
-        await api.removeUserFromGroup(uid, event.threadID);
-      } catch (e) {
-        return message.reply(getLang("needAdmin"));
-      }
-    }
+	langs: {
+		en: {
+			needAdmin: "⚠️ Bot is not admin. Please add bot as admin.",
+			kickFailed: "❌ Failed to kick user: %1",
+			success: "✅ Successfully removed user: %1"
+		},
+		bn: {
+			needAdmin: "⚠️ Bot admin e nei, age bot ke admin banan.",
+			kickFailed: "❌ Member remove kora jayni: %1",
+			success: "✅ Member remove kora hoyeche: %1"
+		}
+	},
 
-    if (!args[0] && !event.messageReply) {
-      return message.SyntaxError();
-    }
+	onStart: async function ({ message, event, args, threadsData, api, getLang }) {
+		const threadID = event.threadID;
+		const botID = String(api.getCurrentUserID());
 
-    if (event.messageReply) {
-      await kickAndCheckError(event.messageReply.senderID);
-    } else {
-      const uids = Object.keys(event.mentions);
-      if (uids.length === 0) return message.SyntaxError();
-      for (const uid of uids) {
-        await kickAndCheckError(uid);
-      }
-    }
-  }
-}
+		// Always check fresh admin information
+		try {
+			const threadInfo = await api.getThreadInfo(threadID);
+
+			const adminIDs = (threadInfo.adminIDs || []).map(a =>
+				String(typeof a === "object" ? a.id : a)
+			);
+
+			if (!adminIDs.includes(botID)) {
+				return message.reply(getLang("needAdmin"));
+			}
+		}
+		catch (err) {
+			console.error("[KICK ADMIN CHECK]", err);
+			return message.reply(
+				"⚠️ Could not verify bot admin status: " + err.message
+			);
+		}
+
+		if (!args[0] && !event.messageReply)
+			return message.SyntaxError();
+
+		const uids = event.messageReply
+			? [String(event.messageReply.senderID)]
+			: Object.keys(event.mentions);
+
+		if (!uids.length)
+			return message.SyntaxError();
+
+		for (const uid of uids) {
+			try {
+				await api.removeUserFromGroup(uid, threadID);
+				await message.reply(getLang("success", uid));
+			}
+			catch (err) {
+				console.error("[KICK ERROR]", err);
+				await message.reply(
+					getLang("kickFailed", err.message || "Unknown error")
+				);
+			}
+		}
+
+		// Refresh thread data after kick
+		try {
+			const freshInfo = await api.getThreadInfo(threadID);
+			await threadsData.refreshInfo(threadID, freshInfo);
+		}
+		catch (err) {
+			console.error("[KICK REFRESH ERROR]", err);
+		}
+	}
+};
