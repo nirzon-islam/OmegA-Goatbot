@@ -1,3 +1,4 @@
+//Author credit NirZon 
 
 const createThreadSync = ({ api, threadsData }) => {
 	const syncing = new Map();
