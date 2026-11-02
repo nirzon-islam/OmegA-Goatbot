@@ -2,7 +2,7 @@
 module.exports = {
 	config: {
 		name: "kick",
-		version: "1.5.0",
+		version: "1.5.1",
 		author: "NirZon",
 		countDown: 5,
 		role: 1,
@@ -17,15 +17,15 @@ module.exports = {
 
 	langs: {
 		en: {
-			needAdmin: "⚠️ Bot is not admin. Please add bot as admin.",
+			needAdmin: "❌ Bot is not admin. Please make the bot an admin first.",
 			checkFailed: "❌ Could not verify bot admin status: %1",
 			noUser: "⚠️ Please mention or reply to a member.",
 			success: "✅ Successfully removed: %1",
 			failed: "❌ Failed to remove %1: %2"
 		},
 		bn: {
-			needAdmin: "⚠️ Bot admin e nei, age bot ke admin banan.",
-			checkFailed: "❌ Admin status check kora jayni: %1",
+			needAdmin: "❌ Bot admin e nei! Age bot ke admin banan.",
+			checkFailed: "❌ Bot-er admin status check kora jayni: %1",
 			noUser: "⚠️ Kake remove korte chan mention ba reply korun.",
 			success: "✅ Successfully remove kora hoyeche: %1",
 			failed: "❌ Remove kora jayni %1: %2"
@@ -35,7 +35,6 @@ module.exports = {
 	onStart: async function ({
 		message,
 		event,
-		args,
 		threadsData,
 		api,
 		getLang
@@ -43,39 +42,49 @@ module.exports = {
 		const threadID = event.threadID;
 		const botID = String(api.getCurrentUserID());
 
-		// 1. Check live group admin status
+		// 1. Fetch live group information
 		let threadInfo;
 
 		try {
 			threadInfo = await api.getThreadInfo(threadID);
 
 			if (!threadInfo || !Array.isArray(threadInfo.adminIDs)) {
-				throw new Error("Invalid admin information received.");
+				throw new Error("Invalid admin information received");
 			}
 		}
 		catch (err) {
-			console.error("[KICK] Admin check failed:", err);
+			console.error("[Kick] Admin check error:", err);
+
 			return message.reply(
 				getLang("checkFailed", err.message || "Unknown error")
 			);
 		}
 
-		const adminIDs = threadInfo.adminIDs.map(admin =>
-			String(
-				typeof admin === "object" && admin !== null
-					? admin.id
-					: admin
-			)
-		);
+		// 2. Normalize admin IDs
+		const adminIDs = threadInfo.adminIDs
+			.map(admin => {
+				if (typeof admin === "object" && admin !== null) {
+					return String(
+						admin.id ??
+						admin.userID ??
+						admin.uid ??
+						""
+					);
+				}
 
-		console.log("[KICK] Bot ID:", botID);
-		console.log("[KICK] Admin IDs:", adminIDs);
+				return String(admin);
+			})
+			.filter(Boolean);
 
+		console.log("[Kick] Bot ID:", botID);
+		console.log("[Kick] Live Admin IDs:", adminIDs);
+
+		// 3. Stop if bot is not admin
 		if (!adminIDs.includes(botID)) {
 			return message.reply(getLang("needAdmin"));
 		}
 
-		// 2. Get target members
+		// 4. Get target members
 		let targetIDs = [];
 
 		if (event.messageReply) {
@@ -91,7 +100,7 @@ module.exports = {
 			return message.reply(getLang("noUser"));
 		}
 
-		// 3. Remove members
+		// 5. Remove members
 		let successCount = 0;
 
 		for (const uid of targetIDs) {
@@ -104,7 +113,11 @@ module.exports = {
 				);
 			}
 			catch (err) {
-				console.error("[KICK] Remove failed:", uid, err);
+				console.error(
+					"[Kick] Remove failed:",
+					uid,
+					err
+				);
 
 				await message.reply(
 					getLang(
@@ -116,20 +129,27 @@ module.exports = {
 			}
 		}
 
-		// 4. Refresh group information
+		// 6. Refresh group cache after successful removal
 		if (successCount > 0) {
 			try {
 				const freshInfo = await api.getThreadInfo(threadID);
 
-				await threadsData.refreshInfo(
-					threadID,
-					freshInfo
-				);
+				if (freshInfo) {
+					await threadsData.refreshInfo(
+						threadID,
+						freshInfo
+					);
+				}
 
-				console.log("[KICK] Thread information refreshed.");
+				console.log(
+					"[Kick] Thread information refreshed."
+				);
 			}
 			catch (err) {
-				console.error("[KICK] Refresh failed:", err);
+				console.error(
+					"[Kick] Refresh failed:",
+					err
+				);
 			}
 		}
 	}
