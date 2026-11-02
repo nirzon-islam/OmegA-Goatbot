@@ -1,9 +1,10 @@
+
 module.exports = {
 	config: {
 		name: "refresh",
-		version: "1.2",
-		author: "NTKhang",
-		countDown: 60,
+		version: "1.3.0",
+		author: "NirZon",
+		countDown: 40,
 		role: 0,
 		description: {
 			vi: "làm mới thông tin nhóm chat hoặc người dùng",
@@ -85,34 +86,77 @@ module.exports = {
 		}
 	},
 
-	onStart: async function ({ args, threadsData, message, event, usersData, getLang }) {
+	onStart: async function ({
+		args,
+		threadsData,
+		message,
+		event,
+		usersData,
+		getLang
+	}) {
 		if (args[0] == "group" || args[0] == "thread") {
 			const targetID = args[1] || event.threadID;
+
 			try {
 				await threadsData.refreshInfo(targetID);
-				return message.reply(targetID == event.threadID ? getLang("refreshMyThreadSuccess") : getLang("refreshThreadTargetSuccess", targetID));
+
+				return message.reply(
+					targetID == event.threadID
+						? getLang("refreshMyThreadSuccess")
+						: getLang("refreshThreadTargetSuccess", targetID)
+				);
 			}
 			catch (error) {
-				return message.reply(targetID == event.threadID ? getLang("errorRefreshMyThread") : getLang("errorRefreshThreadTarget", targetID));
+				console.error(
+					`[NirZon Refresh] Group refresh failed | ThreadID: ${targetID}`,
+					error
+				);
+
+				return message.reply(
+					(targetID == event.threadID
+						? getLang("errorRefreshMyThread")
+						: getLang("errorRefreshThreadTarget", targetID))
+					+ `\n\nError: ${error.message || error}`
+				);
 			}
 		}
+
 		else if (args[0] == "user") {
 			let targetID = event.senderID;
+
 			if (args[1]) {
-				if (Object.keys(event.mentions).length)
+				if (Object.keys(event.mentions || {}).length)
 					targetID = Object.keys(event.mentions)[0];
 				else
 					targetID = args[1];
 			}
+
 			try {
 				await usersData.refreshInfo(targetID);
-				return message.reply(targetID == event.senderID ? getLang("refreshMyUserSuccess") : getLang("refreshUserTargetSuccess", targetID));
+
+				return message.reply(
+					targetID == event.senderID
+						? getLang("refreshMyUserSuccess")
+						: getLang("refreshUserTargetSuccess", targetID)
+				);
 			}
 			catch (error) {
-				return message.reply(targetID == event.senderID ? getLang("errorRefreshMyUser") : getLang("errorRefreshUserTarget", targetID));
+				console.error(
+					`[NirZon Refresh] User refresh failed | UserID: ${targetID}`,
+					error
+				);
+
+				return message.reply(
+					(targetID == event.senderID
+						? getLang("errorRefreshMyUser")
+						: getLang("errorRefreshUserTarget", targetID))
+					+ `\n\nError: ${error.message || error}`
+				);
 			}
 		}
-		else
-			message.SyntaxError();
+
+		else {
+			return message.SyntaxError();
+		}
 	}
 };
