@@ -453,7 +453,7 @@ function makeTempFile(dir, prefix, fileName) {
 module.exports = {
 	config: {
 		name: "install",
-		version: "1.0.0",
+		version: "2.0.0",
 		author: "NirZon",
 		countDown: 3,
 		role: 2,
