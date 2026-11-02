@@ -28,9 +28,21 @@ module.exports = {
   langs: {
     en: {
       defaultWelcomeMessage:
-        "Welcome {userName} 💜\nGlad to have you here! Enjoy your stay.",
+        "✦ 𝐖𝐄𝐋𝐂𝐎𝐌𝐄 𝐓𝐎 𝐎𝐔𝐑 𝐂𝐎𝐌𝐌𝐔𝐍𝐈𝐓𝐘 ✦\n\n" +
+        "🌸 𝐇𝐞𝐲, {userName}! 𝐆𝐥𝐚𝐝 𝐭𝐨 𝐡𝐚𝐯𝐞 𝐲𝐨𝐮 𝐡𝐞𝐫𝐞!\n" +
+        "🏡 𝐘𝐨𝐮'𝐫𝐞 𝐧𝐨𝐰 𝐩𝐚𝐫𝐭 𝐨𝐟: {threadName}\n" +
+        "💫 𝐀 𝐧𝐞𝐰 𝐟𝐚𝐜𝐞, 𝐚 𝐧𝐞𝐰 𝐬𝐭𝐨𝐫𝐲! You're our {memberCount}th member. Make yourself comfortable and enjoy the vibes!\n\n" +
+        "🕒 𝐖𝐢𝐬𝐡𝐢𝐧𝐠 𝐲𝐨𝐮 𝐚 𝐰𝐨𝐧𝐝𝐞𝐫𝐟𝐮𝐥 {timeOfDay}!\n\n" +
+        "📌 𝐑𝐄𝐌𝐈𝐍𝐃𝐄𝐑: ᴋᴇᴇᴘ ɪᴛ ʀᴇꜱᴘᴇᴄᴛꜰᴜʟ, ʙᴇ ᴀᴄᴛɪᴠᴇ & ᴅᴏɴ'ᴛ ꜰᴏʀɢᴇᴛ ᴛᴏ ʀᴇᴀᴅ ᴛʜᴇ ɢʀᴏᴜᴘ ʀᴜʟᴇꜱ!",
       botAddedMessage:
-        "━━━━━━━━━━━━━━━━━━\n🤖 Thanks for adding me to the group!\n\n👑 Bot Owner: NirZon\n⚙️ Prefix: {prefix}\n\nLet's make this group more fun together! 💜\n━━━━━━━━━━━━━━━━━━"
+        "🤖 𝐁𝐨𝐭 𝐒𝐮𝐜𝐜𝐞𝐬𝐬𝐟𝐮𝐥𝐥𝐲 𝐀𝐝𝐝𝐞𝐝!\n\n" +
+        "👋 Hello everyone!\n" +
+        "🏡 Group: {threadName}\n" +
+        "👑 Owner: NirZon\n" +
+        "⚙️ Bot Prefix: {prefix}\n\n" +
+        "✨ Thanks for adding me!\n" +
+        "Type {prefix}help to see my commands.\n\n" +
+        "💜 Powered By NirZon"
     }
   },
 
@@ -52,7 +64,11 @@ module.exports = {
 
       if (userID == botID) {
         if (nickNameBot) await api.changeNickname(nickNameBot, threadID, botID);
-        return message.send(getLang("botAddedMessage").replace(/\{prefix\}/g, prefix));
+        return message.send(
+          getLang("botAddedMessage")
+            .replace(/\{prefix\}/g, prefix)
+            .replace(/\{threadName\}/g, threadName)
+        );
       }
 
       const userName = user.fullName || "New Member";
@@ -62,12 +78,21 @@ module.exports = {
       const memberCount = (event.participantIDs || []).length;
 
       let { welcomeMessage = getLang("defaultWelcomeMessage") } = threadData.data || {};
+      const dhakaHour = Number(new Intl.DateTimeFormat("en-US", {
+        timeZone: "Asia/Dhaka",
+        hour: "2-digit",
+        hourCycle: "h23"
+      }).format(new Date()));
+      const timeOfDay = dhakaHour < 12 ? "Morning" : dhakaHour < 17 ? "Afternoon" : dhakaHour < 20 ? "Evening" : "Night";
+
       welcomeMessage = welcomeMessage
         .replace(/\{userName\}/g, userName)
         .replace(/\{userTag\}/g, userName)
         .replace(/\{threadName\}/g, threadName)
         .replace(/\{memberCount\}/g, memberCount)
-        .replace(/\{inviterName\}/g, inviterName);
+        .replace(/\{inviterName\}/g, inviterName)
+        .replace(/\{timeOfDay\}/g, timeOfDay)
+        .replace(/&amp;/g, "&");
 
       let welcomeImagePath = null;
       try {
