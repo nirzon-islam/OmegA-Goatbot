@@ -1,10 +1,10 @@
 // code from goatstore
-// api: https://omega-goatstore.onrender.com
+// api: https://omega-store-owe7.onrender.com
 const fs = require("fs");
 const path = require("path");
 const axios = require("axios");
 
-const HARD_FALLBACK_BASE = "https://omega-goatstore.onrender.com";
+const HARD_FALLBACK_BASE = "https://omega-store-owe7.onrender.com";
 function envOverride() {
   const v = process.env.STORE_API_BASE;
   return v && v.startsWith("http") ? v.replace(/\/$/, "") : null;
@@ -214,6 +214,19 @@ function saveSyncCache(cache) {
 }
 
 let _autoupdateInFlight = false;
+let _autoSyncInFlight = false;
+let _timersStarted = false;
+const _installInFlight = new Set();
+const _uploadInFlight = new Set();
+
+function atomicWrite(filePath, content) {
+  const dir = path.dirname(filePath);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  const tempPath = `${filePath}.tmp-${process.pid}-${Date.now()}`;
+  fs.writeFileSync(tempPath, content, "utf8");
+  try { fs.renameSync(tempPath, filePath); }
+  catch (err) { try { fs.unlinkSync(tempPath); } catch (_) {} throw err; }
+}
 
 async function stampUploadCode(code) {
   const apiBase = await getApiBase();
@@ -226,33 +239,73 @@ function hashContent(content) {
   return h.toString(16);
 }
 
-function parseVer(v) {
-  return String(v).split(".").map(n => parseInt(n) || 0);
+function parseVer(value) {
+  const raw = String(value == null ? "" : value).trim().replace(/^v/i, "");
+  const match = raw.match(/^(\d+(?:\.\d+)*)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/);
+  if (!match) return null;
+  return { core: match[1].split(".").map(n => Number(n)), pre: match[2] || "" };
 }
 
 function cmpVer(a, b) {
   const pa = parseVer(a), pb = parseVer(b);
-  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-    const d = (pa[i] || 0) - (pb[i] || 0);
-    if (d !== 0) return d;
+  if (!pa || !pb) return 0;
+  for (let i = 0; i < Math.max(pa.core.length, pb.core.length); i++) {
+    const d = (pa.core[i] || 0) - (pb.core[i] || 0);
+    if (d) return d > 0 ? 1 : -1;
+  }
+  if (!pa.pre && pb.pre) return 1;
+  if (pa.pre && !pb.pre) return -1;
+  if (pa.pre === pb.pre) return 0;
+  if (!pa.pre) return 0;
+  const aa = pa.pre.split("."), bb = pb.pre.split(".");
+  for (let i = 0; i < Math.max(aa.length, bb.length); i++) {
+    if (aa[i] == null) return -1;
+    if (bb[i] == null) return 1;
+    if (aa[i] === bb[i]) continue;
+    const an = /^\d+$/.test(aa[i]), bn = /^\d+$/.test(bb[i]);
+    if (an && bn) return Number(aa[i]) > Number(bb[i]) ? 1 : -1;
+    if (an !== bn) return an ? -1 : 1;
+    return aa[i] > bb[i] ? 1 : -1;
   }
   return 0;
 }
 
 function extractConfigBlock(src) {
-  const idx = src.search(/\bconfig\s*[:=]\s*\{/);
-  if (idx === -1) return src;
-  const braceStart = src.indexOf("{", idx);
-  if (braceStart === -1) return src;
-  let depth = 0;
-  for (let i = braceStart; i < src.length; i++) {
-    if (src[i] === "{") depth++;
-    else if (src[i] === "}") {
-      depth--;
-      if (depth === 0) return src.slice(braceStart, i + 1);
-    }
+  const patterns = [/\bconfig\s*:\s*\{/, /module\.exports\.config\s*=\s*\{/];
+  let idx = -1;
+  for (const re of patterns) { const m = re.exec(src); if (m) { idx = m.index + m[0].lastIndexOf("{"); break; } }
+  if (idx < 0) return src;
+  let depth = 0, quote = null, escaped = false, lineComment = false, blockComment = false;
+  for (let i = idx; i < src.length; i++) {
+    const c = src[i], n = src[i + 1];
+    if (lineComment) { if (c === "\n") lineComment = false; continue; }
+    if (blockComment) { if (c === "*" && n === "/") { blockComment = false; i++; } continue; }
+    if (quote) { if (escaped) escaped = false; else if (c === "\\") escaped = true; else if (c === quote) quote = null; continue; }
+    if (c === "/" && n === "/") { lineComment = true; i++; continue; }
+    if (c === "/" && n === "*") { blockComment = true; i++; continue; }
+    if (c === "\"" || c === "'" || c === "`") { quote = c; continue; }
+    if (c === "{") depth++;
+    else if (c === "}" && --depth === 0) return src.slice(idx, i + 1);
   }
-  return src.slice(braceStart);
+  return src.slice(idx);
+}
+
+function readMetaValue(block, keys) {
+  for (const key of keys) {
+    const re = new RegExp("(?:\\b|[\"'])" + key + "[\"']?\\s*:\\s*([\"'`])([^\\n]*?)\\1", "i");
+    const m = block.match(re);
+    if (m && m[2].trim()) return m[2].trim();
+  }
+  return null;
+}
+
+function extractMetadata(src, fallbackName = "") {
+  const block = extractConfigBlock(src);
+  const name = readMetaValue(block, ["name"]) || fallbackName;
+  const author = readMetaValue(block, ["author", "credits"]) || "Unknown";
+  const version = readMetaValue(block, ["version"]) || "N/A";
+  const category = readMetaValue(block, ["category"]) || "Uncategorized";
+  return { name, author, version, category };
 }
 
 function detectFramework(code) {
@@ -408,6 +461,13 @@ async function getTrending(limit = 5) {
 }
 
 async function runAutoSync() {
+  if (_autoSyncInFlight) return;
+  _autoSyncInFlight = true;
+  try { return await runAutoSyncInternal(); }
+  finally { _autoSyncInFlight = false; }
+}
+
+async function runAutoSyncInternal() {
   const log = global.utils?.log || {
     info: (tag, msg) => console.log(`[${tag}] ${msg}`),
     warn: (tag, msg) => console.warn(`[${tag}] ${msg}`)
@@ -438,12 +498,35 @@ async function runAutoSync() {
       if (fw !== "goat") continue;
 
       try {
-        const author = content.match(/author\s*:\s*["'`](.*?)["'`]/)?.[1]
-                    || content.match(/credits\s*:\s*["'`](.*?)["'`]/)?.[1]
-                    || "Unknown";
-        const category = content.match(/category\s*:\s*["'`](.*?)["'`]/)?.[1] || "Uncategorized";
+        const meta = extractMetadata(content, path.basename(file, ".js"));
+        const author = meta.author;
+        const displayName = meta.name || path.basename(file, ".js");
+        const version = meta.version;
+        const category = meta.category;
+        if (!author || author === "Unknown" || !version || version === "N/A" || !parseVer(version)) {
+          skipped++;
+          continue;
+        }
+        const lookup = await storeGet(`/miraistore/search?q=${encodeURIComponent(displayName)}&limit=50&framework=goat&kind=${encodeURIComponent(kind)}`);
+        const entries = Array.isArray(lookup.data?.commands) ? lookup.data.commands : [];
+        const existing = entries.find(c => String(c.name || "").toLowerCase() === displayName.toLowerCase()
+          && String(c.author || "").toLowerCase() === String(author).toLowerCase()
+          && String(c.kind || kind) === String(kind)) || null;
+        if (existing) {
+          const cmp = cmpVer(version, existing.version);
+          if (cmp <= 0) {
+            skipped++;
+            cache[cacheKey] = hash;
+            continue;
+          }
+        }
         const stampedContent = await stampUploadCode(content);
-        const res = await storePost(`/miraistore/upload`, { rawCode: stampedContent, framework: "goat", kind, author, category });
+        const body = {
+          rawCode: stampedContent, framework: "goat", kind,
+          name: displayName, author, version, category,
+          ...(existing?.id != null ? { existingId: existing.id, expectedVersion: existing.version } : {})
+        };
+        const res = await storePost(`/miraistore/upload`, body);
         if (res.data?.error) {
           skipped++;
         } else if (res.data?.updated) {
@@ -504,24 +587,34 @@ async function animateUpload(api, threadID, name) {
 }
 
 function autoloadCommand(filePath) {
+  const registry = global.GoatBot?.commands;
+  const before = registry instanceof Map ? new Map(registry) : null;
   try {
     delete require.cache[require.resolve(filePath)];
     const cmd = require(filePath);
-    if (cmd?.config?.name) {
-      const name = cmd.config.name.toLowerCase();
-      global.GoatBot.commands.set(name, cmd);
-      if (Array.isArray(cmd.config.aliases))
-        cmd.config.aliases.forEach(a => global.GoatBot.commands.set(a.toLowerCase(), cmd));
-      if (typeof cmd.onLoad === "function") cmd.onLoad({});
-      return { success: true, name };
-    }
-    return { success: false, reason: "Missing config.name." };
+    if (!cmd?.config?.name) throw new Error("Missing config.name.");
+    const name = cmd.config.name.toLowerCase();
+    registry.set(name, cmd);
+    if (Array.isArray(cmd.config.aliases))
+      cmd.config.aliases.forEach(a => registry.set(String(a).toLowerCase(), cmd));
+    if (typeof cmd.onLoad === "function") cmd.onLoad({});
+    return { success: true, name };
   } catch (err) {
+    if (before && registry) { registry.clear(); for (const [k, v] of before) registry.set(k, v); }
+    try { delete require.cache[require.resolve(filePath)]; } catch (_) {}
     return { success: false, reason: err.message };
   }
 }
 
 async function doInstall(api, threadID, senderID, id, forceKind = null) {
+  const installKey = `${threadID}:${senderID}:${id}:${forceKind || "auto"}`;
+  if (_installInFlight.has(installKey)) return;
+  _installInFlight.add(installKey);
+  try { return await doInstallInternal(api, threadID, senderID, id, forceKind); }
+  finally { _installInFlight.delete(installKey); }
+}
+
+async function doInstallInternal(api, threadID, senderID, id, forceKind = null) {
   let cmdData = null;
   try {
     const res = await storeGet(`/miraistore/search?q=${encodeURIComponent(id)}&clientFp=${encodeURIComponent(senderID || "")}`);
@@ -560,7 +653,19 @@ async function doInstall(api, threadID, senderID, id, forceKind = null) {
 
   try {
     if (!fs.existsSync(installDir)) fs.mkdirSync(installDir, { recursive: true });
-    fs.writeFileSync(filePath, cmdData.rawCode, "utf-8");
+    const existed = fs.existsSync(filePath);
+    const previous = existed ? fs.readFileSync(filePath) : null;
+    if (previous) atomicWrite(`${filePath}.bak`, previous.toString("utf8"));
+    atomicWrite(filePath, cmdData.rawCode);
+    if (!isEvent) {
+      const loadCheck = autoloadCommand(filePath);
+      if (!loadCheck.success) {
+        if (previous) atomicWrite(filePath, previous.toString("utf8"));
+        else { try { fs.unlinkSync(filePath); } catch (_) {} }
+        if (pid) api.unsendMessage(pid);
+        return api.sendMessage(`❌ Install rolled back. Registration failed: ${loadCheck.reason}`, threadID);
+      }
+    }
   } catch (err) {
     if (pid) api.unsendMessage(pid);
     return api.sendMessage(`❌ Failed to write file:\n${err.message}`, threadID);
@@ -568,7 +673,7 @@ async function doInstall(api, threadID, senderID, id, forceKind = null) {
 
   try { await storePost(`/miraistore/install/${cmdData.id}`, { clientFp: senderID }); } catch (_) {}
 
-  const load = isEvent ? { success: false } : autoloadCommand(filePath);
+  const load = isEvent ? { success: false } : { success: true, name: displayName };
 
   const msg =
     `✅ Installed Successfully!\n` +
@@ -595,22 +700,34 @@ async function doSelfUpdateSilent(api, threadID, selfUpdate) {
   try {
     const res = await storeGet(`/miraistore/search?q=${encodeURIComponent(selfUpdate.latestId)}`);
     const data = res.data;
-    if (!isNaN(selfUpdate.latestId) && data?.rawCode && !Array.isArray(data)) cmdData = data;
-    else if (Array.isArray(data?.commands)) cmdData = data.commands.find(c => String(c.id) === String(selfUpdate.latestId));
+    // The API returns a single command object for ObjectId lookups and may
+    // return a commands array for search responses. Accept both response shapes.
+    if (data && !Array.isArray(data) && typeof data.rawCode === "string") {
+      cmdData = data;
+    } else if (Array.isArray(data?.commands)) {
+      cmdData = data.commands.find(c => String(c.id) === String(selfUpdate.latestId)) || null;
+    }
     if (!cmdData?.rawCode) return false;
   } catch (_) { return false; }
 
   try { new Function(cmdData.rawCode); }
   catch (_) { return false; }
 
+  let previous;
   try {
-    fs.writeFileSync(__filename, cmdData.rawCode, "utf-8");
+    previous = fs.readFileSync(__filename);
+    atomicWrite(`${__filename}.bak`, previous.toString("utf8"));
+    atomicWrite(__filename, cmdData.rawCode);
   } catch (_) { return false; }
 
+  const load = autoloadCommand(__filename);
+  if (!load.success) {
+    try { atomicWrite(__filename, previous.toString("utf8")); autoloadCommand(__filename); } catch (_) {}
+    return false;
+  }
   try { await storePost(`/miraistore/install/${cmdData.id}`, { }); } catch (_) {}
 
   const changelog = (cmdData.description || cmdData.changelog || "No changelog provided.").trim();
-  const load = autoloadCommand(__filename);
 
   if (api && threadID) {
     const msg =
@@ -807,6 +924,14 @@ async function renderSearchPageInto(query, page, limit, filterOpts = {}, senderI
 }
 
 async function uploadFile(api, threadID, filePath, kind, senderID = null) {
+  const uploadKey = `${threadID}:${filePath}:${kind}`;
+  if (_uploadInFlight.has(uploadKey)) return;
+  _uploadInFlight.add(uploadKey);
+  try { return await uploadFileInternal(api, threadID, filePath, kind, senderID); }
+  finally { _uploadInFlight.delete(uploadKey); }
+}
+
+async function uploadFileInternal(api, threadID, filePath, kind, senderID = null) {
   let data;
   try { data = fs.readFileSync(filePath, "utf8"); }
   catch (err) { return api.sendMessage(`❌ Read failed:\n${err.message}`, threadID); }
@@ -814,7 +939,8 @@ async function uploadFile(api, threadID, filePath, kind, senderID = null) {
   try { new Function(data); }
   catch (err) { return api.sendMessage(`❌ Syntax Error:\n${err.message}`, threadID); }
 
-  const displayName = data.match(/name\s*:\s*["'`](.*?)["'`]/)?.[1] || path.basename(filePath);
+  const meta = extractMetadata(data, path.basename(filePath, ".js"));
+  const displayName = meta.name || path.basename(filePath, ".js");
   const detected = detectFramework(data);
   if (detected !== "goat")
     return api.sendMessage(
@@ -824,12 +950,37 @@ async function uploadFile(api, threadID, filePath, kind, senderID = null) {
       threadID
     );
 
+  if (!meta.version || meta.version === "N/A" || !parseVer(meta.version))
+    return api.sendMessage(`❌ Valid version missing in config for ${displayName}.`, threadID);
+
+  // Client-side preflight. The backend must enforce this atomically to prevent race conditions.
+  let existingEntry = null;
+  try {
+    const lookup = await storeGet(`/miraistore/search?q=${encodeURIComponent(displayName)}&limit=50&framework=goat&kind=${encodeURIComponent(kind)}`);
+    const entries = Array.isArray(lookup.data?.commands) ? lookup.data.commands : [];
+    existingEntry = entries.find(c => String(c.name || "").toLowerCase() === displayName.toLowerCase()
+      && String(c.author || "").toLowerCase() === String(meta.author || "").toLowerCase()
+      && String(c.kind || kind) === String(kind)) || null;
+    if (existingEntry) {
+      const cmp = cmpVer(meta.version, existingEntry.version);
+      if (cmp === 0) return api.sendMessage(`ℹ️ ${displayName} is already at v${existingEntry.version}. No duplicate created.`, threadID);
+      if (cmp < 0) return api.sendMessage(`⛔ Older version rejected. Store has v${existingEntry.version}; your file is v${meta.version}.`, threadID);
+    }
+  } catch (err) {
+    // Continue only because the backend remains the final authority for duplicate/version rules.
+  }
+
   let pid;
   try { pid = await animateUpload(api, threadID, displayName); } catch (_) {}
 
   try {
     const stampedData = await stampUploadCode(data);
-    const body = { rawCode: stampedData, framework: "goat", kind };
+    const body = {
+      rawCode: stampedData, framework: "goat", kind,
+      name: displayName, author: meta.author, version: meta.version,
+      category: meta.category,
+      ...(existingEntry?.id != null ? { existingId: existingEntry.id, expectedVersion: existingEntry.version } : {})
+    };
     if (senderID) { body.uploaderID = senderID; body.clientFp = senderID; }
     const res = await storePost(`/miraistore/upload`, body);
 
@@ -846,6 +997,12 @@ async function uploadFile(api, threadID, filePath, kind, senderID = null) {
       );
     }
 
+    if (res.data?.olderVersion || res.data?.sameVersion || res.data?.duplicate) {
+      if (pid) api.unsendMessage(pid);
+      const status = res.data.olderVersion ? "Older version rejected" : "Same version already exists";
+      return api.sendMessage(`⛔ ${status}. ${res.data.message || "No new Store entry was created."}`, threadID);
+    }
+
     if (res.data?.error) {
       if (pid) api.unsendMessage(pid);
       return api.sendMessage(
@@ -858,18 +1015,13 @@ async function uploadFile(api, threadID, filePath, kind, senderID = null) {
       );
     }
 
-    const author  = data.match(/author\s*:\s*["'`](.*?)["'`]/)?.[1]
-                 || data.match(/credits\s*:\s*["'`](.*?)["'`]/)?.[1]
-                 || "Unknown";
-    const version = data.match(/version\s*:\s*["'`](.*?)["'`]/)?.[1] || "N/A";
-    const category = data.match(/category\s*:\s*["'`](.*?)["'`]/)?.[1] || "Uncategorized";
+    const author = meta.author;
+    const version = meta.version;
+    const category = meta.category;
 
     let header = "✅ Upload Successful!";
     let note = "";
-    if (res.data.olderVersion) {
-      header = "⚠️ Older Version — Stored As New Entry!";
-      note = `💡 ${res.data.message}\n`;
-    } else if (res.data.updated) {
+    if (res.data.updated) {
       header = "🔄 Updated Existing Entry (Overwritten)!";
       note = `💡 ${res.data.message}\n`;
     }
@@ -941,6 +1093,8 @@ module.exports = {
   },
 
   onLoad: function () {
+    if (_timersStarted) return;
+    _timersStarted = true;
     setTimeout(() => {
       premium.refresh(true).catch(() => {});
       setInterval(() => { premium.refresh(true).catch(() => {}); }, 1000 * 60 * 5);
