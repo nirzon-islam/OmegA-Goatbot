@@ -1,16 +1,17 @@
+
 const { findUid } = global.utils;
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 module.exports = {
 	config: {
 		name: "adduser",
-		version: "1.6.0",
+		version: "1.6.1",
 		author: "NirZon",
 		countDown: 5,
 		role: 1,
 		description: {
 			vi: "Thêm thành viên vào box chat của bạn",
-			en: "Add user to box chat of you fixed"
+			en: "Add user to box chat of you 'fixed'"
 		},
 		category: "box chat",
 		guide: {
@@ -109,36 +110,40 @@ module.exports = {
 				});
 		}
 
-		// Get cached settings first
+		// Get current thread settings
 		const cachedInfo = await threadsData.get(threadID);
 		const approvalMode = cachedInfo.approvalMode;
 
-		// Fetch fresh group information
+		// Fetch live group information
 		let freshInfo;
 
 		try {
 			freshInfo = await api.getThreadInfo(threadID);
 
-			if (!freshInfo || !Array.isArray(freshInfo.participantIDs)) {
-				throw new Error("Invalid group information received");
-			}
+			if (!freshInfo || !Array.isArray(freshInfo.participantIDs))
+				throw new Error("Invalid group participant information");
 
 			await threadsData.refreshInfo(threadID, freshInfo);
 		}
 		catch (err) {
 			console.error("[NirZon Adduser] Refresh error:", err);
+
 			return message.reply(
-				"❌ Group information refresh failed.\nError: " + err.message
+				"❌ Group information refresh failed.\nError: " +
+				(err.message || err)
 			);
 		}
 
-		// Use live participant IDs
 		const liveMembers = new Set(
 			freshInfo.participantIDs.map(id => String(id))
 		);
 
 		const adminIDs = (freshInfo.adminIDs || []).map(admin =>
-			String(admin.id || admin)
+			String(
+				typeof admin === "object" && admin !== null
+					? admin.id || admin.userID || admin.uid || ""
+					: admin
+			)
 		);
 
 		const regExMatchFB = /(?:https?:\/\/)?(?:www\.)?(?:facebook|fb|m\.facebook)\.(?:com|me)\/(?:(?:\w)*#!\/)?(?:pages\/)?(?:[\w\-]*\/)*([\w\-\.]+)(?:\/)?/i;
@@ -184,11 +189,12 @@ module.exports = {
 				continue;
 			}
 
-			if (continueLoop) continue;
+			if (continueLoop)
+				continue;
 
 			uid = String(uid);
 
-			// Check current live group membership
+			// Check live membership
 			if (liveMembers.has(uid)) {
 				checkErrorAndPush(getLang("alreadyInGroup"), item);
 				continue;
@@ -202,14 +208,10 @@ module.exports = {
 				else
 					success[0].uids.push(uid);
 
-				// Avoid sending requests too quickly
 				await sleep(500);
 			}
 			catch (err) {
-				console.error(
-					`[NirZon Adduser] Failed to add ${uid}:`,
-					err
-				);
+				console.error(`[NirZon Adduser] Failed to add ${uid}:`, err);
 
 				const errorText = String(err.message || err);
 
@@ -225,7 +227,7 @@ module.exports = {
 			}
 		}
 
-		// Refresh group information after adding members
+		// Refresh cache after processing
 		try {
 			const updatedInfo = await api.getThreadInfo(threadID);
 
