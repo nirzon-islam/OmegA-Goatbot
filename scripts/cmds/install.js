@@ -49,6 +49,18 @@ function extractCommandName(code) {
 	return `${match[1].trim()}.js`;
 }
 
+function safeWriteFile(filePath, content) {
+	const tempPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+	try {
+		fs.writeFileSync(tempPath, content, { encoding: "utf8", flag: "wx" });
+		fs.renameSync(tempPath, filePath);
+	}
+	catch (error) {
+		if (fs.existsSync(tempPath)) fs.removeSync(tempPath);
+		throw error;
+	}
+}
+
 function cleanCodeResponse(code, contentType = "") {
 	if (typeof code !== "string")
 		return null;
@@ -194,6 +206,7 @@ function detectModuleType(command) {
 	return category === "events" ? "event" : "command";
 }
 
+// অন্য ফাইলের author এখানে check করা হবে না।
 function validateModuleExport(command) {
 	if (!command || typeof command !== "object")
 		throw new Error("File must export a command/event object.");
@@ -388,6 +401,30 @@ async function callOnLoad(command, api) {
 	});
 }
 
+function snapshotRegistrations() {
+	return {
+		commands: new Map(GoatBot.commands || []),
+		aliases: new Map(GoatBot.aliases || []),
+		eventCommands: new Map(GoatBot.eventCommands || []),
+		onChat: [...(GoatBot.onChat || [])],
+		onEvent: [...(GoatBot.onEvent || [])],
+		onAnyEvent: [...(GoatBot.onAnyEvent || [])],
+		onFirstChat: [...(GoatBot.onFirstChat || [])],
+		commandFilesPath: [...(GoatBot.commandFilesPath || [])]
+	};
+}
+
+function restoreRegistrations(snapshot) {
+	GoatBot.commands = new Map(snapshot.commands);
+	GoatBot.aliases = new Map(snapshot.aliases);
+	GoatBot.eventCommands = new Map(snapshot.eventCommands);
+	GoatBot.onChat = snapshot.onChat;
+	GoatBot.onEvent = snapshot.onEvent;
+	GoatBot.onAnyEvent = snapshot.onAnyEvent;
+	GoatBot.onFirstChat = snapshot.onFirstChat;
+	GoatBot.commandFilesPath = snapshot.commandFilesPath;
+}
+
 async function loadInstalledModule(filePath, api, overwrite = false) {
 	clearRequireCache(filePath);
 
@@ -408,10 +445,12 @@ async function loadInstalledModule(filePath, api, overwrite = false) {
 	if (existing && !overwrite)
 		throw new Error(`${type} "${name}" is already loaded.`);
 
-	if (type === "command" && existing)
-		removeCommandRegistrations(name, existing);
+	const snapshot = snapshotRegistrations();
 
 	try {
+		if (type === "command" && existing)
+			removeCommandRegistrations(name, existing);
+
 		if (type === "event")
 			registerEvent(command, filePath);
 		else
@@ -421,10 +460,8 @@ async function loadInstalledModule(filePath, api, overwrite = false) {
 		return { command, type, name };
 	}
 	catch (error) {
-		if (type === "event")
-			GoatBot.eventCommands.delete(key);
-		else
-			removeCommandRegistrations(name, command);
+		restoreRegistrations(snapshot);
+		clearRequireCache(filePath);
 		throw error;
 	}
 }
@@ -453,7 +490,7 @@ function makeTempFile(dir, prefix, fileName) {
 module.exports = {
 	config: {
 		name: "install",
-		version: "2.0.0",
+		version: "3.0.0",
 		author: "NirZon",
 		countDown: 3,
 		role: 2,
@@ -582,10 +619,19 @@ module.exports = {
 			}
 
 			fs.ensureDirSync(targetDir);
-			fs.writeFileSync(finalPath, rawCode, "utf8");
+			const installBackupPath = `${finalPath}.install-backup`;
+			const hadExistingFile = fs.existsSync(finalPath);
+
+			if (hadExistingFile)
+				fs.copyFileSync(finalPath, installBackupPath);
 
 			try {
+				safeWriteFile(finalPath, rawCode);
 				const loaded = await loadInstalledModule(finalPath, api, false);
+
+				if (fs.existsSync(installBackupPath))
+					fs.removeSync(installBackupPath);
+
 				const extra = installedPackages.length
 					? `📦 𝐃𝐞𝐩𝐞𝐧𝐝𝐞𝐧𝐜𝐢𝐞𝐬: ${installedPackages.join(", ")}`
 					: "";
@@ -594,9 +640,13 @@ module.exports = {
 			}
 			catch (error) {
 				clearRequireCache(finalPath);
-				if (fs.existsSync(finalPath))
+				if (hadExistingFile && fs.existsSync(installBackupPath)) {
+					fs.copyFileSync(installBackupPath, finalPath);
+					fs.removeSync(installBackupPath);
+				}
+				else if (fs.existsSync(finalPath)) {
 					fs.removeSync(finalPath);
-
+				}
 				return message.reply(getFailureMessage(fileName, error.message));
 			}
 		}
@@ -669,7 +719,7 @@ module.exports = {
 			if (hadOldFile)
 				fs.copyFileSync(finalPath, backupPath);
 
-			fs.writeFileSync(finalPath, rawCode, "utf8");
+			safeWriteFile(finalPath, rawCode);
 
 			try {
 				const loaded = await loadInstalledModule(finalPath, api, true);
