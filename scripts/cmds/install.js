@@ -49,27 +49,6 @@ function extractCommandName(code) {
 	return `${match[1].trim()}.js`;
 }
 
-function assertAuthorLock(code) {
-	if (typeof code !== "string")
-		throw new Error("Invalid module source.");
-	const matches = [...code.matchAll(/\\bauthor\\s*:\\s*(["'`])([^"'`]*)\\1/g)];
-	if (matches.length !== 1 || matches[0][2].trim() !== "NirZon")
-		throw new Error('Author lock: config.author must be exactly "NirZon".');
-	return true;
-}
-
-function safeWriteFile(filePath, content) {
-	const tempPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
-	try {
-		fs.writeFileSync(tempPath, content, { encoding: "utf8", flag: "wx" });
-		fs.renameSync(tempPath, filePath);
-	}
-	catch (error) {
-		if (fs.existsSync(tempPath)) fs.removeSync(tempPath);
-		throw error;
-	}
-}
-
 function cleanCodeResponse(code, contentType = "") {
 	if (typeof code !== "string")
 		return null;
@@ -221,8 +200,7 @@ function validateModuleExport(command) {
 
 	if (!command.config || typeof command.config !== "object")
 		throw new Error("config is missing.");
-	if (command.config.author !== "NirZon")
-		throw new Error('Author lock: config.author must be exactly "NirZon".');
+
 	if (typeof command.config.name !== "string" ||
 		!command.config.name.trim() ||
 		!/^[a-zA-Z0-9_-]+$/.test(command.config.name.trim()))
@@ -410,32 +388,9 @@ async function callOnLoad(command, api) {
 	});
 }
 
-function snapshotRegistrations() {
-	return {
-		commands: GoatBot.commands instanceof Map ? new Map(GoatBot.commands) : null,
-		aliases: GoatBot.aliases instanceof Map ? new Map(GoatBot.aliases) : null,
-		eventCommands: GoatBot.eventCommands instanceof Map ? new Map(GoatBot.eventCommands) : null,
-		onChat: Array.isArray(GoatBot.onChat) ? [...GoatBot.onChat] : GoatBot.onChat,
-		onEvent: Array.isArray(GoatBot.onEvent) ? [...GoatBot.onEvent] : GoatBot.onEvent,
-		onAnyEvent: Array.isArray(GoatBot.onAnyEvent) ? [...GoatBot.onAnyEvent] : GoatBot.onAnyEvent,
-		onFirstChat: Array.isArray(GoatBot.onFirstChat) ? GoatBot.onFirstChat.map(item => ({ ...item, threadIDsChattedFirstTime: [...(item.threadIDsChattedFirstTime || [])] })) : GoatBot.onFirstChat,
-		commandFilesPath: Array.isArray(GoatBot.commandFilesPath) ? GoatBot.commandFilesPath.map(item => ({ ...item, commandName: [...(item.commandName || [])] })) : GoatBot.commandFilesPath
-	};
-}
-
-function restoreRegistrations(snapshot) {
-	if (snapshot.commands) GoatBot.commands = new Map(snapshot.commands);
-	if (snapshot.aliases) GoatBot.aliases = new Map(snapshot.aliases);
-	if (snapshot.eventCommands) GoatBot.eventCommands = new Map(snapshot.eventCommands);
-	GoatBot.onChat = snapshot.onChat;
-	GoatBot.onEvent = snapshot.onEvent;
-	GoatBot.onAnyEvent = snapshot.onAnyEvent;
-	GoatBot.onFirstChat = snapshot.onFirstChat;
-	GoatBot.commandFilesPath = snapshot.commandFilesPath;
-}
-
 async function loadInstalledModule(filePath, api, overwrite = false) {
 	clearRequireCache(filePath);
+
 	let command;
 	try {
 		command = require(filePath);
@@ -443,27 +398,33 @@ async function loadInstalledModule(filePath, api, overwrite = false) {
 	catch (error) {
 		throw new Error(`Module load failed: ${error.stack || error.message}`);
 	}
+
 	const type = validateModuleExport(command);
 	const name = command.config.name.trim();
 	const key = name.toLowerCase();
 	const registry = type === "event" ? GoatBot.eventCommands : GoatBot.commands;
 	const existing = registry?.get(key);
+
 	if (existing && !overwrite)
 		throw new Error(`${type} "${name}" is already loaded.`);
-	const snapshot = snapshotRegistrations();
+
+	if (type === "command" && existing)
+		removeCommandRegistrations(name, existing);
+
 	try {
-		if (type === "command" && existing)
-			removeCommandRegistrations(name, existing);
 		if (type === "event")
 			registerEvent(command, filePath);
 		else
 			registerCommand(command, filePath);
+
 		await callOnLoad(command, api);
 		return { command, type, name };
 	}
 	catch (error) {
-		restoreRegistrations(snapshot);
-		clearRequireCache(filePath);
+		if (type === "event")
+			GoatBot.eventCommands.delete(key);
+		else
+			removeCommandRegistrations(name, command);
 		throw error;
 	}
 }
@@ -492,7 +453,7 @@ function makeTempFile(dir, prefix, fileName) {
 module.exports = {
 	config: {
 		name: "install",
-		version: "3.0.0",
+		version: "2.0.0",
 		author: "NirZon",
 		countDown: 3,
 		role: 2,
@@ -544,12 +505,6 @@ module.exports = {
 			rawCode = cleanCodeResponse(rawCode);
 			if (!rawCode)
 				return message.reply("❌ 𝐂𝐨𝐝𝐞 𝐢𝐬 𝐞𝐦𝐩𝐭𝐲.");
-			try {
-				assertAuthorLock(rawCode);
-			}
-			catch (error) {
-				return message.reply(`❌ 𝐀𝐮𝐭𝐡𝐨𝐫 𝐋𝐨𝐜𝐤 𝐑𝐞𝐣𝐞𝐜𝐭𝐞𝐝.\\n⚠️ ${error.message}`);
-			}
 
 			try {
 				new Function(rawCode);
@@ -627,19 +582,10 @@ module.exports = {
 			}
 
 			fs.ensureDirSync(targetDir);
-			const installBackupPath = `${finalPath}.install-backup`;
-			const hadExistingFile = fs.existsSync(finalPath);
-
-			if (hadExistingFile)
-				fs.copyFileSync(finalPath, installBackupPath);
+			fs.writeFileSync(finalPath, rawCode, "utf8");
 
 			try {
-				safeWriteFile(finalPath, rawCode);
 				const loaded = await loadInstalledModule(finalPath, api, false);
-
-				if (fs.existsSync(installBackupPath))
-					fs.removeSync(installBackupPath);
-
 				const extra = installedPackages.length
 					? `📦 𝐃𝐞𝐩𝐞𝐧𝐝𝐞𝐧𝐜𝐢𝐞𝐬: ${installedPackages.join(", ")}`
 					: "";
@@ -648,13 +594,9 @@ module.exports = {
 			}
 			catch (error) {
 				clearRequireCache(finalPath);
-				if (hadExistingFile && fs.existsSync(installBackupPath)) {
-					fs.copyFileSync(installBackupPath, finalPath);
-					fs.removeSync(installBackupPath);
-				}
-				else if (fs.existsSync(finalPath)) {
+				if (fs.existsSync(finalPath))
 					fs.removeSync(finalPath);
-				}
+
 				return message.reply(getFailureMessage(fileName, error.message));
 			}
 		}
@@ -680,12 +622,6 @@ module.exports = {
 		let oldRegistryEntry = null;
 
 		try {
-			try {
-				assertAuthorLock(rawCode);
-			}
-			catch (error) {
-				return message.reply(`❌ 𝐀𝐮𝐭𝐡𝐨𝐫 𝐋𝐨𝐜𝐤 𝐑𝐞𝐣𝐞𝐜𝐭𝐞𝐝.\\n⚠️ ${error.message}`);
-			}
 			const { commandDir, eventDir } = ensureDirectories();
 			const tempDir = path.join(process.cwd(), "scripts", "tmp");
 			fs.ensureDirSync(tempDir);
@@ -733,7 +669,7 @@ module.exports = {
 			if (hadOldFile)
 				fs.copyFileSync(finalPath, backupPath);
 
-			safeWriteFile(finalPath, rawCode);
+			fs.writeFileSync(finalPath, rawCode, "utf8");
 
 			try {
 				const loaded = await loadInstalledModule(finalPath, api, true);
