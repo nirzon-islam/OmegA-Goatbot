@@ -1,168 +1,235 @@
-
 const fs = require("fs-extra");
 const path = require("path");
 
 const { GoatBot } = global;
 
+function sendTemporaryMessage(api, body, threadID) {
+  api.sendMessage(body, threadID, (err, info) => {
+    if (err || !info?.messageID) return;
+
+    setTimeout(() => {
+      try {
+        api.unsendMessage(info.messageID, () => {});
+      } catch (error) {
+        console.error("[Smart Delete] Auto-unsend Error:", error);
+      }
+    }, 10000);
+  });
+}
+
 module.exports = {
   config: {
     name: "delete",
     aliases: ["del"],
-    version: "1.0.0",
+    version: "2.0.0",
     author: "NirZon",
     countDown: 3,
     role: 2,
-    shortDescription: "Delete and unload command files",
+    shortDescription: "Safely delete and unload command/event files",
     longDescription:
-      "Deletes command or event files and removes their registrations from the running GoatBot without restarting.",
+      "Deletes a command or event by its exact filename and removes its live GoatBot registrations without restarting.",
     description:
-      "Automatically deletes command/event files, aliases and in-memory registrations.",
+      "Exact-filename deletion with registry cleanup and require-cache removal.",
     category: "system"
   },
 
   onStart: async function ({ api, event, args }) {
-    const fileName = args[0];
+    const fileName = String(args[0] || "").trim();
 
     if (!fileName) {
-      return api.sendMessage(
-        "⚠️ Please provide the full file name.\n\nExample: delete adminmention.js",
+      return sendTemporaryMessage(api, 
+        "⚠️ Please provide the full file name.\n\n" +
+        "Example:\n" +
+        "delete adminmention.js",
         event.threadID
       );
     }
 
-    if (!fileName.toLowerCase().endsWith(".js")) {
-      return api.sendMessage(
-        "❌ File extension is required!\n\nExample: delete adminmention.js",
+    // Require the exact filename; command names and aliases are not accepted.
+    if (
+      !fileName.toLowerCase().endsWith(".js") ||
+      path.basename(fileName) !== fileName ||
+      fileName === "." ||
+      fileName === ".."
+    ) {
+      return sendTemporaryMessage(api, 
+        "❌ Invalid file name!\n\n" +
+        "Please provide the complete .js filename.\n" +
+        "Example: delete adminmention.js",
         event.threadID
       );
     }
 
-    if (path.basename(fileName) !== fileName) {
-      return api.sendMessage(
-        "❌ Invalid file name.",
+    const root = process.cwd();
+    const commandDir = path.resolve(root, "scripts", "cmds");
+    const eventDir = path.resolve(root, "scripts", "events");
+
+    const candidates = [
+      { type: "Command", dir: commandDir },
+      { type: "Event", dir: eventDir }
+    ].map(item => ({
+      ...item,
+      filePath: path.resolve(item.dir, fileName)
+    }));
+
+    // Ensure the resolved path remains inside the intended directory.
+    const safeCandidates = candidates.filter(({ dir, filePath }) =>
+      filePath.startsWith(dir + path.sep)
+    );
+
+    const existingFiles = safeCandidates.filter(({ filePath }) =>
+      fs.existsSync(filePath) && fs.statSync(filePath).isFile()
+    );
+
+    if (existingFiles.length === 0) {
+      return sendTemporaryMessage(api, 
+        `❎ File not found: ${fileName}\n\n` +
+        "📂 Checked folders:\n" +
+        "• scripts/cmds\n" +
+        "• scripts/events",
         event.threadID
       );
     }
 
-    const safeName = fileName;
-
-    const directories = [
-      path.resolve(process.cwd(), "scripts/cmds"),
-      path.resolve(process.cwd(), "scripts/events")
-    ];
-
-    const filePath = directories
-      .map(dir => path.join(dir, safeName))
-      .find(file => fs.existsSync(file));
-
-    if (!filePath) {
-      return api.sendMessage(
-        `❎ File not found: ${safeName}`,
+    // Do not guess if the same filename exists in both folders.
+    if (existingFiles.length > 1) {
+      return sendTemporaryMessage(api, 
+        `⚠️ Duplicate filename detected: ${fileName}\n\n` +
+        "A file with this name exists in both Commands and Events.\n" +
+        "Rename one of the files first; nothing was deleted.",
         event.threadID
       );
     }
 
-    let oldCommand;
+    const target = existingFiles[0];
+    const resolvedPath = target.filePath;
 
-    try {
-      oldCommand = require(filePath);
-    } catch (error) {
-      return api.sendMessage(
-        `❎ Could not read file.\n⚠️ ${error.message}`,
-        event.threadID
-      );
-    }
+    // Find the already-loaded module by its registered physical location.
+    // This avoids requiring/executing an arbitrary file just to inspect it.
+    const samePath = value => {
+      if (!value?.location) return false;
 
-    const name = oldCommand.config?.name;
-
-    if (!name) {
-      return api.sendMessage(
-        "❎ Command name could not be detected.",
-        event.threadID
-      );
-    }
-
-    const key = String(name).toLowerCase();
-
-    try {
-      // Remove command registration
-      if (GoatBot.commands instanceof Map) {
-        GoatBot.commands.delete(key);
+      try {
+        return path.resolve(value.location) === resolvedPath;
+      } catch {
+        return false;
       }
+    };
 
-      // Remove event registration
+    let loadedModule = null;
+    let registeredName = null;
+    let isEvent = target.type === "Event";
+
+    if (isEvent) {
       if (GoatBot.eventCommands instanceof Map) {
-        GoatBot.eventCommands.delete(key);
-      }
-
-      // Remove aliases
-      if (GoatBot.aliases instanceof Map) {
-        for (const [alias, target] of GoatBot.aliases.entries()) {
-          if (String(target).toLowerCase() === key) {
-            GoatBot.aliases.delete(alias);
+        for (const [key, value] of GoatBot.eventCommands.entries()) {
+          if (samePath(value)) {
+            loadedModule = value;
+            registeredName = String(value.config?.name || key).toLowerCase();
+            break;
           }
         }
       }
+    } else if (GoatBot.commands instanceof Map) {
+      for (const [key, value] of GoatBot.commands.entries()) {
+        if (samePath(value)) {
+          loadedModule = value;
+          registeredName = String(value.config?.name || key).toLowerCase();
+          break;
+        }
+      }
+    }
 
-      // Remove chat and event listeners
-      for (const list of [
-        "onChat",
-        "onEvent",
-        "onAnyEvent"
-      ]) {
-        if (Array.isArray(GoatBot[list])) {
-          GoatBot[list] = GoatBot[list].filter(
-            item => String(item).toLowerCase() !== key
+    if (!loadedModule || !registeredName) {
+      return sendTemporaryMessage(api, 
+        `⚠️ File Not Loaded\n\n` +
+        `📁 File: ${fileName}\n` +
+        `📌 Type: ${target.type}\n` +
+        `Nothing was deleted. Please check the loader state first.`,
+        event.threadID
+      );
+    }
+
+    if (registeredName === "delete") {
+      return sendTemporaryMessage(api, 
+        "❌ You cannot delete the active delete command itself.",
+        event.threadID
+      );
+    }
+
+    try {
+      // Delete the physical file first. If this fails, the live command
+      // remains registered and usable.
+      await fs.remove(resolvedPath);
+
+      if (isEvent) {
+        GoatBot.eventCommands.delete(registeredName);
+      } else {
+        GoatBot.commands.delete(registeredName);
+
+        // Remove every alias that points to this command.
+        if (GoatBot.aliases instanceof Map) {
+          for (const [alias, owner] of [...GoatBot.aliases.entries()]) {
+            if (String(owner).toLowerCase() === registeredName) {
+              GoatBot.aliases.delete(alias);
+            }
+          }
+        }
+
+        // Remove runtime listener registrations.
+        for (const listName of ["onChat", "onEvent", "onAnyEvent"]) {
+          if (Array.isArray(GoatBot[listName])) {
+            GoatBot[listName] = GoatBot[listName].filter(
+              item => String(item).toLowerCase() !== registeredName
+            );
+          }
+        }
+
+        if (Array.isArray(GoatBot.onFirstChat)) {
+          GoatBot.onFirstChat = GoatBot.onFirstChat.filter(
+            item =>
+              String(item?.commandName).toLowerCase() !== registeredName
+          );
+        }
+
+        if (Array.isArray(GoatBot.commandFilesPath)) {
+          GoatBot.commandFilesPath = GoatBot.commandFilesPath.filter(
+            item =>
+              !(item?.commandName || []).some(
+                commandName =>
+                  String(commandName).toLowerCase() === registeredName
+              )
           );
         }
       }
 
-      // Remove first chat registration
-      if (Array.isArray(GoatBot.onFirstChat)) {
-        GoatBot.onFirstChat = GoatBot.onFirstChat.filter(
-          item =>
-            String(item?.commandName).toLowerCase() !== key
-        );
-      }
-
-      // Remove command file registration
-      if (Array.isArray(GoatBot.commandFilesPath)) {
-        GoatBot.commandFilesPath =
-          GoatBot.commandFilesPath.filter(
-            item =>
-              !(item?.commandName || []).some(
-                command =>
-                  String(command).toLowerCase() === key
-              )
-          );
-      }
-
-      // Clear require cache
+      // Remove the module from Node's require cache.
       try {
-        delete require.cache[require.resolve(filePath)];
+        const resolvedModulePath = require.resolve(resolvedPath);
+        delete require.cache[resolvedModulePath];
       } catch {}
 
-      // Delete physical file
-      await fs.remove(filePath);
-
-      return api.sendMessage(
-        `╭━━━〔 DELETE SUCCESS 〕━━━╮\n\n` +
-        `📁 File: ${safeName}\n` +
+      return sendTemporaryMessage(api, 
+        `✅ Delete Successful\n\n` +
+        `📁 File: ${fileName}\n` +
+        `📌 Type: ${target.type}\n` +
         `🗑️ Status: Deleted\n` +
         `⚡ Memory: Unloaded\n` +
-        `🔗 Aliases: Removed\n` +
-        `♻️ Restart: Not required\n\n` +
-        `👑 Author: NirZon\n` +
-        `╰━━━━━━━━━━━━━━━━━━━━╯`,
+        `🔗 Aliases: ${isEvent ? "N/A" : "Removed"}\n` +
+        `♻️ Restart: Not Required\n\n` +
+        `━━━━━━━━━━━━━━━━━━`,
         event.threadID
       );
-
     } catch (error) {
-      console.error("Delete Error:", error);
+      console.error("[Smart Delete] Error:", error);
 
-      return api.sendMessage(
-        `❎ Failed to delete ${safeName}.\n\n` +
-        `⚠️ ${error.message}`,
+      return sendTemporaryMessage(api, 
+        `❌ Delete Failed\n\n` +
+        `📁 File: ${fileName}\n` +
+        `❎ Status: Failed\n` +
+        `⚠️ Reason: ${error.message}\n` +
+        `♻️ Memory: Registration Unchanged\n\n` +
+        `━━━━━━━━━━━━━━━━━━`,
         event.threadID
       );
     }
