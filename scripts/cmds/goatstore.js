@@ -1,4 +1,4 @@
-// code from goatstore
+// NirZon's OmegA goatstore 👽
 // api: https://omega-store-owe7.onrender.com
 const fs = require("fs");
 const path = require("path");
@@ -592,46 +592,94 @@ async function doInstall(api, threadID, senderID, id, forceKind = null) {
 
 async function doSelfUpdateSilent(api, threadID, selfUpdate) {
   let cmdData = null;
+  let tempPath = null;
+  let backupPath = null;
+  let oldCommand = null;
+  let oldAliases = [];
+
   try {
     const res = await storeGet(`/miraistore/search?q=${encodeURIComponent(selfUpdate.latestId)}`);
     const data = res.data;
     if (!isNaN(selfUpdate.latestId) && data?.rawCode && !Array.isArray(data)) cmdData = data;
     else if (Array.isArray(data?.commands)) cmdData = data.commands.find(c => String(c.id) === String(selfUpdate.latestId));
-    if (!cmdData?.rawCode) return false;
+    if (!cmdData?.rawCode || typeof cmdData.rawCode !== "string") return false;
+    if (String(cmdData.id) !== String(selfUpdate.latestId)) return false;
   } catch (_) { return false; }
 
-  try { new Function(cmdData.rawCode); }
-  catch (_) { return false; }
+  const livePath = path.resolve(__filename);
+  tempPath = `${livePath}.update-${process.pid}.js`;
+  backupPath = `${livePath}.backup`;
 
   try {
-    fs.writeFileSync(__filename, cmdData.rawCode, "utf-8");
-  } catch (_) { return false; }
+    // Parse and initialize the downloaded module before touching the live file.
+    new Function(cmdData.rawCode);
+    fs.writeFileSync(tempPath, cmdData.rawCode, { encoding: "utf8", flag: "w" });
+    delete require.cache[require.resolve(tempPath)];
+    const candidate = require(tempPath);
+    if (!candidate?.config || String(candidate.config.name).toLowerCase() !== "goatstore")
+      throw new Error("Downloaded file is not a valid GoatStore command.");
+    if (!candidate.config.version || cmpVer(candidate.config.version, selfUpdate.currentVersion) <= 0)
+      throw new Error("Downloaded version is not newer than the installed version.");
 
-  try { await storePost(`/miraistore/install/${cmdData.id}`, { }); } catch (_) {}
+    // Keep the current command registered so it can be restored if reload fails.
+    oldCommand = global.GoatBot?.commands?.get("goatstore") || null;
+    if (oldCommand?.config?.aliases) oldAliases = [...oldCommand.config.aliases];
 
-  const changelog = (cmdData.description || cmdData.changelog || "No changelog provided.").trim();
-  const load = autoloadCommand(__filename);
+    // Preserve the current source, then atomically replace it.
+    fs.copyFileSync(livePath, backupPath);
+    fs.renameSync(tempPath, livePath);
+    tempPath = null;
 
-  if (api && threadID) {
-    const msg =
-      `♻️ Auto-Updated OmegA Store!\n` +
-      `╭─‣ Version : v${cmdData.version || selfUpdate.latestVersion}\n` +
-      `├‣ ID : ${cmdData.id}\n` +
-      `╰────────────◊\n` +
-      `📝 Changelog:\n${changelog}\n\n` +
-      (load.success ? `🚀 Live now! No restart needed.` : `⚠️ Reload failed (${load.reason}) — restart bot to apply.`);
-    api.sendMessage(msg, threadID).catch(() => {});
+    const load = autoloadCommand(livePath);
+    if (!load.success) throw new Error(load.reason || "Command reload failed.");
+
+    // Force the next scheduled check to read the newly installed version.
+    _updateCheckCache = null;
+    try { await storePost(`/miraistore/install/${cmdData.id}`, {}); } catch (_) {}
+
+    const changelog = String(cmdData.description || cmdData.changelog || "No changelog provided.").trim();
+    if (api && threadID) {
+      const msg =
+        `♻️ Auto-Updated OmegA Store!\n` +
+        `╭─‣ Version : v${cmdData.version || selfUpdate.latestVersion}\n` +
+        `├‣ ID : ${cmdData.id}\n` +
+        `╰────────────◊\n` +
+        `📝 Changelog:\n${changelog}\n\n` +
+        `🚀 Live now! Backup saved.`;
+      api.sendMessage(msg, threadID).catch(() => {});
+    }
+    return true;
+  } catch (err) {
+    // Restore the original source and command if any replacement/reload step fails.
+    try {
+      if (backupPath && fs.existsSync(backupPath)) {
+        fs.copyFileSync(backupPath, livePath);
+        const restored = autoloadCommand(livePath);
+        if (!restored.success && oldCommand && global.GoatBot?.commands) {
+          global.GoatBot.commands.set("goatstore", oldCommand);
+          for (const alias of oldAliases) global.GoatBot.commands.set(String(alias).toLowerCase(), oldCommand);
+        }
+      }
+    } catch (_) {}
+    if (api && threadID) {
+      api.sendMessage(`⚠️ Self-update failed. Previous version restored.\nReason: ${err.message}`, threadID).catch(() => {});
+    }
+    return false;
+  } finally {
+    if (tempPath) {
+      try { if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath); } catch (_) {}
+      try { delete require.cache[require.resolve(tempPath)]; } catch (_) {}
+    }
   }
-  return true;
 }
 
 async function maybeAutoUpdate(api, threadID) {
-  if (_autoupdateInFlight) return;
-  const selfUpdate = await checkSelfUpdate();
-  if (!selfUpdate?.hasUpdate) return;
+  if (_autoupdateInFlight) return false;
   _autoupdateInFlight = true;
   try {
-    await doSelfUpdateSilent(api, threadID, selfUpdate);
+    const selfUpdate = await checkSelfUpdate();
+    if (!selfUpdate?.hasUpdate) return false;
+    return await doSelfUpdateSilent(api, threadID, selfUpdate);
   } finally {
     _autoupdateInFlight = false;
   }
