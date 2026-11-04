@@ -418,7 +418,8 @@ async function runAutoSync() {
     { dir: getEventsDir(), kind: "event" }
   ].filter(f => fs.existsSync(f.dir));
 
-  if (!folders.length) return;
+  const stats = { uploaded, updated, skipped, failed };
+  if (!folders.length) return stats;
 
   const cache = loadSyncCache();
 
@@ -458,7 +459,8 @@ async function runAutoSync() {
         failed++;
         if (++consecutiveErrors >= 5) {
           saveSyncCache(cache);
-          return log.warn("GOATSTORE", `AutoSync stopped: store API unreachable (${err.response?.data?.error || err.message})`);
+          log.warn("GOATSTORE", `AutoSync stopped: store API unreachable (${err.response?.data?.error || err.message})`);
+          return { uploaded, updated, skipped, failed, stopped: true };
         }
       }
 
@@ -469,6 +471,7 @@ async function runAutoSync() {
   saveSyncCache(cache);
   if (uploaded || updated || failed || skipped)
     log.info("GOATSTORE", `AutoSync done — ${uploaded} uploaded, ${updated} updated, ${skipped} skipped, ${failed} failed`);
+  return { uploaded, updated, skipped, failed };
 }
 
 const buildBar = pct => "█".repeat(Math.floor(pct / 10)) + "░".repeat(10 - Math.floor(pct / 10));
@@ -696,32 +699,34 @@ function authorLine(cmd) {
   return `${cmd.author || "Unknown"}${v}`;
 }
 
-function resultBlock(cmd) {
+function formatUploadDate(value) {
+  const date = value ? new Date(value) : null;
+  return date && !Number.isNaN(date.getTime()) ? date.toDateString() : "N/A";
+}
+
+function resultBlock(cmd, index = 0) {
   const isP = premium.isPremiumCmd(cmd.name, cmd.author);
-  const nameLine =isP ? `\u262F ${cmd.name}` : cmd.name;
+  const nameLine = isP ? `☯ ${cmd.name}` : cmd.name;
   return (
-    `╭─‣ ${nameLine} 〄\n` +
-    `├‣ ID : ${cmd.id}\n` +
-    `├‣ Type : ${typeBadge(cmd)}\n` +
-    `├‣ Author : ${cmd.author || "Unknown"}\n` +
-    `├‣ Version : ${cmd.version && cmd.version !== "N/A" ? ` ${cmd.version}` : " N/A"}\n` +
-    `├‣ Category : ${cmd.category}\n` +
-    `╰────────────◊\n` +
-    ` ✰ Upload : ${new Date(cmd.uploadDate || Date.now()).toDateString()}\n\n`
+    `${String(index + 1).padStart(2, "0")}. ✦ ${nameLine}\n` +
+    `    ID: ${cmd.id}\n` +
+    `    Author: ${cmd.author || "Unknown"}\n` +
+    `    Version: ${cmd.version && cmd.version !== "N/A" ? cmd.version : "N/A"}\n` +
+    `    Category: ${cmd.category || "Uncategorized"}\n` +
+    `    📅 Uploaded: ${formatUploadDate(cmd.uploadDate)}\n\n`
   );
 }
 
-function listBlock(cmd) {
+function listBlock(cmd, index = 0) {
   const isP = premium.isPremiumCmd(cmd.name, cmd.author);
-  const nameLine =isP ? `\u262F ${cmd.name}` : cmd.name;
+  const nameLine = isP ? `☯ ${cmd.name}` : cmd.name;
   return (
-    `╭─‣ ${nameLine} 〄\n` +
-    `├‣ ID : ${cmd.id}\n` +
-    `├‣ Author : ${cmd.author || "Unknown"}\n` +
-    `├‣ Version : ${cmd.version && cmd.version !== "N/A" ? ` ${cmd.version}` : " N/A"}\n` +
-    `├‣ Category : ${cmd.category}\n` +
-    `╰────────────◊\n` +
-    ` ✰ Upload : ${new Date(cmd.uploadDate || Date.now()).toDateString()}\n\n`
+    `${String(index + 1).padStart(2, "0")}. ✦ ${nameLine}\n` +
+    `    ID: ${cmd.id}\n` +
+    `    Author: ${cmd.author || "Unknown"}\n` +
+    `    Version: ${cmd.version && cmd.version !== "N/A" ? cmd.version : "N/A"}\n` +
+    `    Category: ${cmd.category || "Uncategorized"}\n` +
+    `    📅 Uploaded: ${formatUploadDate(cmd.uploadDate)}\n\n`
   );
 }
 
@@ -735,10 +740,14 @@ async function sendListPage(api, threadID, senderID, kind, page, limit = 10, pre
 
     const totalPages = Math.ceil(data.total / limit);
     const label = kind === "event" ? "OmegA Store Events" : "OmegA Store Commands";
-    let msg = `📂 ${label} — Page ${page}/${totalPages} (${data.total} total)\n\n`;
-        data.commands.forEach(cmd => { if (premium.isFiltered(cmd.name, cmd.author, senderID)) return; msg += listBlock(cmd); });
-    if (totalPages > 1) msg += `⏤͟͟͞͞  Page ${page}/${totalPages}\n╭‣ React or reply p ${page + 1 <= totalPages ? page + 1 : page} for nxt pg\n`;
-    msg += `╰‣ reply in <id> for install`;
+    let msg = `📂 OmegA Store — ${kind === "event" ? "Events" : "Commands"}\nPage ${page}/${totalPages} • Total: ${data.total}\n\n`;
+    let visibleIndex = 0;
+    data.commands.forEach(cmd => {
+      if (premium.isFiltered(cmd.name, cmd.author, senderID)) return;
+      msg += listBlock(cmd, visibleIndex++);
+    });
+    if (totalPages > 1) msg += `━━━━━━━━━━━━━━━━━━\n📄 Page ${page}/${totalPages}\nReply "page ${page + 1 <= totalPages ? page + 1 : page}" for next page\n`;
+    msg += `━━━━━━━━━━━━━━━━━━\n↪ Reply "in <id>" to install\n↪ Use "${prefix}gs install <id>" to install`;
 
     const finalMsg = msg.trim();
     const sent = await api.sendMessage(finalMsg, threadID);
@@ -765,8 +774,10 @@ function searchTitle(query, filterOpts) {
   if (filterOpts.author) return `👤 OmegA Store • Author: ${filterOpts.author}`;
   if (filterOpts.category && !query) return `📂 OmegA Store • Category: ${filterOpts.category}`;
   if (filterOpts.framework && !query) return `📂 OmegA Store • Category: ${filterOpts.framework}`;
-  if (filterOpts.kind === "event" && !query) return `📂 OmegA Store • Events`;
-  return `🔍 OmegA Store • Search: "${query}"`;
+  if (filterOpts.kind === "event") return query
+    ? `🔎 OmegA Store — Event Search: "${query}"`
+    : `📂 OmegA Store — Events`;
+  return `🔎 OmegA Store — Search: "${query}"`;
 }
 
 async function sendSearchPage(api, threadID, senderID, query, page, limit = 5, prefix = "!", filterOpts = {}) {
@@ -792,10 +803,10 @@ async function sendSearchPage(api, threadID, senderID, query, page, limit = 5, p
     if (page > totalPages) return api.sendMessage("❌ No results found for this page.", threadID);
     const pageCommands = commands.slice((page - 1) * limit, page * limit);
     const title = searchTitle(query, filterOpts);
-    let msg = `${title} (${total} found)\n\n`;
-    pageCommands.forEach(cmd => { msg += resultBlock(cmd); });
-    if (totalPages > 1) msg += `⏤͟͟͞͞  Page ${page}/${totalPages}\n╭‣ React or reply p ${page + 1 <= totalPages ? page + 1 : page} for nxt pg\n`;
-    msg += `╰‣ reply in <id> for install`;
+    let msg = `${title}\nFound ${total} matching files • Page ${page}/${totalPages}\n\n`;
+    pageCommands.forEach((cmd, index) => { msg += resultBlock(cmd, (page - 1) * limit + index); });
+    if (totalPages > 1) msg += `━━━━━━━━━━━━━━━━━━\n📄 Page ${page}/${totalPages}\nReply "page ${page + 1 <= totalPages ? page + 1 : page}" for next page\n`;
+    msg += `━━━━━━━━━━━━━━━━━━\n↪ Reply "in <id>" to install\n↪ Use "${prefix}gs install <id>" to install`;
 
     const sent = await api.sendMessage(msg.trim(), threadID);
     const h = {
@@ -819,10 +830,14 @@ async function renderListPageInto(messageID, kind, page, limit, senderID = null)
 
   const totalPages = Math.ceil(data.total / limit);
   const label = kind === "event" ? "OmegA Store Events" : "OmegA Store Commands";
-  let msg = `📂 ${label} — Page ${page}/${totalPages} (${data.total} total)\n\n`;
-  data.commands.forEach(cmd => { if (premium.isFiltered(cmd.name, cmd.author, senderID)) return; msg += listBlock(cmd); });
-  if (totalPages > 1) msg += `⏤͟͟͞͞  Page ${page}/${totalPages}\n╭‣ React or reply p ${page + 1 <= totalPages ? page + 1 : page} for nxt pg\n`;
-  msg += `╰‣ reply in <id> for install`;
+  let msg = `📂 OmegA Store — ${kind === "event" ? "Events" : "Commands"}\nPage ${page}/${totalPages} • Total: ${data.total}\n\n`;
+  let visibleIndex = 0;
+  data.commands.forEach(cmd => {
+    if (premium.isFiltered(cmd.name, cmd.author, senderID)) return;
+    msg += listBlock(cmd, visibleIndex++);
+  });
+  if (totalPages > 1) msg += `━━━━━━━━━━━━━━━━━━\n📄 Page ${page}/${totalPages}\nReply "page ${page + 1 <= totalPages ? page + 1 : page}" for next page\n`;
+  msg += `━━━━━━━━━━━━━━━━━━\n↪ Reply "in <id>" to install\n↪ Use "${getPrefix()}gs install <id>" to install`;
   return { text: msg.trim(), totalPages };
 }
 
@@ -847,28 +862,28 @@ async function renderSearchPageInto(query, page, limit, filterOpts = {}, senderI
   if (page > totalPages) return null;
   const pageCommands = commands.slice((page - 1) * limit, page * limit);
   const title = searchTitle(query, filterOpts);
-  let msg = `${title} (${total} found)\n\n`;
-  pageCommands.forEach(cmd => { msg += resultBlock(cmd); });
-  if (totalPages > 1) msg += `⏤͟͟͞͞  Page ${page}/${totalPages}\n╭‣ React or reply p ${page + 1 <= totalPages ? page + 1 : page} for nxt pg\n`;
-  msg += `╰‣ reply in <id> for install`;
+  let msg = `${title}\nFound ${total} matching files • Page ${page}/${totalPages}\n\n`;
+  pageCommands.forEach((cmd, index) => { msg += resultBlock(cmd, (page - 1) * limit + index); });
+  if (totalPages > 1) msg += `━━━━━━━━━━━━━━━━━━\n📄 Page ${page}/${totalPages}\nReply "page ${page + 1 <= totalPages ? page + 1 : page}" for next page\n`;
+  msg += `━━━━━━━━━━━━━━━━━━\n↪ Reply "in <id>" to install\n↪ Use "${getPrefix()}gs install <id>" to install`;
   return { text: msg.trim(), totalPages };
 }
 
 async function uploadFile(api, threadID, filePath, kind, senderID = null) {
   let data;
   try { data = fs.readFileSync(filePath, "utf8"); }
-  catch (err) { return api.sendMessage(`❌ Read failed:\n${err.message}`, threadID); }
+  catch (err) { return api.sendMessage(`❌ OmegA Store — Upload Failed\n\nReason: File could not be read.\n${err.message}`, threadID); }
 
   try { new Function(data); }
-  catch (err) { return api.sendMessage(`❌ Syntax Error:\n${err.message}`, threadID); }
+  catch (err) { return api.sendMessage(`❌ OmegA Store — Upload Failed\n\nReason: Syntax error in file.\n${err.message}`, threadID); }
 
   const displayName = data.match(/name\s*:\s*["'`](.*?)["'`]/)?.[1] || path.basename(filePath);
   const detected = detectFramework(data);
   if (detected !== "goat")
     return api.sendMessage(
-      `❌ Only GoatBot files can be uploaded here.\n` +
-      `├‣ Detected : "${detected}" (this looks like a ${detected === "mirai" ? "Mirai" : "plain script"} file)\n` +
-      `╰────────────◊`,
+      `❌ OmegA Store — Upload Failed\n\n` +
+      `Only GoatBot files can be uploaded here.\n` +
+      `Detected: "${detected}" (${detected === "mirai" ? "Mirai" : "plain script"} file).`,
       threadID
     );
 
@@ -884,12 +899,11 @@ async function uploadFile(api, threadID, filePath, kind, senderID = null) {
     if (["Already exists", "Version already exists", "Version too low", "Not allowed", "Upload blocked"].includes(res.data?.error)) {
       if (pid) api.unsendMessage(pid);
       return api.sendMessage(
-        `⚠️ Upload Blocked!\n` +
-        `╭─‣ Name : ${displayName}\n` +
-        (res.data.id ? `├‣ ID : ${res.data.id}\n` : "") +
-        (res.data.currentVersion ? `├‣ Current : v${res.data.currentVersion}\n` : "") +
-        `╰────────────◊\n` +
-        `💡 ${res.data.message}`,
+        `⚠️ OmegA Store — Upload Blocked\n\n` +
+        `✦ Name: ${displayName}\n` +
+        (res.data.id ? `✦ ID: ${res.data.id}\n` : "") +
+        (res.data.currentVersion ? `✦ Current Version: v${res.data.currentVersion}\n` : "") +
+        `\n💡 ${res.data.message || "This file cannot be uploaded."}`,
         threadID
       );
     }
@@ -897,11 +911,11 @@ async function uploadFile(api, threadID, filePath, kind, senderID = null) {
     if (res.data?.error) {
       if (pid) api.unsendMessage(pid);
       return api.sendMessage(
-        `⚠️ Upload Failed!\n` +
-        `╭─‣ Name : ${displayName}\n` +
-        `├‣ Error : ${res.data.error}\n` +
-        `╰────────────◊\n` +
-        `💡 ${res.data.message || "MiraiStore backend register korte parenai. Backend/API side check koro."}`,
+        `❌ OmegA Store — Upload Failed\n\n` +
+        `✦ Name: ${displayName}\n` +
+        `✦ Error: ${res.data.error}\n\n` +
+        `Please check the file and try again.\n` +
+        `💡 ${res.data.message || "Store API could not register this file."}`,
         threadID
       );
     }
@@ -923,25 +937,25 @@ async function uploadFile(api, threadID, filePath, kind, senderID = null) {
     }
 
     const msg =
-      `${header}\n` +
-      `╭─‣ Name : ${displayName}\n` +
-      `├‣ Type : ${res.data.type || `goat-${kind}`}\n` +
-      `├‣ Version : ${version}\n` +
-      `├‣ Author : ${author}\n` +
-      `├‣ Category : ${category}\n` +
-      `├‣ ID : ${res.data.id}\n` +
-      `╰────────────◊\n` +
-      note +
-      `⭔ Upload : ${new Date().toDateString()}`;
+      `${header}\n\n` +
+      `✦ Name: ${displayName}\n` +
+      `✦ Type: ${res.data.type || `goat-${kind}`}\n` +
+      `✦ Version: ${version}\n` +
+      `✦ Author: ${author}\n` +
+      `✦ Category: ${category}\n` +
+      `✦ ID: ${res.data.id}\n` +
+      `📅 Uploaded: ${new Date().toDateString()}\n` +
+      (note ? `\n${note}` : "") +
+      (res.data.olderVersion ? "" : res.data.updated ? "" : `\nYour file is now available in OmegA Store.`);
     if (pid) { try { await api.editMessage(msg, pid); } catch (_) { api.sendMessage(msg, threadID); } }
     else api.sendMessage(msg, threadID);
   } catch (err) {
     if (pid) api.unsendMessage(pid);
     api.sendMessage(
-      `⚠️ Store API Call Fail Korlo!\n` +
-      `├‣ Error : ${err.response?.data?.error || err.message}\n` +
-      `╰────────────◊\n` +
-      `💡 ${err.response?.data?.message || "Request fail hoyeche, MiraiStore backend / network check koro."}`,
+      `❌ OmegA Store — Upload Failed\n\n` +
+      `Reason: Store API request failed.\n` +
+      `Error: ${err.response?.data?.error || err.message}\n\n` +
+      `💡 ${err.response?.data?.message || "Please check the Store API or network and try again."}`,
       threadID
     );
   }
@@ -951,7 +965,7 @@ module.exports = {
   config: {
     name: "goatstore",
     aliases: ["gs", "cmdstore", "commandstore"],
-    version: "3.0.0",
+    version: "3.1.0",
     author: "NirZon",
     countDown: 3,
     role: 2,
@@ -1051,7 +1065,7 @@ module.exports = {
     try { isBotMsg = String(messageReply.senderID) === String(api.getCurrentUserID()); } catch (_) {}
     if (!isBotMsg) return;
     const repliedBody = messageReply.body || "";
-    if (!/〄|🔍|📂|MiraiStore|GoatBot Store/i.test(repliedBody)) return;
+    if (!/〄|🔍|📂|OmegA Store|MiraiStore|GoatBot Store/i.test(repliedBody)) return;
 
     if (inMatch) return doInstall(api, threadID, senderID, inMatch[1], null);
 
@@ -1243,9 +1257,9 @@ module.exports = {
       const updates = await getTodayUpdates(senderID);
 
       if (updates.length && !userSeenNoti.get(senderID)) {
-        let n = `🔔 [ OmegA STORE NOTIFICATION ]\nToday ${updates.length} OmegA Store update(s)!\n━━━━━━━━━━━━━━━━━━\n`;
-        updates.forEach(f => { if (premium.isFiltered(f.name, f.author, senderID)) return; n += ` ‣ ${f.name} (ID: ${f.id})\n`; });
-        n += `\n(Type "${prefix}gs n" for details or "${prefix}gs" again for menu)`;
+        let n = `🔔 OmegA Store Notification\n\n✦ ${updates.length} New Store Updates!\n\n`;
+        updates.forEach(f => { if (premium.isFiltered(f.name, f.author, senderID)) return; n += `› ${f.name} (ID: ${f.id})\n`; });
+        n += `\n━━━━━━━━━━━━━━━━━━\nType "${prefix}gs n" for details\nType "${prefix}gs" again for menu`;
         userSeenNoti.set(senderID, true);
         return api.sendMessage(n, threadID);
       }
@@ -1288,21 +1302,33 @@ module.exports = {
       const updates = await getTodayUpdates(senderID);
       if (!updates.length)
         return api.sendMessage("📅 No OmegA Store updates today.", threadID);
-      let msg = `📂 Today's OmegA Store Updates\n━━━━━━━━━━━━━━━━━━\n`;
+      let msg = `🔔 OmegA Store — Today's Updates\n\n✦ ${updates.length} New Updates Today!\n\n`;
+      let visibleIndex = 0;
       updates.forEach(cmd => {
         if (premium.isFiltered(cmd.name, cmd.author, senderID)) return;
-        msg += `╭─‣ ${cmd.name}\n├‣ ID: ${cmd.id}\n├‣ Type: ${typeBadge(cmd)}\n├‣ Author: ${cmd.author}\n╰────────────◊\n\n`;  });
+        msg += `${String(++visibleIndex).padStart(2, "0")}. ✦ ${cmd.name}\n`;
+        msg += `    ID: ${cmd.id}\n`;
+        msg += `    Author: ${cmd.author || "Unknown"}\n`;
+        msg += `    Version: ${cmd.version || "N/A"}\n\n`;
+      });
       await api.sendMessage(msg.trim(), threadID);
       return;
     }
 
     if (sub === "sync") {
-      api.sendMessage("🔄 Starting manual sync...", threadID);
+      api.sendMessage("🔄 OmegA Store — File Sync\n\nSyncing bot files...\n⏳ Please wait while files are synchronized.", threadID);
       try {
-        await runAutoSync();
-        api.sendMessage("✅ Sync complete.", threadID);
+        const stats = await runAutoSync() || { uploaded: 0, updated: 0, skipped: 0, failed: 0 };
+        const msg =
+          `✅ OmegA Store — Sync Complete\n\n` +
+          `✦ Uploaded: ${stats.uploaded || 0}\n` +
+          `✦ Updated: ${stats.updated || 0}\n` +
+          `✦ Skipped: ${stats.skipped || 0}\n` +
+          `✦ Failed: ${stats.failed || 0}\n\n` +
+          (stats.stopped ? `⚠️ Sync stopped after repeated API errors.` : `All detected files have been checked.`);
+        api.sendMessage(msg, threadID);
       } catch (err) {
-        api.sendMessage(`❌ Sync failed: ${err.message}`, threadID);
+        api.sendMessage(`❌ OmegA Store — Sync Failed\n\nReason: ${err.message}\n\nPlease try again later.`, threadID);
       }
       return;
     }
@@ -1349,12 +1375,18 @@ module.exports = {
           const res = await storeGet(`/miraistore/list?limit=20&framework=goat&kind=event&clientFp=${encodeURIComponent(senderID || "")}`);
           const events = res.data.commands || [];
           if (!events.length) return api.sendMessage("❌ No OmegA Store events found.", threadID);
-          let msg = `📂 OmegA Store Events (${res.data.total})\n\n`;
+          let msg = `📂 OmegA Store — Events\nTotal: ${res.data.total}\n\n`;
+          let visibleIndex = 0;
           events.forEach(cmd => {
             if (premium.isFiltered(cmd.name, cmd.author, senderID)) return;
-            msg += `╭─‣ ${cmd.name}\n├‣ ID : ${cmd.id}\n├‣ Author : ${authorLine(cmd)}\n╰────────────◊\n\n`;
+            msg += `${String(++visibleIndex).padStart(2, "0")}. ✦ ${cmd.name}\n`;
+            msg += `    ID: ${cmd.id}\n`;
+            msg += `    Author: ${cmd.author || "Unknown"}\n`;
+            msg += `    Version: ${cmd.version || "N/A"}\n`;
+            msg += `    Category: ${cmd.category || "Uncategorized"}\n`;
+            msg += `    📅 Uploaded: ${formatUploadDate(cmd.uploadDate)}\n\n`;
           });
-          msg += `💡 Use: ${prefix}gs -e install <id>`;
+          msg += `━━━━━━━━━━━━━━━━━━\n↪ Reply "in <id>" to install\n↪ Use "${prefix}gs -e install <id>" to install`;
           await api.sendMessage(msg.trim(), threadID);
           return;
         } catch (_) { return api.sendMessage("❌ Event list API error.", threadID); }
@@ -1366,12 +1398,16 @@ module.exports = {
           .filter(cmd => matchesNameOrAliases(cmd, action))
           .filter(cmd => !premium.isFiltered(cmd.name, cmd.author, senderID));
         if (!events.length) return api.sendMessage(`❌ No OmegA Store event found: "${action}"`, threadID);
-        let msg = `📂 OmegA Store Events matching "${action}"\n\n`;
-        events.forEach(cmd => {
-          if (premium.isFiltered(cmd.name, cmd.author, senderID)) return;
-          msg += `╭─‣ ${cmd.name}\n├‣ ID : ${cmd.id}\n├‣ Author : ${authorLine(cmd)}\n╰────────────◊\n\n`;
+        let msg = `🔎 OmegA Store — Event Search: "${action}"\nFound ${events.length} matching events\n\n`;
+        events.forEach((cmd, index) => {
+          msg += `${String(index + 1).padStart(2, "0")}. ✦ ${cmd.name}\n`;
+          msg += `    ID: ${cmd.id}\n`;
+          msg += `    Author: ${cmd.author || "Unknown"}\n`;
+          msg += `    Version: ${cmd.version || "N/A"}\n`;
+          msg += `    Category: ${cmd.category || "Uncategorized"}\n`;
+          msg += `    📅 Uploaded: ${formatUploadDate(cmd.uploadDate)}\n\n`;
         });
-        msg += `💡 Use: ${prefix}gs -e install <id>`;
+        msg += `━━━━━━━━━━━━━━━━━━\n↪ Reply "in <id>" to install\n↪ Use "${prefix}gs -e install <id>" to install`;
         await api.sendMessage(msg.trim(), threadID);
         return;
       } catch (_) { return api.sendMessage("❌ Event search API error.", threadID); }
@@ -1398,17 +1434,19 @@ module.exports = {
       try {
         if (!list) return api.sendMessage("❌ Trending API error.", threadID);
         if (!list.length) return api.sendMessage("❌ No trending files.", threadID);
-        let msg = `🔥 OmegA Store • Top Trending 🔥\n\n`;
-        list.forEach((cmd, i) => {
+        let msg = `🔥 OmegA Store — Trending\n\nMost Popular Commands\n\n`;
+        let visibleIndex = 0;
+        list.forEach(cmd => {
           if (premium.isFiltered(cmd.name, cmd.author, senderID)) return;
+          const position = ++visibleIndex;
+          const rank = position === 1 ? "🥇 01." : position === 2 ? "🥈 02." : position === 3 ? "🥉 03." : `${String(position).padStart(2, "0")}.`;
           msg +=
-            `╭─‣ ${cmd.name}${i === 0 ? " 🏆" : ""}\n` +
-            `├‣ Type : ${typeBadge(cmd)}\n` +
-            `├‣ Likes : ❤️ ${cmd.likes}\n` +
-            `├‣ Views : 👁️ ${cmd.views}\n` +
-            `├‣ ID : ${cmd.id}\n` +
-            `╰────────────◊\n\n`;
+            `${rank} ${cmd.name}\n` +
+            `    ❤️ Likes: ${cmd.likes ?? 0}\n` +
+            `    👁️ Views: ${cmd.views ?? 0}\n` +
+            `    ID: ${cmd.id}\n\n`;
         });
+        msg += `━━━━━━━━━━━━━━━━━━\n↪ Reply "in <id>" to install\n↪ Use "${prefix}gs install <id>" to install`;
         await api.sendMessage(msg.trim(), threadID);
         return;
       } catch (_) { return api.sendMessage("❌ Trending API error.", threadID); }
@@ -1463,23 +1501,22 @@ module.exports = {
         if (isPrem && !premium.isPremiumViewer(senderID))
           return api.sendMessage("*This command is premium only*", threadID);
 
-        const finalMsg = isPrem
-          ? resultBlock(data) + `💬 Reply "in" to install`
-          : (
-              `${typeBadge(data)}\n` +
-              `╭─‣ Name : ${data.name}\n` +
-              `├‣ Author : ${data.author}\n` +
-              `├‣ Version : ${data.version || "N/A"}\n` +
-              `├‣ Category : ${data.category}\n` +
-              `├‣ Views : 👁️ ${data.views}\n` +
-              `├‣ Likes : ❤️ ${data.likes}\n` +
-              `├‣ Installs : ⬇️ ${data.installs}\n` +
-              `╰────────────◊\n` +
-              `⭔ Description: ${data.description || "No description"}\n` +
-              `⭔ Upload : ${new Date(data.uploadDate || Date.now()).toDateString()}\n` +
-              `🌐 URL : ${data.rawUrl}\n\n` +
-              `💬 Reply "in" to install`
-            );
+        const finalMsg =
+          `📦 OmegA Store — Command Details\n\n` +
+          `✦ Name: ${data.name || "Unknown"}\n` +
+          `✦ Type: ${typeBadge(data)}\n` +
+          `✦ ID: ${data.id}\n` +
+          `✦ Author: ${data.author || "Unknown"}\n` +
+          `✦ Version: ${data.version || "N/A"}\n` +
+          `✦ Category: ${data.category || "Uncategorized"}\n` +
+          `❤️ Likes: ${data.likes ?? 0}\n` +
+          `👁️ Views: ${data.views ?? 0}\n` +
+          `⬇️ Installs: ${data.installs ?? 0}\n` +
+          `📅 Uploaded: ${formatUploadDate(data.uploadDate)}\n\n` +
+          `Description: ${data.description || "No description"}\n` +
+          `🌐 URL: ${data.rawUrl || "N/A"}\n\n` +
+          `↪ Reply "in" to install\n` +
+          `↪ Use "${prefix}gs install ${data.id}" to install`;
         const sent = await api.sendMessage(finalMsg, threadID);
         const h = { commandName: "goatstore", messageID: sent.messageID, singleId: data.id, mode: "single", senderID, editCount: 0 };
         global.GoatBot.onReply.set(sent.messageID, h);
