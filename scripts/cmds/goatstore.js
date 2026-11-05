@@ -477,39 +477,47 @@ async function runAutoSync() {
 const buildBar = pct => "█".repeat(Math.floor(pct / 10)) + "░".repeat(10 - Math.floor(pct / 10));
 const frames = ["◖", "◕", "◔", "◓", "◒", "◑", "◐"];
 
-async function animateInstall(api, threadID, name) {
-  const steps = [
-    { pct: 25, delay: 450 },
-    { pct: 50, delay: 450 },
-    { pct: 75, delay: 450 },
-    { pct: 100, delay: 450 }
-  ];
-  const info = await api.sendMessage(
-    `📦 Installing ${name}...\n\n◖ Installing command...\n[░░░░░░░░░░] 0%`,
-    threadID
-  );
-  for (let i = 0; i < steps.length; i++) {
-    await new Promise(r => setTimeout(r, steps[i].delay));
-    await api.editMessage(
-      `📦 Installing ${name}...\n\n${frames[i]} Installing command...\n[${buildBar(steps[i].pct)}] ${steps[i].pct}%`,
-      info.messageID
-    );
+async function animateInstall(api, threadID, name, author) {
+  const steps = [0, 25, 50, 75, 100];
+  const render = pct =>
+    `📦 OmegA Installer\n\n` +
+    `◖ Installing command: ${name}\n` +
+    `◖ command author: ${author || "Unknown"}\n` +
+    `${buildBar(pct).replace(/█/g, "▰").replace(/░/g, "▱")} ${pct}%\n` +
+    `━━━━━━━━━━━━━━━━━━━━`;
+
+  const info = await api.sendMessage(render(0), threadID);
+  for (let i = 1; i < steps.length; i++) {
+    await new Promise(r => setTimeout(r, 450));
+    await api.editMessage(render(steps[i]), info.messageID);
   }
   return info.messageID;
 }
 
-async function animateUpload(api, threadID, name) {
-  const steps = [
-    { label: "Reading file",         pct: 30,  delay: 500 },
-    { label: "Uploading directly",   pct: 70,  delay: 900 },
-    { label: "Finalizing registration", pct: 100, delay: 500 }
-  ];
-  const info = await api.sendMessage(`📤 Uploading ${name}...\n\n◖ Preparing upload...\n[░░░░░░░░░░] 0%`, threadID);
-  for (let i = 0; i < steps.length; i++) {
-    await new Promise(r => setTimeout(r, steps[i].delay));
-    await api.editMessage(`📤 Uploading ${name}...\n\n${frames[i]} ${steps[i].label}...\n[${buildBar(steps[i].pct)}] ${steps[i].pct}%`, info.messageID);
+async function animateUpload(api, threadID, name, author) {
+  const steps = [0, 25, 50, 75, 100];
+  const render = pct =>
+    `📤 OmegA Uploader\n\n` +
+    `◖ Uploading file: ${name}\n` +
+    `◖ file author: ${author || "Unknown"}\n` +
+    `${buildBar(pct).replace(/█/g, "▰").replace(/░/g, "▱")} ${pct}%\n` +
+    `━━━━━━━━━━━━━━━━━━━━`;
+
+  const info = await api.sendMessage(render(0), threadID);
+  for (let i = 1; i < steps.length; i++) {
+    await new Promise(r => setTimeout(r, 450));
+    await api.editMessage(render(steps[i]), info.messageID);
   }
   return info.messageID;
+}
+
+function autoUnsend(api, messageID, delay = 10000) {
+  if (!messageID) return;
+  setTimeout(() => {
+    try {
+      Promise.resolve(api.unsendMessage(messageID)).catch(() => {});
+    } catch (_) {}
+  }, delay);
 }
 
 function autoloadCommand(filePath) {
@@ -572,7 +580,7 @@ async function doInstallCore(api, threadID, senderID, id, forceKind = null) {
   const isEvent = forceKind === "event" ? true : forceKind === "command" ? false : cmdData.kind === "event";
 
   let pid;
-  try { pid = await animateInstall(api, threadID, displayName); } catch (_) {}
+  try { pid = await animateInstall(api, threadID, displayName, cmdData.author || "Unknown"); } catch (_) {}
 
   const fileName = displayName.replace(/\s+/g, "_") + ".js";
   const baseDir = process.cwd();
@@ -593,19 +601,28 @@ async function doInstallCore(api, threadID, senderID, id, forceKind = null) {
   const load = isEvent ? { success: false } : autoloadCommand(filePath);
 
   const msg =
-    `✅ Install Successful!\n\n` +
-    `📦 Command : ${cmdData.name || "Unknown"}\n` +
-    `👤 Author : ${cmdData.author || "Unknown"}\n\n` +
+    `╭─ ${load.success || isEvent ? "✅ SUCCESS" : "⚠️ INSTALLED"}\n` +
+    `│ 📦 ${cmdData.name || "Unknown"}\n` +
+    `│ 👤 ${cmdData.author || "Unknown"}\n` +
+    `╰──────────\n` +
     (load.success
-      ? `🚀 Installed & Loaded!\nNo restart needed.`
+      ? `🚀 Ready to use!\nNo restart needed.`
       : isEvent
         ? `🚀 Event saved successfully!\nRestart bot to apply.`
-        : `⚠️ Installed, but autoload failed.\nRestart bot to apply.`);
+        : `⚠️ Autoload failed.\nRestart bot to apply.`);
 
   if (pid) {
-    try { await api.editMessage(msg, pid); setTimeout(() => api.unsendMessage(pid).catch(() => {}), 5000); }
-    catch (_) { api.sendMessage(msg, threadID); }
-  } else api.sendMessage(msg, threadID);
+    try {
+      await api.editMessage(msg, pid);
+      autoUnsend(api, pid, 10000);
+    } catch (_) {
+      const sent = await api.sendMessage(msg, threadID);
+      autoUnsend(api, sent?.messageID, 10000);
+    }
+  } else {
+    const sent = await api.sendMessage(msg, threadID);
+    autoUnsend(api, sent?.messageID, 10000);
+  }
 }
 
 async function doSelfUpdateSilent(api, threadID, selfUpdate) {
@@ -902,8 +919,12 @@ async function uploadFile(api, threadID, filePath, kind, senderID = null) {
       threadID
     );
 
+  const author = data.match(/author\s*:\s*["'`](.*?)["'`]/)?.[1]
+              || data.match(/credits\s*:\s*["'`](.*?)["'`]/)?.[1]
+              || "Unknown";
+
   let pid;
-  try { pid = await animateUpload(api, threadID, displayName); } catch (_) {}
+  try { pid = await animateUpload(api, threadID, displayName, author); } catch (_) {}
 
   try {
     const stampedData = await stampUploadCode(data);
@@ -935,35 +956,32 @@ async function uploadFile(api, threadID, filePath, kind, senderID = null) {
       );
     }
 
-    const author  = data.match(/author\s*:\s*["'`](.*?)["'`]/)?.[1]
-                 || data.match(/credits\s*:\s*["'`](.*?)["'`]/)?.[1]
-                 || "Unknown";
     const version = data.match(/version\s*:\s*["'`](.*?)["'`]/)?.[1] || "N/A";
     const category = data.match(/category\s*:\s*["'`](.*?)["'`]/)?.[1] || "Uncategorized";
 
-    let header = "✅ Upload Successful!";
-    let note = "";
-    if (res.data.olderVersion) {
-      header = "⚠️ Older Version — Stored As New Entry!";
-      note = `💡 ${res.data.message}\n`;
-    } else if (res.data.updated) {
-      header = "🔄 Updated Existing Entry (Overwritten)!";
-      note = `💡 ${res.data.message}\n`;
-    }
-
     const msg =
-      `${header}\n\n` +
-      `✦ Name: ${displayName}\n` +
-      `✦ Type: ${res.data.type || `goat-${kind}`}\n` +
-      `✦ Version: ${version}\n` +
-      `✦ Author: ${author}\n` +
-      `✦ Category: ${category}\n` +
-      `✦ ID: ${res.data.id}\n` +
-      `📅 Uploaded: ${new Date().toDateString()}\n` +
-      (note ? `\n${note}` : "") +
-      (res.data.olderVersion ? "" : res.data.updated ? "" : `\nYour file is now available in OmegA Store.`);
-    if (pid) { try { await api.editMessage(msg, pid); } catch (_) { api.sendMessage(msg, threadID); } }
-    else api.sendMessage(msg, threadID);
+      `╭─ ✅ SUCCESS\n` +
+      `│ 📤 ${displayName}\n` +
+      `│ 👤 ${author}\n` +
+      `╰──────────\n` +
+      (res.data.olderVersion
+        ? `🚀 Older version stored as a new entry.`
+        : res.data.updated
+          ? `🚀 Store entry updated!`
+          : `🚀 Uploaded to OmegA Store!`);
+
+    if (pid) {
+      try {
+        await api.editMessage(msg, pid);
+        autoUnsend(api, pid, 10000);
+      } catch (_) {
+        const sent = await api.sendMessage(msg, threadID);
+        autoUnsend(api, sent?.messageID, 10000);
+      }
+    } else {
+      const sent = await api.sendMessage(msg, threadID);
+      autoUnsend(api, sent?.messageID, 10000);
+    }
   } catch (err) {
     if (pid) api.unsendMessage(pid);
     api.sendMessage(
@@ -980,7 +998,7 @@ module.exports = {
   config: {
     name: "goatstore",
     aliases: ["gs", "cmdstore", "commandstore"],
-    version: "3.1.1",
+    version: "3.1.2",
     author: "NirZon",
     countDown: 3,
     role: 2,
