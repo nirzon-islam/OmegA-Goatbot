@@ -479,15 +479,21 @@ const frames = ["◖", "◕", "◔", "◓", "◒", "◑", "◐"];
 
 async function animateInstall(api, threadID, name) {
   const steps = [
-    { label: "Downloading source",  pct: 30,  delay: 600 },
-    { label: "Verifying integrity", pct: 60,  delay: 900 },
-    { label: "Writing to disk",     pct: 85,  delay: 700 },
-    { label: "Registering command", pct: 100, delay: 600 }
+    { pct: 25, delay: 450 },
+    { pct: 50, delay: 450 },
+    { pct: 75, delay: 450 },
+    { pct: 100, delay: 450 }
   ];
-  const info = await api.sendMessage(`📦 Installing ${name}...\n\n◖ Fetching package info...\n[░░░░░░░░░░] 0%`, threadID);
+  const info = await api.sendMessage(
+    `📦 Installing ${name}...\n\n◖ Installing command...\n[░░░░░░░░░░] 0%`,
+    threadID
+  );
   for (let i = 0; i < steps.length; i++) {
     await new Promise(r => setTimeout(r, steps[i].delay));
-    await api.editMessage(`📦 Installing ${name}...\n\n${frames[i]} ${steps[i].label}...\n[${buildBar(steps[i].pct)}] ${steps[i].pct}%`, info.messageID);
+    await api.editMessage(
+      `📦 Installing ${name}...\n\n${frames[i]} Installing command...\n[${buildBar(steps[i].pct)}] ${steps[i].pct}%`,
+      info.messageID
+    );
   }
   return info.messageID;
 }
@@ -524,7 +530,20 @@ function autoloadCommand(filePath) {
   }
 }
 
+const activeInstalls = new Set();
+
 async function doInstall(api, threadID, senderID, id, forceKind = null) {
+  const installKey = `${threadID}:${senderID}:${id}`;
+  if (activeInstalls.has(installKey)) return;
+  activeInstalls.add(installKey);
+  try {
+    return await doInstallCore(api, threadID, senderID, id, forceKind);
+  } finally {
+    activeInstalls.delete(installKey);
+  }
+}
+
+async function doInstallCore(api, threadID, senderID, id, forceKind = null) {
   let cmdData = null;
   try {
     const res = await storeGet(`/miraistore/search?q=${encodeURIComponent(id)}&clientFp=${encodeURIComponent(senderID || "")}`);
@@ -574,18 +593,14 @@ async function doInstall(api, threadID, senderID, id, forceKind = null) {
   const load = isEvent ? { success: false } : autoloadCommand(filePath);
 
   const msg =
-    `✅ Installed Successfully!\n` +
-    `╭─‣ Name : ${cmdData.name || "Unknown"}\n` +
-    `├‣ Type : ${typeBadge(cmdData)}\n` +
-    `├‣ Author : ${cmdData.author || "Unknown"}\n` +
-    `├‣ Version : ${cmdData.version || "N/A"}\n` +
-    `├‣ Category : ${cmdData.category || "N/A"}\n` +
-    `├‣ ID : ${id}\n` +
-    `├‣ Location : ${locLabel}\n` +
-    `╰────────────◊\n` +
-    (load.success ? `🚀 "${load.name}" is now live! No restart needed.`
-      : isEvent ? `⚠️ Event saved. Restart bot to apply.`
-      : `⚠️ Autoload failed: ${load.reason}`);
+    `✅ Install Successful!\n\n` +
+    `📦 Command : ${cmdData.name || "Unknown"}\n` +
+    `👤 Author : ${cmdData.author || "Unknown"}\n\n` +
+    (load.success
+      ? `🚀 Installed & Loaded!\nNo restart needed.`
+      : isEvent
+        ? `🚀 Event saved successfully!\nRestart bot to apply.`
+        : `⚠️ Installed, but autoload failed.\nRestart bot to apply.`);
 
   if (pid) {
     try { await api.editMessage(msg, pid); setTimeout(() => api.unsendMessage(pid).catch(() => {}), 5000); }
