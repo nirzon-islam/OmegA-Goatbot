@@ -5,7 +5,7 @@ const BASE_API = "https://baby-chat-api-hog5.onrender.com";
 const TRIGGERS = [
   "baby", "bbz", "bby", "bot",
   "mikasa", "hinata", "xadika",
-  "jan", "babu", "alya", "omega",
+  "jan", "babu", "alya", "kakino", "omega",
   "বেবি", "বট", "বাবু", "জান"
 ];
 
