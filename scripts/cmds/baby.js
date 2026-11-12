@@ -1,3 +1,4 @@
+
 const axios = require("axios");
 
 const BASE_API = "https://baby-chat-api-hog5.onrender.com";
@@ -5,15 +6,16 @@ const BASE_API = "https://baby-chat-api-hog5.onrender.com";
 const TRIGGERS = [
   "baby", "bbz", "bby", "bot",
   "mikasa", "hinata", "xadika",
-  "jan", "babu", "alya", "kakino", "omega",
-  "বেবি", "বট", "বাবু", "জান"
+  "jan", "babu", "alya", "omega",
+  "kakino", "বেবি", "বট", "বাবু", "জান"
 ];
 
 const LAST = new Map();
-
-// PREVENT DUPLICATE HANDLING
 const handledEvents = new Map();
 
+const RESPONSE_DELAY = 4000;
+
+// PREVENT DUPLICATE HANDLING
 function claimEvent(event) {
   const id = event.messageID
     ? String(event.messageID)
@@ -29,6 +31,13 @@ function claimEvent(event) {
   }
 
   return true;
+}
+
+// RESPONSE DELAY
+function waitForBaby() {
+  return new Promise(resolve =>
+    setTimeout(resolve, RESPONSE_DELAY)
+  );
 }
 
 function randomItem(array, key) {
@@ -109,31 +118,26 @@ const GENERAL = [
   "Tomar kothay alada ekta maya ache! 💖",
   "Ahaaa! Emon kotha shunle hashi pay! 😍",
   "Tomake ektu jalabo aj! 🤭",
-
   "Tomar mathay ki buddhi ache naki chuti niyecho? 😂",
   "Are bapre! Ektu aste bolo! 🤣",
   "Tomake dekhe mone hoy cha er dokan khule gelo! ☕",
   "Eto paknami koro keno? 😭",
   "Tomar jonno alada dhorjo lage! 🤣",
-
   "Aj raate kintu tomake shohoje ghumate debo na! 😈",
   "Kache aso… kane kane ekta secret bolbo! 😏",
   "Tomar ei durbolota jaygata ami jani… ❤️‍🔥",
   "Aj kintu adorer dose ektu beshi hobe! 😈",
   "Chokhe chokh rakho… aj amar mood alada! 🔥",
-
   "Amake pawa eto sohoj na! 😎",
   "Amar attitude bujhe kotha bolo! 😏",
   "Aj ami karo kothay poroya debo na! 😌",
   "Beshi badmashi korle kintu jhamela! 😉",
   "Tomar attitude dekhe amar hashi pay! 😂",
-
   "Aj amar mood ekdom bedom mejaji… samlate parbe? 😈",
   "Kache aso, aj ektu beshi ador korbo! ❤️‍🔥",
   "Aj raate ghum noy, dushtumi korar plan! 😉",
   "Ekbar jodi kache pao, shohoje charbo na! 😏",
   "Aj amar mathay kintu bhalo kichu ashche! 🔥",
-
   "Eto rate amar kotha mone pore? Naki bichanay giye eka eka amake miss korchis? 😏",
   "Ajke tor sathe kotha bolle ghum haram howar chance beshi! 🌚",
   "Shudhu kiss chaile hobe? Age bol, kotota dushtu hote parish! 💋",
@@ -258,7 +262,6 @@ async function getChatParams(api, event, text) {
 }
 
 // THREE LINE MESSAGE + MENTION + REPLY REGISTRATION
-// showPresence=false হলে continuation reply-তে PRESENCE দেখাবে না।
 async function sendThreeLines(api, event, reply, showPresence = true) {
   const name = await getName(api, event);
   const tag = `@${name}`;
@@ -405,7 +408,7 @@ module.exports = {
   config: {
     name: "baby",
     aliases: ["bby", "bbz", "omega"],
-    version: "5.3.1",
+    version: "5.3.2",
     author: "NirZon",
     countDown: 2,
     role: 0,
@@ -416,7 +419,6 @@ module.exports = {
   },
 
   onStart: async function ({ api, event, args }) {
-    // Same message already handled by another event handler?
     if (!claimEvent(event)) return;
 
     const input = args.join(" ").trim();
@@ -431,9 +433,10 @@ module.exports = {
         );
       }
 
-      // BABY ALONE = RANDOM REPLY
+      // BABY ALONE
       if (!input) {
         const reply = await getSpecialReply(event.senderID);
+        await waitForBaby();
         return sendThreeLines(api, event, reply);
       }
 
@@ -486,13 +489,11 @@ module.exports = {
         let kind = "normal";
         let parsed;
 
-        // GLOBAL TEACH
         if (/^global\s+/i.test(value)) {
           scope = "global";
           value = value.replace(/^global\s+/i, "");
         }
 
-        // INTRO TEACH
         if (/^amar\s*\|/i.test(value)) {
           kind = "intro";
 
@@ -512,14 +513,12 @@ module.exports = {
           };
         }
 
-        // REACTION TEACH
         else if (/^react\s+/i.test(value)) {
           kind = "react";
           value = value.replace(/^react\s+/i, "");
           parsed = parsePair(value);
         }
 
-        // NORMAL / GLOBAL TEACH
         else {
           parsed = parsePair(value);
         }
@@ -613,15 +612,16 @@ module.exports = {
         );
       }
 
-      // AI CHAT WITH SPEAKER NAME
+      // AI CHAT
       const params = await getChatParams(api, event, input);
       const data = await apiGet(params);
 
-      return sendThreeLines(
-        api,
-        event,
-        data.reply || "Ektu somossa hocche, abar bolo! 🥺"
-      );
+      const reply = data.reply ||
+        "Ektu somossa hocche, abar bolo! 🥺";
+
+      await waitForBaby();
+
+      return sendThreeLines(api, event, reply);
 
     } catch (error) {
       console.error("Baby command:", error.message);
@@ -634,22 +634,23 @@ module.exports = {
   },
 
   // REPLY TO BABY'S MESSAGE
-  // ANY GROUP MEMBER CAN REPLY
   onReply: async function ({ api, event, Reply }) {
     try {
       const text = String(event.body || "").trim();
       if (!text) return;
 
-      // No author restriction:
-      // Every member can continue the shared group conversation.
       const params = await getChatParams(api, event, text);
       const data = await apiGet(params);
 
-      // Continuation replies do NOT show PRESENCE.
+      const reply = data.reply ||
+        "Ektu somossa hocche, abar bolo! 🥺";
+
+      await waitForBaby();
+
       return sendThreeLines(
         api,
         event,
-        data.reply || "Ektu somossa hocche, abar bolo! 🥺",
+        reply,
         false
       );
 
@@ -671,8 +672,6 @@ module.exports = {
 
       const lower = body.toLowerCase();
 
-      // Ignore prefixed Baby commands here.
-      // Those are handled by onStart.
       const aliases = ["baby", "bby", "bbz", "omi"];
       const prefix = String(
         global.GoatBot?.config?.Prefix ||
@@ -701,7 +700,6 @@ module.exports = {
 
       if (!trigger) return;
 
-      // Prevent duplicate handling of the same event.
       if (!claimEvent(event)) return;
 
       const escaped = trigger.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -714,21 +712,25 @@ module.exports = {
         .trim()
         .replace(/\s+/g, " ");
 
-      // ONLY TRIGGER = RANDOM SPECIAL / GENERAL REPLY
+      // ONLY TRIGGER
       if (!message) {
         const reply = await getSpecialReply(event.senderID);
+
+        await waitForBaby();
+
         return sendThreeLines(api, event, reply);
       }
 
-      // TRIGGER WITH TEXT = AI / TEACH RESPONSE
+      // TRIGGER WITH TEXT
       const params = await getChatParams(api, event, message);
       const data = await apiGet(params);
 
-      return sendThreeLines(
-        api,
-        event,
-        data.reply || "Ektu somossa hocche, abar bolo! 🥺"
-      );
+      const reply = data.reply ||
+        "Ektu somossa hocche, abar bolo! 🥺";
+
+      await waitForBaby();
+
+      return sendThreeLines(api, event, reply);
 
     } catch (error) {
       console.error("Baby onChat:", error.message);
