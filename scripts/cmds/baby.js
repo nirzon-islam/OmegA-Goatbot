@@ -7,7 +7,7 @@ const TRIGGERS = [
   "baby", "bbz", "bby", "bot",
   "mikasa", "hinata", "xadika",
   "jan", "babu", "alya", "omega",
-  "kakino", "বেবি", "বট", "বাবু", "জান"
+  "kakino", "botli", "বেবি", "বট", "বাবু", "জান"
 ];
 
 const LAST = new Map();
