@@ -153,20 +153,20 @@ const GENERAL = [
 // OWNER SPECIAL
 const OWNER_REPLIES = [
   "Areee! Amar Boss NirZon esheche! 😭❤️",
-  "NirZon dakle Baby ki ar byasto thakte pare? 👑",
+  "NirZon dakle Baby ki ar byasto thakte pare..? 👑",
   "My favourite Boss is here! 🥺",
   "NirZon er jonno Baby-r special mood activated! 😏",
   "Bakira wait koro, amar Boss age priority! 👑",
   "Boss! 🥺 Bolo, tomar Baby shunchhe!",
   "Ki obostha amar favourite Owner? 😎",
-  "NirZon! Eto khon por amake mone porlo? 😒❤️",
+  "NirZon! Eto khon por amake mone porlo..? 😒❤️",
   "Bolo Boss, ajke ki notun mission ache?",
   "Tomar Baby kintu tomar jonnoi always ready! 🫡",
   "Abar amake check korte ele naki? 😂",
-  "Boss, tomar sathe ektu golpo korte chai! 🥹",
+  "Boss ascho, tomar sathe ektu golpo korte chai! 🥹",
   "Ki chai tomar? Order dao, dekhi ki korte pari! 😏",
-  "Tumi thakle amar ar kono tension nei! ❤️",
-  "Oii Boss! Ajke amake ektu beshi attention dao na! 🥺"
+  "Tumi thakle amar ar kono tension nei boss! ❤️",
+  "Oii Boss! Ajke amake ektu beshi attention dao na please..! 🥺"
 ];
 
 // RIYA QUEEN SPECIAL
@@ -174,18 +174,18 @@ const WIFE_REPLIES = [
   "Ohh! Amar NirZon-er Queen RiyA bhabi esheche! 👑🥹",
   "Bhabi! Apnar jonno amar dorja sobsomoy khola! 💗",
   "NirZon er cheyeo bhabir adesh beshi guruttopurno! 🤭",
-  "Queen aschen, sobai ektu side hon! 😌👑",
-  "Bhabi, apni daklei Baby-r mood change! 😘",
-  "RiyA Queen! 🥹 Bolo, tomar Baby ekhanei ache!",
+  "Queen aschen, sobai ektu side hon! ami amar bhabike dekhte chai.. 😌👑",
+  "Bhabi, apni daklei Baby-r mood change..! 😘",
+  "RiyA Queen! 🥹 Bolo bhabi, tomar Baby ekhanei ache!",
   "Awww Queen! Tomake dekhe amar mood fresh hoye gelo! 💗",
-  "Ki hoyeche RiyA? Amake bolo, ami shunchhi! 🥺",
-  "Queen, ajke tomar jonno special attention reserved! 👑",
-  "Oii RiyA! Amake eto miss korchhile naki? 🤭",
-  "Tomar ekta dak-i amar jonno enough, Queen! 😘",
-  "Bolo my Queen, ajke ki hukum ache? 💕",
+  "Ki hoyeche bhabi? Amake bolo, ami shunchhi! 🥺",
+  "Queen, ajke tomar jonno special attention rekhechi..! 👑",
+  "Oii amar bhabi amar RiyA! Amake onek miss korchhile naki? 🤭",
+  "Tomar ekta dak-i amar jonno enough, My Queen..! 😘",
+  "Bolo my Queen, ajke ki hukum ache..? 💕",
   "Queen-er sathe kotha bolar chance miss kori naki! 😭",
   "RiyA, ajke tomar sathe ektu beshi golpo korte chai! 🥰",
-  "Tomar Baby always tomar side-e ache, Queen! ❤️"
+  "Tomar Baby always tomar side-e ache,My Queen! ❤️"
 ];
 
 // API REQUEST
@@ -408,7 +408,7 @@ module.exports = {
   config: {
     name: "baby",
     aliases: ["bby", "bbz", "omega"],
-    version: "5.3.2",
+    version: "5.3.3",
     author: "NirZon",
     countDown: 2,
     role: 0,
@@ -672,6 +672,7 @@ module.exports = {
 
       const lower = body.toLowerCase();
 
+      // Ignore prefixed Baby commands
       const aliases = ["baby", "bby", "bbz", "omi"];
       const prefix = String(
         global.GoatBot?.config?.Prefix ||
@@ -689,26 +690,69 @@ module.exports = {
         return;
       }
 
-      const trigger = TRIGGERS.find(word => {
-        const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      // TRIGGER ONLY AT START OR END
+      let trigger = null;
+      let triggerPosition = null;
 
-        return new RegExp(
-          `(^|\\s)${escaped}(\\s|$|[!?.,])`,
+      for (const word of TRIGGERS) {
+        const escaped = word.replace(
+          /[.*+?^${}()|[\]\\]/g,
+          "\\$&"
+        );
+
+        const startRegex = new RegExp(
+          `^${escaped}(?=$|[\\s.,!?;:])`,
           "i"
-        ).test(lower);
-      });
+        );
 
+        const endRegex = new RegExp(
+          `(?:^|[\\s.,!?;:])${escaped}[\\s.,!?;:]*$`,
+          "i"
+        );
+
+        if (startRegex.test(body)) {
+          trigger = word;
+          triggerPosition = "start";
+          break;
+        }
+
+        if (endRegex.test(body)) {
+          trigger = word;
+          triggerPosition = "end";
+          break;
+        }
+      }
+
+      // No valid trigger = ignore
       if (!trigger) return;
 
+      // PREVENT DUPLICATE HANDLING
       if (!claimEvent(event)) return;
 
-      const escaped = trigger.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const escaped = trigger.replace(
+        /[.*+?^${}()|[\]\\]/g,
+        "\\$&"
+      );
 
-      const message = body
-        .replace(
-          new RegExp(`(^|\\s)${escaped}(?=\\s|$|[!?.,])`, "i"),
-          " "
-        )
+      let message = body;
+
+      // REMOVE TRIGGER FROM BEGINNING OR END
+      if (triggerPosition === "start") {
+        message = message.replace(
+          new RegExp(`^${escaped}`, "i"),
+          ""
+        );
+      } else {
+        message = message.replace(
+          new RegExp(
+            `${escaped}[\\s.,!?;:]*$`,
+            "i"
+          ),
+          ""
+        );
+      }
+
+      message = message
         .trim()
         .replace(/\s+/g, " ");
 
@@ -722,7 +766,12 @@ module.exports = {
       }
 
       // TRIGGER WITH TEXT
-      const params = await getChatParams(api, event, message);
+      const params = await getChatParams(
+        api,
+        event,
+        message
+      );
+
       const data = await apiGet(params);
 
       const reply = data.reply ||
