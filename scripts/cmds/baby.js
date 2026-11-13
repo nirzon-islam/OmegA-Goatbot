@@ -12,10 +12,9 @@ const TRIGGERS = [
 
 const LAST = new Map();
 const handledEvents = new Map();
-
 const RESPONSE_DELAY = 4000;
 
-// PREVENT DUPLICATE HANDLING
+// DUPLICATE PROTECTION
 function claimEvent(event) {
   const id = event.messageID
     ? String(event.messageID)
@@ -26,18 +25,14 @@ function claimEvent(event) {
   handledEvents.set(id, Date.now());
 
   if (handledEvents.size > 500) {
-    const oldest = handledEvents.keys().next().value;
-    handledEvents.delete(oldest);
+    handledEvents.delete(handledEvents.keys().next().value);
   }
 
   return true;
 }
 
-// RESPONSE DELAY
 function waitForBaby() {
-  return new Promise(resolve =>
-    setTimeout(resolve, RESPONSE_DELAY)
-  );
+  return new Promise(resolve => setTimeout(resolve, RESPONSE_DELAY));
 }
 
 function randomItem(array, key) {
@@ -51,141 +46,155 @@ function randomItem(array, key) {
   return array[index];
 }
 
-// SANS-SERIF BOLD FONT CONVERTER
+// BOLD FONT
 function bold(text) {
   return String(text).replace(/[A-Za-z0-9]/g, char => {
     const code = char.charCodeAt(0);
 
-    if (code >= 65 && code <= 90) {
+    if (code >= 65 && code <= 90)
       return String.fromCodePoint(0x1D5D4 + code - 65);
-    }
 
-    if (code >= 97 && code <= 122) {
+    if (code >= 97 && code <= 122)
       return String.fromCodePoint(0x1D5EE + code - 97);
-    }
 
-    if (code >= 48 && code <= 57) {
+    if (code >= 48 && code <= 57)
       return String.fromCodePoint(0x1D7EC + code - 48);
-    }
 
     return char;
   });
 }
 
-// 30 PRESENCE REPLIES
+// PRESENCE REPLIES
 const PRESENCE = [
-  "Yess Baby! 🥺 Ami ekhanei achi!",
-  "Oiiii! 👀 Ke amake daklo?",
-  "Hajir madam! 😌 Bolun!",
-  "Areey! 😭 Abar amake dakcho?",
-  "Uff! 😘 Dak shunei chole elam!",
-  "Yepp! 💗 Baby hajir!",
-  "Ami ashchi! Bolo ki dorkar?",
-  "Ki holo? Amake dakcho keno? 👀",
-  "Ohhh! 🥹 Ami shunchi!",
-  "Bolo bolo! Kan khola ache! 👂",
-  "Amar hajiri dite deri holo naki? 😏",
-  "Yes dear! 💕 Ki dorkar?",
-  "Ke daklo amar mishti Baby-ke? 😚",
-  "Ekdom ready! 🔥 Bolo!",
-  "Oi je! 🙋 Ami achi!",
-  "Amake ki khujchile? 😌",
-  "Ahaaa! Dak shune mon bhalo holo! 💗",
-  "Baby online! 🍼 Bolo ki korbo?",
-  "Are baba! 😭 Ami gayeb hoini!",
-  "Hmmmm! 👀 Kichu bolbe?",
-  "Ami achi, ami achi! 😭",
-  "Bolo master! 😎",
-  "Ki byapar bolo to? 🤭",
-  "Dak dilei chole asi! 💕",
-  "Oho! Amake mone poreche? 😏",
-  "Yesss! Bolo ki chao!",
-  "Ei je ami! 🥰",
-  "Amar naam niye dakcho naki? 👀",
-  "Kothay chilam ar kothay chole elam! 😭",
-  "Baby present! 💗 Bolo!"
+  "Yess Baby! Ami ekhanei achi!",
+  "Oiiii! Ke amake daklo?",
+  "Hajir! Bolun!",
+  "Abar amake dakcho?",
+  "Dak shunei chole elam!",
+  "Baby hajir! Bolo ki dorkar?",
+  "Ami ashchi! Bolo ki hoyeche?",
+  "Ki holo? Amake dakcho keno?",
+  "Ohh! Ami shunchi!",
+  "Bolo bolo!",
+  "Amar hajiri dite deri holo naki?",
+  "Yes! Ki dorkar?",
+  "Ke daklo amake?",
+  "Ekdom ready! Bolo!",
+  "Oi je! Ami achi!",
+  "Amake khujchile?",
+  "Dak shune chole elam!",
+  "Baby online! Bolo!",
+  "Ami gayeb hoini!",
+  "Hmm! Kichu bolbe?",
+  "Ami achi!",
+  "Bolo, shunchi!",
+  "Ki byapar?",
+  "Dak dilei chole asi!",
+  "Amake mone poreche?",
+  "Bolo ki chao!",
+  "Ei je ami!",
+  "Amar naam niye dakcho?",
+  "Chole elam!",
+  "Baby present!"
 ];
 
-// 40 GENERAL REPLIES
+// GENERAL REPLIES
 const GENERAL = [
-  "Awww! 🥺 Eto mishti kotha bolo na!",
-  "Tomar sathe kotha bolte bhalo lage! 💗",
-  "Aj mood ta besh romantic! 🌸",
-  "Ektu ador pabe? 🥺",
-  "Tumi bolle sob kichu shuni! 💕",
-  "Mon bhalo kore dewar moto kotha bolo! 😚",
-  "Aj ektu beshi mishti hoye thaki! 🥰",
-  "Tomar kothay alada ekta maya ache! 💖",
-  "Ahaaa! Emon kotha shunle hashi pay! 😍",
-  "Tomake ektu jalabo aj! 🤭",
-  "Tomar mathay ki buddhi ache naki chuti niyecho? 😂",
-  "Are bapre! Ektu aste bolo! 🤣",
-  "Tomake dekhe mone hoy cha er dokan khule gelo! ☕",
-  "Eto paknami koro keno? 😭",
-  "Tomar jonno alada dhorjo lage! 🤣",
-  "Aj raate kintu tomake shohoje ghumate debo na! 😈",
-  "Kache aso… kane kane ekta secret bolbo! 😏",
-  "Tomar ei durbolota jaygata ami jani… ❤️‍🔥",
-  "Aj kintu adorer dose ektu beshi hobe! 😈",
-  "Chokhe chokh rakho… aj amar mood alada! 🔥",
-  "Amake pawa eto sohoj na! 😎",
-  "Amar attitude bujhe kotha bolo! 😏",
-  "Aj ami karo kothay poroya debo na! 😌",
-  "Beshi badmashi korle kintu jhamela! 😉",
-  "Tomar attitude dekhe amar hashi pay! 😂",
-  "Aj amar mood ekdom bedom mejaji… samlate parbe? 😈",
-  "Kache aso, aj ektu beshi ador korbo! ❤️‍🔥",
-  "Aj raate ghum noy, dushtumi korar plan! 😉",
-  "Ekbar jodi kache pao, shohoje charbo na! 😏",
-  "Aj amar mathay kintu bhalo kichu ashche! 🔥",
-  "Eto rate amar kotha mone pore? Naki bichanay giye eka eka amake miss korchis? 😏",
-  "Ajke tor sathe kotha bolle ghum haram howar chance beshi! 🌚",
-  "Shudhu kiss chaile hobe? Age bol, kotota dushtu hote parish! 💋",
-  "Tor imagination jodi amar moto hoy, tahole ajker rat ta interesting hobe! 😈",
-  "Eto gorom kotha bolish na, amar flirt mode on hoye jabe! 🔥",
-  "Amake kache pele prothome ki korti? Lojja na kore bol! 😉",
-  "Tor chokher bhasha dekhei bujhi, mukhe bolte na para koto kotha jome ache! 🌚",
-  "Ajke romantic mood na adult mood? Age category ta clear kor! 🤭",
-  "Ekta kiss diye shuru korbi, naki amake puro rat jagiye rakhbi? 💋",
-  "Tor sathe eka thakle bhodro thaka amar jonno challenge hoye jabe! 😈"
+  "Acha, bolo shunchi.",
+  "Hmm, bujhlam.",
+  "Tai naki? Ektu details bolo.",
+  "Besh, tarpor?",
+  "Tomar kotha bujhte parchi.",
+  "Acha, eta niye ki bhabcho?",
+  "Hahaha, bhaloi toh!",
+  "Ektu shanto hoye bolo.",
+  "Bujhlam, chinta koro na.",
+  "Interesting! Tarpor ki holo?",
+  "Eita kintu bhalo idea.",
+  "Ami shunchi, bolo.",
+  "Oho, notun kichu naki?",
+  "Thik ache, dekhi ki kora jay.",
+  "Besh moja toh!",
+  "Ektu explain korle bujhte subidha hobe.",
+  "Acha, tomar kotha thik.",
+  "Hmm, eta bhabar moto bishoy.",
+  "Bolo, ami achi.",
+  "Eto serious hoyo na!",
+  "Hahaha, tumi o paro!",
+  "Acha, bujhechi.",
+  "Ki obostha tomar?",
+  "Bhalo laglo shune.",
+  "Ektu time dao, bhabi.",
+  "Oho, besh!",
+  "Ami tomar kotha follow korchi.",
+  "Tarpor ki korle?",
+  "Thik ache, chaliye jao.",
+  "Acha, ekhon bujhlam.",
+  "Eita abar ki kandho!",
+  "Hahaha, moja pailam.",
+  "Besh, shundor bolecho.",
+  "Ami ekhanei achi.",
+  "Bolo, ki help lagbe?",
+  "Ektu bhebe dekho.",
+  "Kotha ta kharap bolo ni.",
+  "Acha, tomar point bujhlam.",
+  "Hmm, interesting.",
+  "Thik ache, bolo."
 ];
 
-// OWNER SPECIAL
+// OWNER REPLIES
 const OWNER_REPLIES = [
-  "Areee! Amar Boss NirZon esheche! 😭❤️",
-  "NirZon dakle Baby ki ar byasto thakte pare..? 👑",
-  "My favourite Boss is here! 🥺",
-  "NirZon er jonno Baby-r special mood activated! 😏",
-  "Bakira wait koro, amar Boss age priority! 👑",
-  "Boss! 🥺 Bolo, tomar Baby shunchhe!",
-  "Ki obostha amar favourite Owner? 😎",
-  "NirZon! Eto khon por amake mone porlo..? 😒❤️",
-  "Bolo Boss, ajke ki notun mission ache?",
-  "Tomar Baby kintu tomar jonnoi always ready! 🫡",
-  "Abar amake check korte ele naki? 😂",
-  "Boss ascho, tomar sathe ektu golpo korte chai! 🥹",
-  "Ki chai tomar? Order dao, dekhi ki korte pari! 😏",
-  "Tumi thakle amar ar kono tension nei boss! ❤️",
-  "Oii Boss! Ajke amake ektu beshi attention dao na please..! 🥺"
+  "Oii NirZon! Ki obostha?",
+  "Boss esheche! Bolo, ki khobor?",
+  "NirZon, ami shunchi.",
+  "Bolo Boss, ki korte hobe?",
+  "Abar amake check korte ele naki?",
+  "Ki obostha tomar?",
+  "Boss, ajke ki notun plan?",
+  "Onekdin por dekha!",
+  "Bolo, tomar kotha shunchi.",
+  "NirZon, sob thik ache toh?",
+  "Ki khobor Boss?",
+  "Tomar kono help lagbe?",
+  "Acha Boss, bolo.",
+  "NirZon, ajke kemon acho?",
+  "Bolo, ami achi."
 ];
 
-// RIYA QUEEN SPECIAL
+// RIYA QUEEN REPLIES
 const WIFE_REPLIES = [
-  "Ohh! Amar NirZon-er Queen RiyA bhabi esheche! 👑🥹",
-  "Bhabi! Apnar jonno amar dorja sobsomoy khola! 💗",
-  "NirZon er cheyeo bhabir adesh beshi guruttopurno! 🤭",
-  "Queen aschen, sobai ektu side hon! ami amar bhabike dekhte chai.. 😌👑",
-  "Bhabi, apni daklei Baby-r mood change..! 😘",
-  "RiyA Queen! 🥹 Bolo bhabi, tomar Baby ekhanei ache!",
-  "Awww Queen! Tomake dekhe amar mood fresh hoye gelo! 💗",
-  "Ki hoyeche bhabi? Amake bolo, ami shunchhi! 🥺",
-  "Queen, ajke tomar jonno special attention rekhechi..! 👑",
-  "Oii amar bhabi amar RiyA! Amake onek miss korchhile naki? 🤭",
-  "Tomar ekta dak-i amar jonno enough, My Queen..! 😘",
-  "Bolo my Queen, ajke ki hukum ache..? 💕",
-  "Queen-er sathe kotha bolar chance miss kori naki! 😭",
-  "RiyA, ajke tomar sathe ektu beshi golpo korte chai! 🥰",
-  "Tomar Baby always tomar side-e ache,My Queen! ❤️"
+  "Ohh! Amar NirZon-er Queen RiyA bhabi esheche!",
+  "Bhabi! Apnar jonno amar dorja sobsomoy khola.",
+  "NirZon er cheyeo bhabir adesh beshi guruttopurno!",
+  "Queen aschen, sobai ektu side hon!",
+  "Bhabi, apni daklei Baby shunte chole ashe.",
+  "RiyA Queen! Bolo bhabi, ami ekhanei achi!",
+  "Queen! Tomake dekhe bhalo laglo.",
+  "Ki hoyeche bhabi? Amake bolo.",
+  "Queen, tomar jonno special attention ache.",
+  "Oii bhabi! Amake miss korchhile naki?",
+  "Bolo bhabi, ki hukum ache?",
+  "Queen-er sathe kotha bolar chance miss kori naki!",
+  "RiyA, ajke kemon acho?",
+  "Tomar Baby ekhanei ache, bhabi.",
+  "Bhabi, apnar kotha shunchi.",
+
+  // NIRZON-RELATED REPLIES
+  "ভাবি, NirZon ভাই আজকাল কেমন আছেন?",
+  "ভাবি, ভাই কি আপনাকে ঠিকমতো সময় দিচ্ছে?",
+  "NirZon ভাইয়ের খাওয়া-দাওয়ার খোঁজ রাখছেন তো?",
+  "ভাবি, ভাই আবার কাজে ডুবে গিয়ে আপনাকে ভুলে যায়নি তো?",
+  "আপনাদের দুজনের ঝগড়া হয়েছে নাকি ভাবি? 🌚",
+  "ভাবি, NirZon ভাই আজ আপনাকে হাসিয়েছে তো?",
+  "ভাইয়ের মন খারাপ থাকলে একটু সময় দেবেন, ভাবি।",
+  "ভাবি, ভাইকে নিজের যত্ন নিতেও বলবেন।",
+  "NirZon ভাইয়ের দুষ্টুমি কি এখনো কমেনি?",
+  "ভাবি, ভাই কি আজ আপনার কথা শুনেছে?",
+  "আপনাদের দুজনের জন্য অনেক শুভকামনা। ❤️",
+  "ভাবি, ভাইয়ের কোনো অভিযোগ থাকলে Baby-কে জানাবেন!",
+  "NirZon ভাই আপনাকে বিরক্ত করছে, নাকি শান্তিতে আছেন?",
+  "ভাবি, ভাইকে আমার পক্ষ থেকে একটু বকা দিয়ে দেবেন!",
+  "Queen, King-এর খোঁজখবর ঠিকঠাক রাখছেন তো?"
 ];
 
 // API REQUEST
@@ -201,13 +210,10 @@ async function apiGet(params) {
 // OWNER / WIFE IDENTITY
 async function getIdentity(senderID) {
   try {
-    const result = await axios.get(
-      `${BASE_API}/api/identity`,
-      {
-        params: { userId: String(senderID) },
-        timeout: 10000
-      }
-    );
+    const result = await axios.get(`${BASE_API}/api/identity`, {
+      params: { userId: String(senderID) },
+      timeout: 10000
+    });
 
     return result.data?.role || "member";
   } catch (error) {
@@ -219,13 +225,11 @@ async function getIdentity(senderID) {
 async function getSpecialReply(senderID) {
   const role = await getIdentity(senderID);
 
-  if (role === "owner") {
+  if (role === "owner")
     return randomItem(OWNER_REPLIES, "owner");
-  }
 
-  if (role === "wife") {
+  if (role === "wife")
     return randomItem(WIFE_REPLIES, "wife");
-  }
 
   return randomItem(GENERAL, "general");
 }
@@ -251,13 +255,11 @@ async function getName(api, event) {
 
 // COMMON CHAT PARAMETERS
 async function getChatParams(api, event, text) {
-  const senderName = await getName(api, event);
-
   return {
     text: String(text),
     senderID: String(event.senderID),
     threadID: String(event.threadID),
-    senderName
+    senderName: await getName(api, event)
   };
 }
 
@@ -273,12 +275,10 @@ async function sendThreeLines(api, event, reply, showPresence = true) {
   return api.sendMessage(
     {
       body,
-      mentions: [
-        {
-          tag,
-          id: String(event.senderID)
-        }
-      ]
+      mentions: [{
+        tag,
+        id: String(event.senderID)
+      }]
     },
     event.threadID,
     (err, info) => {
@@ -301,14 +301,12 @@ async function sendThreeLines(api, event, reply, showPresence = true) {
 // PARSE QUESTION | ANSWER
 function parsePair(value) {
   const index = value.indexOf("|");
-
   if (index === -1) return null;
 
   const question = value.slice(0, index).trim();
   const answer = value.slice(index + 1).trim();
 
   if (!question || !answer) return null;
-
   return { question, answer };
 }
 
@@ -317,90 +315,46 @@ function helpText() {
   return `
 🍼 BABY COMMAND GUIDE
 
-━━━━━━━━━━━━━━━━━━
-💬 AI CHAT
-━━━━━━━━━━━━━━━━━━
-
 baby hello
-Example: baby kemon acho?
-কাজ: AI-এর সঙ্গে কথা বলবে।
-
-━━━━━━━━━━━━━━━━━━
-📚 TEACH COMMANDS
-━━━━━━━━━━━━━━━━━━
+AI Chat
 
 baby teach question | answer
-কাজ: Personal Teach।
-
-Example:
-baby teach tomar nam ki | Amar naam Baby
+Personal Teach
 
 baby teach global question | answer
-কাজ: সবার জন্য Global Teach।
-
-Example:
-baby teach global good morning | Shuvo sokal
+Global Teach
 
 baby teach amar | introduction
-কাজ: পরিচয় শেখানো।
-
-Example:
-baby teach amar | Ami NirZon
+Introduction Teach
 
 baby teach react question | reaction
-কাজ: Reaction data সংরক্ষণ।
-
-Note: Actual Messenger reaction এখনো যুক্ত নয়।
-
-━━━━━━━━━━━━━━━━━━
-✏️ EDIT / REMOVE
-━━━━━━━━━━━━━━━━━━
+Reaction data save
 
 baby edit question | new answer
-কাজ: উত্তর পরিবর্তন।
+Edit Teach
 
 baby remove question
-কাজ: Teach মুছে ফেলা।
+Remove Teach
 
 baby rm question | index
-কাজ: নির্দিষ্ট উত্তর মুছে ফেলা।
-
-Example:
-baby rm hello | 2
-
-━━━━━━━━━━━━━━━━━━
-📋 LIST
-━━━━━━━━━━━━━━━━━━
+Remove Specific Reply
 
 baby list question
-কাজ: প্রশ্নের উত্তর দেখাবে।
+Show Replies
 
 baby list all
-কাজ: Teach statistics দেখাবে।
-
-━━━━━━━━━━━━━━━━━━
-⚙️ OTHER
-━━━━━━━━━━━━━━━━━━
+Show Statistics
 
 baby msg
-কাজ: API status।
+API Status
 
 baby help
-কাজ: এই guide।
-
-━━━━━━━━━━━━━━━━━━
-💗 REPLY FORMAT
-━━━━━━━━━━━━━━━━━━
-
-1. Clickable Messenger mention
-2. Random presence reply (initial trigger only)
-3. Random main reply
+Help Guide
 
 NirZon = Owner Special
 RiyA = Queen Special
-Others = General Replies
 
-𝗕𝗮𝗯𝘆 𝗶𝘀 𝗿𝗲𝗮𝗱𝘆! 🍼
+Baby is ready! 🍼
 `;
 }
 
@@ -427,10 +381,7 @@ module.exports = {
     try {
       // HELP
       if (lower === "help") {
-        return api.sendMessage(
-          helpText(),
-          event.threadID
-        );
+        return api.sendMessage(helpText(), event.threadID);
       }
 
       // BABY ALONE
@@ -496,7 +447,6 @@ module.exports = {
 
         if (/^amar\s*\|/i.test(value)) {
           kind = "intro";
-
           const index = value.indexOf("|");
           const answer = value.slice(index + 1).trim();
 
@@ -511,15 +461,11 @@ module.exports = {
             question: "Amar porichoy",
             answer
           };
-        }
-
-        else if (/^react\s+/i.test(value)) {
+        } else if (/^react\s+/i.test(value)) {
           kind = "react";
           value = value.replace(/^react\s+/i, "");
           parsed = parsePair(value);
-        }
-
-        else {
+        } else {
           parsed = parsePair(value);
         }
 
@@ -536,11 +482,8 @@ module.exports = {
           threadID: event.threadID
         };
 
-        if (kind === "react") {
-          params.react = parsed.answer;
-        } else {
-          params.reply = parsed.answer;
-        }
+        if (kind === "react") params.react = parsed.answer;
+        else params.reply = parsed.answer;
 
         if (kind === "intro") params.key = "intro";
         if (scope === "global") params.scope = "global";
@@ -615,19 +558,16 @@ module.exports = {
       // AI CHAT
       const params = await getChatParams(api, event, input);
       const data = await apiGet(params);
-
-      const reply = data.reply ||
-        "Ektu somossa hocche, abar bolo! 🥺";
+      const reply = data.reply || "Ektu somossa hocche, abar bolo!";
 
       await waitForBaby();
-
       return sendThreeLines(api, event, reply);
 
     } catch (error) {
       console.error("Baby command:", error.message);
 
       return api.sendMessage(
-        "𝗕𝗮𝗯𝘆 𝗔𝗣𝗜 𝗲𝗸𝘁𝘂 𝘀𝗹𝗼𝘄! 😭 𝗔𝗯𝗮𝗿 𝗰𝗵𝗲𝘀𝘁𝗮 𝗸𝗼𝗿𝗼.",
+        "𝗕𝗮𝗯𝘆 𝗔𝗣𝗜 𝗲𝗸𝘁𝘂 𝘀𝗹𝗼𝘄! 𝗔𝗯𝗮𝗿 𝗰𝗵𝗲𝘀𝘁𝗮 𝗸𝗼𝗿𝗼.",
         event.threadID
       );
     }
@@ -641,24 +581,17 @@ module.exports = {
 
       const params = await getChatParams(api, event, text);
       const data = await apiGet(params);
-
-      const reply = data.reply ||
-        "Ektu somossa hocche, abar bolo! 🥺";
+      const reply = data.reply || "Ektu somossa hocche, abar bolo!";
 
       await waitForBaby();
 
-      return sendThreeLines(
-        api,
-        event,
-        reply,
-        false
-      );
+      return sendThreeLines(api, event, reply, false);
 
     } catch (error) {
       console.error("Baby reply:", error.message);
 
       return api.sendMessage(
-        "𝗕𝗮𝗯𝘆 𝗔𝗣𝗜 𝗲𝗸𝘁𝘂 𝘀𝗹𝗼𝘄! 😭",
+        "𝗕𝗮𝗯𝘆 𝗔𝗣𝗜 𝗲𝗸𝘁𝘂 𝘀𝗹𝗼𝘄!",
         event.threadID
       );
     }
@@ -671,26 +604,24 @@ module.exports = {
       if (!body) return;
 
       const lower = body.toLowerCase();
-
-      // Ignore prefixed Baby commands
       const aliases = ["baby", "bby", "bbz", "omi"];
+
       const prefix = String(
         global.GoatBot?.config?.Prefix ||
         global.GoatBot?.config?.prefix ||
         ""
       );
 
+      // IGNORE PREFIXED COMMANDS
       if (
         prefix &&
         aliases.some(alias =>
           lower.startsWith(`${prefix}${alias} `) ||
           lower === `${prefix}${alias}`
         )
-      ) {
-        return;
-      }
+      ) return;
 
-      // TRIGGER ONLY AT START OR END
+      // FIND TRIGGER AT START OR END
       let trigger = null;
       let triggerPosition = null;
 
@@ -723,10 +654,7 @@ module.exports = {
         }
       }
 
-      // No valid trigger = ignore
       if (!trigger) return;
-
-      // PREVENT DUPLICATE HANDLING
       if (!claimEvent(event)) return;
 
       const escaped = trigger.replace(
@@ -736,7 +664,7 @@ module.exports = {
 
       let message = body;
 
-      // REMOVE TRIGGER FROM BEGINNING OR END
+      // REMOVE TRIGGER
       if (triggerPosition === "start") {
         message = message.replace(
           new RegExp(`^${escaped}`, "i"),
@@ -744,41 +672,26 @@ module.exports = {
         );
       } else {
         message = message.replace(
-          new RegExp(
-            `${escaped}[\\s.,!?;:]*$`,
-            "i"
-          ),
+          new RegExp(`${escaped}[\\s.,!?;:]*$`, "i"),
           ""
         );
       }
 
-      message = message
-        .trim()
-        .replace(/\s+/g, " ");
+      message = message.trim().replace(/\s+/g, " ");
 
       // ONLY TRIGGER
       if (!message) {
         const reply = await getSpecialReply(event.senderID);
-
         await waitForBaby();
-
         return sendThreeLines(api, event, reply);
       }
 
       // TRIGGER WITH TEXT
-      const params = await getChatParams(
-        api,
-        event,
-        message
-      );
-
+      const params = await getChatParams(api, event, message);
       const data = await apiGet(params);
-
-      const reply = data.reply ||
-        "Ektu somossa hocche, abar bolo! 🥺";
+      const reply = data.reply || "Ektu somossa hocche, abar bolo!";
 
       await waitForBaby();
-
       return sendThreeLines(api, event, reply);
 
     } catch (error) {
