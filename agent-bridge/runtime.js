@@ -20,7 +20,8 @@ function startBridgeWorker({ log = console, intervalMs = 15000, getAccountStatus
     try {
       const status = getAccountStatus() || {};
       const allowed = new Set(["online", "logged_out", "checkpoint", "error"]);
-      const state = allowed.has(status.state) ? status.state : "error";
+      if (!allowed.has(status.state)) return;
+      const state = status.state;
       await client.reportAccountStatus({
         state,
         accountId: typeof status.accountId === "string" ? status.accountId.slice(0, 128) : "",
