@@ -33,7 +33,7 @@ function startBridgeWorker({ log = console, intervalMs = 15000, getAccountStatus
   };
 
   const poll = async () => {
-    if (running) return;
+    if (!worker || running) return;
     running = true;
     try {
       if (worker) await worker.pollOnce(5);
