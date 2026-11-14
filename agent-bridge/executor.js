@@ -3,6 +3,7 @@
 const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
+const crypto = require("crypto");
 const { normalizeRelative } = require("./pathGuard");
 const { backupFile } = require("./backup");
 
@@ -15,6 +16,13 @@ function executeApprovedAction(action) {
   const { type, path: relativePath } = action;
   if (typeof type !== "string" || typeof relativePath !== "string") {
     throw new Error("Action requires type and path");
+  }
+
+  const allowedKeys = type === "create" || type === "edit"
+    ? new Set(["type", "path", "content"])
+    : new Set(["type", "path"]);
+  if (Object.keys(action).some(key => !allowedKeys.has(key))) {
+    throw new Error("Action contains unsupported properties");
   }
 
   const target = normalizeRelative(relativePath);
@@ -46,7 +54,7 @@ function executeApprovedAction(action) {
     }
     const backup = exists ? backupFile(target.relative) : null;
     fs.mkdirSync(path.dirname(target.absolute), { recursive: true });
-    const temporary = target.absolute + ".agent-tmp-" + process.pid;
+    const temporary = target.absolute + ".agent-tmp-" + process.pid + "-" + crypto.randomBytes(8).toString("hex");
     try {
       fs.writeFileSync(temporary, action.content, { flag: "wx", mode: 0o600 });
       fs.renameSync(temporary, target.absolute);
