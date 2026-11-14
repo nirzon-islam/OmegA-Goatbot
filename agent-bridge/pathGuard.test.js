@@ -2,29 +2,35 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { normalizeRelative } = require("./pathGuard");
+const path = require("node:path");
+const { normalizeRelative, normalizeDirectory } = require("./pathGuard");
 
-test("allows only files inside the language workspace", () => {
-  const result = normalizeRelative("languages/bn.lang");
-  assert.equal(result.relative, "languages/bn.lang");
-  assert.throws(() => normalizeRelative("scripts/cmds/example.js"), /outside the approved workspace/);
+test("allows repository source and safe text files", () => {
+  for (const file of [
+    "scripts/cmds/example.js", "dashboard/app.js",
+    "agent-bridge/README.md", "configCommands.json", "languages/bn.lang"
+  ]) {
+    if (file === "configCommands.json") {
+      assert.throws(() => normalizeRelative(file), /Sensitive file/);
+    } else {
+      assert.equal(normalizeRelative(file).relative, file);
+    }
+  }
 });
 
-test("rejects paths outside approved roots and traversal attempts", () => {
-  assert.throws(() => normalizeRelative("config.json"), /outside the approved workspace/);
-  assert.throws(() => normalizeRelative("../config.json"));
-  assert.throws(() => normalizeRelative("languages/../config.json"));
+test("blocks credentials, appstate, environment files and generated dependencies", () => {
+  for (const file of [
+    ".env", "account.txt", "config.json", "config.dev.json",
+    "agent-bridge/.env.example", "node_modules/pkg/index.js",
+    ".git/config", "secrets/key.json", "bot/session/token.json",
+    "Fca_Database/state.json", "package-lock.json"
+  ]) assert.throws(() => normalizeRelative(file));
 });
 
-test("rejects protected, hidden, dependency and unsupported file paths", () => {
-  assert.throws(() => normalizeRelative("languages/.env"));
-  assert.throws(() => normalizeRelative("languages/node_modules/pkg/index.js"));
-  assert.throws(() => normalizeRelative("languages/account.txt"));
-  assert.throws(() => normalizeRelative("languages/hidden.txt"), /Only .lang and .js files/);
-});
-
-test("rejects absolute and malformed paths", () => {
-  assert.throws(() => normalizeRelative("/etc/passwd"));
-  assert.throws(() => normalizeRelative(""));
-  assert.throws(() => normalizeRelative("languages\\\\bn.lang"));
+test("rejects traversal, absolute paths, symlink-like malformed paths and unsupported extensions", () => {
+  for (const file of [
+    "../config.json", "languages/../config.json", "/etc/passwd",
+    "languages\\bn.lang", "languages/hidden.bin"
+  ]) assert.throws(() => normalizeRelative(file));
+  assert.throws(() => normalizeDirectory("../"));
 });
