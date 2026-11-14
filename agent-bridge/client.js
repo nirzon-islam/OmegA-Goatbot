@@ -92,6 +92,9 @@ function createBridgeClient() {
     claim(taskId) {
       return post("/api/bridge/claim", { taskId });
     },
+    submitRequest(senderId, description) {
+      return post("/api/bridge/requests", { senderId, description });
+    },
     reportResult(payload) {
       return post("/api/bridge/result", payload);
     }
