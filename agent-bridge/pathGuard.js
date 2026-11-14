@@ -49,6 +49,11 @@ function normalizeRelative(input) {
     throw new Error("Invalid file path");
   }
 
+  const rawSegments = input.trim().split("/");
+  if (rawSegments.some(part => part === "." || part === "..")) {
+    throw new Error("Path traversal is not allowed");
+  }
+
   const normalized = path.posix.normalize(input.trim());
   if (
     normalized === "." ||
