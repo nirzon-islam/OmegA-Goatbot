@@ -43,3 +43,23 @@ test("dangerous and unsupported operations are rejected", () => {
   assert.throws(() => executeApprovedAction({ type: "delete", path: "languages/bn.lang" }), /not supported/);
   assert.throws(() => executeApprovedAction({ type: "install", path: "languages/bn.lang" }), /not supported/);
 });
+
+
+test("approved plans can list and read multiple language files", () => {
+  const dir = path.join(root, "languages");
+  fs.mkdirSync(path.join(dir, "nested"), { recursive: true });
+  fs.writeFileSync(path.join(dir, "bn.lang"), "hello-bn");
+  fs.writeFileSync(path.join(dir, "nested", "en.lang"), "hello-en");
+  const listing = executeApprovedAction({ type: "list", path: "languages" });
+  assert.ok(listing.entries.some(item => item.path === "languages/bn.lang"));
+  const result = executeApprovedAction({
+    type: "plan",
+    summary: "Read-only language inventory",
+    steps: [
+      { type: "list", path: "languages" },
+      { type: "readMany", path: "languages" }
+    ]
+  });
+  assert.equal(result.steps.length, 2);
+  assert.ok(result.steps[1].entries.some(item => item.path === "languages/nested/en.lang" && item.content === "hello-en"));
+});
