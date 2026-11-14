@@ -213,9 +213,12 @@ try {
     log,
     getAccountStatus: () => {
       const status = global.statusAccountBot;
-      if (status === "good") return { state: "online", accountId: global.GoatBot.botID || "" };
-      if (status === "can't login") return { state: "logged_out", accountId: global.GoatBot.botID || "", message: "Facebook session is no longer authenticated." };
-      return { state: null };
+      const accountId = global.GoatBot.botID || "";
+      if (status === "good") return { state: "online", accountId };
+      if (status === "can't login") return { state: "logged_out", accountId, message: "Facebook session is no longer authenticated." };
+      if (status === "checkpoint") return { state: "checkpoint", accountId, message: "Facebook requires a checkpoint or identity verification." };
+      if (status === "error") return { state: "error", accountId, message: "Facebook login/listener reported an authentication error." };
+      return { state: "error", accountId, message: "Facebook account status is not yet verified." };
     }
   });
 } catch (error) {
