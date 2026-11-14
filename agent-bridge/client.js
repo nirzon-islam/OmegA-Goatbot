@@ -95,6 +95,9 @@ function createBridgeClient() {
     submitRequest(senderId, description) {
       return post("/api/bridge/requests", { senderId, description });
     },
+    getRequestStatus(senderId, taskId) {
+      return post("/api/bridge/status", { senderId, taskId });
+    },
     reportResult(payload) {
       return post("/api/bridge/result", payload);
     }
