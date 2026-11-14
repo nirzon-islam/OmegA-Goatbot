@@ -56,4 +56,19 @@ function normalizeRelative(input) {
   return { relative: normalized, absolute };
 }
 
-module.exports = { normalizeRelative, ALLOWED_ROOTS: Object.freeze([...ALLOWED_ROOTS]) };
+function normalizeDirectory(input) {
+  if (typeof input !== "string" || !input.trim() || input.length > 200) throw new Error("Invalid directory path");
+  const value = input.trim();
+  if (value.includes("\0") || value.includes("\\") || value.startsWith("/")) throw new Error("Invalid directory path");
+  const segments = value.split("/");
+  if (segments.some(part => !part || DENIED_SEGMENTS.has(part) || part.startsWith("."))) throw new Error("Path is protected or malformed");
+  const normalized = path.posix.normalize(value);
+  if (normalized !== value || !ALLOWED_ROOTS.some(root => normalized === root || normalized.startsWith(root + "/"))) throw new Error("Directory is outside the approved workspace");
+  const absolute = path.resolve(ROOT, normalized);
+  if (!isWithinRoot(absolute)) throw new Error("Path escapes workspace root");
+  rejectSymlinkEscape(absolute);
+  if (fs.existsSync(absolute) && !fs.lstatSync(absolute).isDirectory()) throw new Error("Target is not a directory");
+  return { relative: normalized, absolute };
+}
+
+module.exports = { normalizeRelative, normalizeDirectory, ALLOWED_ROOTS: Object.freeze([...ALLOWED_ROOTS]) };
