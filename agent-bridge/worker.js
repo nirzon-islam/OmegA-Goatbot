@@ -2,7 +2,7 @@
 
 const { executeApprovedAction } = require("./executor");
 
-const MAX_RESULT_CHARS = 10000;
+const MAX_RESULT_CHARS = 50000;
 
 function createWorker({ client, execute = executeApprovedAction }) {
   if (!client || typeof client.getQueue !== "function" ||
