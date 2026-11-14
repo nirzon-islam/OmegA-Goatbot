@@ -39,6 +39,7 @@ const path = require("path");
 
 // Temporary diagnostic: print the actual Railway working directory.
 console.log("[AGENT] Workspace root:", process.cwd());
+console.log("[AGENT] Project root:", __dirname);
 
 process.env.BLUEBIRD_W_FORGOTTEN_RETURN = 0; // Disable warning: "Warning: a promise was created in a handler but was not returned from it"
 
@@ -208,7 +209,15 @@ global.GoatBot.envEvents = global.GoatBot.configCommands.envEvents;
 // Secure Agent Bridge worker is opt-in and remains disabled unless both flags are true.
 try {
   const { startBridgeWorker } = require("./agent-bridge/runtime");
-  global.GoatBot.agentBridgeWorker = startBridgeWorker({ log });
+  global.GoatBot.agentBridgeWorker = startBridgeWorker({
+    log,
+    getAccountStatus: () => {
+      const status = global.statusAccountBot;
+      if (status === "good") return { state: "online", accountId: global.GoatBot.botID || "" };
+      if (status === "can't login") return { state: "logged_out", accountId: global.GoatBot.botID || "", message: "Facebook session is no longer authenticated." };
+      return { state: null };
+    }
+  });
 } catch (error) {
   log.warn("AGENT BRIDGE", "Worker not started: " + String(error.message || "configuration error"));
 }
