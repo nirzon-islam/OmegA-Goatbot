@@ -100,6 +100,9 @@ function createBridgeClient() {
     },
     reportResult(payload) {
       return post("/api/bridge/result", payload);
+    },
+    reportAccountStatus(payload) {
+      return post("/api/bridge/account-status", payload);
     }
   });
 }
