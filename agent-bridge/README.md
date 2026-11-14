@@ -50,13 +50,13 @@ The bot's existing `config.json` currently stores several integrations directly 
 
 ### Bridge status
 
-The bridge is a scaffold only. It is not wired into the Messenger command loader or bot startup, and backend request intake/planning is not complete. Keep `AGENT_BRIDGE_ENABLED=false`. Do not set a live bridge secret or run a worker until the backend integration and sender authorization are implemented and tested.
+The bridge runtime is opt-in and polls only when both `AGENT_BRIDGE_ENABLED=true` and `AGENT_WORKER_ENABLED=true`. The backend must have `BRIDGE_ENABLED=true`, matching 32+ character secret, AI provider credentials, and sender allowlist. Keep both flags false until provider planning, owner approval, and end-to-end tests are verified. Every supported action, including read/test, requires Owner approval before the worker can claim it.
 
 ### Railway manual setup (when integration is complete)
 
 - Runtime: Node.js 20.x.
 - Start command: `npm start`.
-- Add bridge variables from `.env.example` in Railway Variables.
+- Add bridge variables from `.env.example` in Railway Variables.\n- Set `AGENT_BRIDGE_ENABLED=true` only after the backend is configured and tested.\n- Set `AGENT_WORKER_ENABLED=true` only when ready to allow approved actions to run.
 - `AGENT_BACKEND_URL` must be the deployed backend base URL (no trailing slash).
 - Use the exact same randomly generated `AGENT_BRIDGE_SECRET` / backend `BRIDGE_SECRET`, 32+ characters.
 - Set `AGENT_WORKSPACE_ROOT` only to the intended bot workspace; verify it resolves to the deployed checkout.
