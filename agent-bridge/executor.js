@@ -4,16 +4,16 @@ const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
 const crypto = require("crypto");
-const { normalizeRelative } = require("./pathGuard");
+const { normalizeRelative, normalizeDirectory } = require("./pathGuard");
 const { backupFile } = require("./backup");
 
-const MAX_FILE_BYTES = 64 * 1024;
+const MAX_FILE_BYTES = 64 * 1024;\nconst MAX_READ_FILES = 40;\nconst MAX_READ_TOTAL_BYTES = 256 * 1024;
 
 function executeApprovedAction(action) {
   if (!action || typeof action !== "object" || Array.isArray(action)) {
     throw new Error("Invalid action");
   }
-  const { type, path: relativePath } = action;
+  if (action.type === "plan") {\n    if (!Array.isArray(action.steps) || action.steps.length < 1 || action.steps.length > 12) throw new Error("Invalid approved plan");\n    const results = [];\n    for (let index = 0; index < action.steps.length; index++) {\n      results.push({ step: index + 1, ...executeApprovedAction(action.steps[index]) });\n    }\n    return { summary: typeof action.summary === "string" ? action.summary : "Approved multi-step task completed", steps: results };\n  }\n  const { type, path: relativePath } = action;
   if (typeof type !== "string" || typeof relativePath !== "string") {
     throw new Error("Action requires type and path");
   }
@@ -25,7 +25,7 @@ function executeApprovedAction(action) {
     throw new Error("Action contains unsupported properties");
   }
 
-  const target = normalizeRelative(relativePath);
+  if (type === "list" || type === "readMany") {\n    const directory = normalizeDirectory(relativePath);\n    if (!fs.existsSync(directory.absolute)) throw new Error("Directory does not exist");\n    const entries = [];\n    function walk(current, rel) {\n      for (const name of fs.readdirSync(current).sort()) {\n        if (name.startsWith(".")) continue;\n        const full = path.join(current, name);\n        const stat = fs.lstatSync(full);\n        if (stat.isSymbolicLink()) continue;\n        const child = rel + "/" + name;\n        if (stat.isDirectory()) { if (entries.length < MAX_READ_FILES) walk(full, child); }\n        else if (stat.isFile() && /\\.(lang|js)$/.test(name) && entries.length < MAX_READ_FILES) {\n          if (type === "list") entries.push({ path: child, type: "file", size: stat.size });\n          else {\n            if (stat.size > MAX_FILE_BYTES) throw new Error("File exceeds the 64 KiB read limit: " + child);\n            entries.push({ path: child, content: fs.readFileSync(full, "utf8") });\n          }\n        }\n      }\n    }\n    walk(directory.absolute, directory.relative);\n    if (type === "readMany") {\n      const total = entries.reduce((sum, item) => sum + Buffer.byteLength(item.content, "utf8"), 0);\n      if (total > MAX_READ_TOTAL_BYTES) throw new Error("Combined file content exceeds the 256 KiB task limit");\n    }\n    return { path: directory.relative, entries, count: entries.length };\n  }\n  const target = normalizeRelative(relativePath);
 
   if (type === "read") {
     const stat = fs.lstatSync(target.absolute);
