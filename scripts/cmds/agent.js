@@ -1,18 +1,13 @@
 "use strict";
 
 const LOCKED_AUTHOR = "NirZon";
-const COMMAND_AUTHOR = "NirZon";
 
-if (COMMAND_AUTHOR !== LOCKED_AUTHOR) {
-  throw new Error("[agent] Author lock mismatch");
-}
-
-module.exports = {
+const commandModule = {
   config: {
     name: "agent",
     aliases: ["aiagent"],
     version: "1.0.0",
-    author: COMMAND_AUTHOR,
+    author: "NirZon",
     role: 2,
     shortDescription: "Submit a request to the secure Agent Backend",
     longDescription: "Queues a non-executable request for owner review and planning.",
@@ -55,3 +50,9 @@ module.exports = {
     }
   }
 };
+
+if (commandModule.config.author !== LOCKED_AUTHOR) {
+  throw new Error("[agent] Author lock mismatch");
+}
+
+module.exports = commandModule;
