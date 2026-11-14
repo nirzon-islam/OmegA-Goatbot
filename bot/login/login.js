@@ -205,7 +205,7 @@ function filterKeysAppState(_0x46da08) {
 global.responseUptimeCurrent = responseUptimeSuccess;
 global.responseUptimeSuccess = responseUptimeSuccess;
 global.responseUptimeError = responseUptimeError;
-global.statusAccountBot = "good";
+global.statusAccountBot = "unknown";
 let changeFbStateByCode = false;
 let latestChangeContentAccount = fs.statSync(dirAccount).mtimeMs;
 let dashBoardIsRunning = false;
@@ -826,6 +826,10 @@ async function startBot(_0x3cad9e) {
             if (_0x570bf7 == "Connection closed." || _0x570bf7 == "Connection closed by user.") {
               return;
             } else {
+              const _agentLoginError = String(_0x570bf7?.error || _0x570bf7?.message || _0x570bf7 || "").toLowerCase();
+              global.statusAccountBot = /checkpoint|challenge|verify|verification|two.factor|security code|confirm your identity/.test(_agentLoginError)
+                ? "checkpoint"
+                : "error";
               await handlerWhenListenHasError({
                 'api': _0x4d5048,
                 'threadModel': _0xedf862,
