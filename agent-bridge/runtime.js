@@ -4,13 +4,11 @@ const { createBridgeClient } = require("./client");
 const { createWorker } = require("./worker");
 
 function startBridgeWorker({ log = console, intervalMs = 15000, getAccountStatus = () => ({ state: "unknown" }) } = {}) {
-  if (process.env.AGENT_BRIDGE_ENABLED !== "true" ||
-      process.env.AGENT_WORKER_ENABLED !== "true") {
-    return null;
-  }
+  if (process.env.AGENT_BRIDGE_ENABLED !== "true") return null;
 
   const client = createBridgeClient();
-  const worker = createWorker({ client });
+  const workerEnabled = process.env.AGENT_WORKER_ENABLED === "true";
+  const worker = workerEnabled ? createWorker({ client }) : null;
   let running = false;
   let reporting = false;
 
@@ -38,7 +36,7 @@ function startBridgeWorker({ log = console, intervalMs = 15000, getAccountStatus
     if (running) return;
     running = true;
     try {
-      await worker.pollOnce(5);
+      if (worker) await worker.pollOnce(5);
     } catch (error) {
       log.warn("AGENT BRIDGE", "Poll failed: " + String(error.message || "unknown error"));
     } finally {
@@ -51,7 +49,7 @@ function startBridgeWorker({ log = console, intervalMs = 15000, getAccountStatus
     void reportStatus();
   }, intervalMs);
   if (typeof timer.unref === "function") timer.unref();
-  void poll();
+  if (worker) void poll();
   void reportStatus();
 
   return Object.freeze({
