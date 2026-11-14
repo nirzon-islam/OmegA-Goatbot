@@ -202,6 +202,14 @@ global.GoatBot.envGlobal = global.GoatBot.configCommands.envGlobal;
 global.GoatBot.envCommands = global.GoatBot.configCommands.envCommands;
 global.GoatBot.envEvents = global.GoatBot.configCommands.envEvents;
 
+// Secure Agent Bridge worker is opt-in and remains disabled unless both flags are true.
+try {
+  const { startBridgeWorker } = require("./agent-bridge/runtime");
+  global.GoatBot.agentBridgeWorker = startBridgeWorker({ log });
+} catch (error) {
+  log.warn("AGENT BRIDGE", "Worker not started: " + String(error.message || "configuration error"));
+}
+
 // ———————————————— LOAD LANGUAGE ———————————————— //
 const getText = global.utils.getText;
 

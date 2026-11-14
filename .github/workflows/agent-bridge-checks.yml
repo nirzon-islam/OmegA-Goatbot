@@ -1,0 +1,32 @@
+name: Agent Bridge Checks
+
+on:
+  push:
+    branches:
+      - feature/agent-secure-bridge
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  bridge-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Syntax check
+        run: |
+          node --check agent-bridge/client.js
+          node --check agent-bridge/pathGuard.js
+          node --check agent-bridge/backup.js
+          node --check agent-bridge/executor.js
+          node --check agent-bridge/worker.js
+          node --check agent-bridge/runtime.js
+          node --check scripts/cmds/agent.js
+          node --check EryXenX.js
+      - name: Unit tests
+        run: node --test agent-bridge/*.test.js
