@@ -3,10 +3,11 @@ name: Agent Bridge Checks
 on:
   push:
     branches:
-      - feature/agent-secure-bridge
+      - 'feature/**'
   pull_request:
     branches:
       - main
+      - 'feature/**'
 
 jobs:
   bridge-checks:
