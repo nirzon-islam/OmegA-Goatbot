@@ -1,7 +1,6 @@
 # Railway Agent Bridge
 
-This bridge is intentionally isolated from GoatBot startup. It is not imported by
-index.js, EryXenX.js, the login process, event handlers, or command loaders.
+The `!agent` command is loaded through the existing command loader. The background worker is started from `EryXenX.js` only when both `AGENT_BRIDGE_ENABLED=true` and `AGENT_WORKER_ENABLED=true`.
 
 ## Current executor contract
 
@@ -50,7 +49,7 @@ The bot's existing `config.json` currently stores several integrations directly 
 
 ### Bridge status
 
-The bridge runtime is opt-in and polls only when both `AGENT_BRIDGE_ENABLED=true` and `AGENT_WORKER_ENABLED=true`. The backend must have `BRIDGE_ENABLED=true`, matching 32+ character secret, AI provider credentials, and sender allowlist. Keep both flags false until provider planning, owner approval, and end-to-end tests are verified. Every supported action, including read/test, requires Owner approval before the worker can claim it.
+The bridge runtime is opt-in and polls only when both `AGENT_BRIDGE_ENABLED=true` and `AGENT_WORKER_ENABLED=true`. The backend must have `BRIDGE_ENABLED=true`, matching 32+ character secret, at least one AI provider key, and the same sender allowlist. Keep both flags false until database-backed end-to-end tests and credential rotation are verified. Every supported action, including read/test, requires Owner approval before the worker can claim it.
 
 ### Railway manual setup (when integration is complete)
 
