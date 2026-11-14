@@ -1,43 +1,40 @@
-# Railway Agent Bridge (scaffold)
+# Railway Agent Bridge
 
-This folder is an isolated integration scaffold. It is intentionally **not started**
-by GoatBot and does not modify the Messenger login, event handlers, command loader,
-database, or existing uptime server.
+This bridge is intentionally isolated from GoatBot startup. It is not imported by
+index.js, EryXenX.js, the login process, event handlers, or command loaders.
 
-## Current compatibility finding
+## Current executor contract
 
-The current Agent Backend Bridge API uses signed requests with these headers:
+The executor accepts only an already-claimed, already-approved structured action:
 
-- `X-Agent-Timestamp`
-- `X-Agent-Nonce`
-- `X-Agent-Signature`
+- `read`: read a regular file under `languages/`.
+- `create`: create a new `.lang` or `.js` file under `languages/`; never overwrites.
+- `edit`: update an existing supported file under `languages/`; makes a content-addressed backup first.
+- `test`: compile-check a JavaScript file with `vm.Script`; it does not execute it.
 
-The signature is HMAC-SHA256 over:
+No shell, eval, package scripts, arbitrary test runners, delete, install, or runtime
+code paths are supported. File size is limited to 64 KiB. Symlinks and hidden paths
+are rejected. The allowlist is deliberately limited to `languages/` because the
+copy repository contains sensitive bot login/session code, dashboard authentication,
+and high-impact commands under other directories.
 
-```text
-timestamp + "\n" + nonce + "\n" + METHOD + "\n" + originalUrl + "\n" + sha256(rawBody)
+## Backend action payload examples
+
+```json
+{ "type": "read", "path": "languages/bn.lang" }
+{ "type": "create", "path": "languages/new.lang", "content": "..." }
+{ "type": "edit", "path": "languages/bn.lang", "content": "..." }
+{ "type": "test", "path": "languages/cmds/en.js" }
 ```
 
-Its current `POST /api/bridge/claim` endpoint requires a known `taskId`.
-The current Railway copy has no approved-task queue consumer, and the backend
-does not yet expose a task-discovery endpoint or push callback. Therefore the
-worker cannot safely discover approved work yet.
+Only the exact action stored in the backend approval record and returned by the
+single-use claim endpoint may be passed to this executor. Never derive action data
+from the free-text task description.
 
-## Environment (do not commit values)
+## Still not production-enabled
 
-- `AGENT_BACKEND_URL`: HTTPS URL of the Render Agent Backend
-- `AGENT_BRIDGE_SECRET`: same high-entropy secret configured as `BRIDGE_SECRET`
-- `AGENT_WORKSPACE_ROOT`: optional workspace root (defaults to repository root)
-
-## Guardrails
-
-- No shell execution, eval, dynamic code loading, or arbitrary package scripts.
-- File access is limited to explicitly allowed project subdirectories.
-- Bot session files, login code, Git internals, dependencies, and environment files
-  are protected.
-- A regular-file backup helper is provided for pre-change snapshots.
-- This scaffold is not production-ready until the backend task discovery/callback
-  contract, exact approved action schema, result reporting, and end-to-end tests
-  are implemented and verified.
-
-Do not enable or deploy this integration until those dependencies are complete.
+The executor is not wired into the bot process or an automatic polling loop. Before
+enabling it, add backend action-schema validation at approval creation, bind task
+type to action type, add integration tests against MongoDB replica-set transactions,
+and verify deployment environment variables. No Railway service is started by this
+code.
