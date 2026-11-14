@@ -17,22 +17,22 @@ function createWorker({ client, execute = executeApprovedAction }) {
       throw new Error("Invalid queued task ID");
     }
 
-    let claimed;
+    let response;
     try {
-      const response = await client.claim(taskId);
-      if (!response || response.success !== true || !response.task ||
-          response.task.taskId !== taskId || !response.task.action ||
-          response.task.type !== response.task.action.type) {
-        throw new Error("Claim response does not match the queued task");
-      }
-      claimed = response.task;
+      response = await client.claim(taskId);
     } catch (error) {
-      // A failed claim is not an execution failure; it may already be claimed.
       if (error.status === 409) return { taskId, skipped: true, reason: "not_claimable" };
       throw error;
     }
 
+    const claimed = response && response.task;
     try {
+      if (!response || response.success !== true || !claimed ||
+          claimed.taskId !== taskId || !claimed.action ||
+          claimed.type !== claimed.action.type) {
+        throw new Error("Claim response does not match the queued task");
+      }
+
       const value = await execute(claimed.action);
       const serialized = typeof value === "string" ? value : JSON.stringify(value);
       await client.reportResult({
