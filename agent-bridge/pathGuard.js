@@ -59,7 +59,7 @@ function normalizeRelative(input) {
 function normalizeDirectory(input) {
   if (typeof input !== "string" || !input.trim() || input.length > 200) throw new Error("Invalid directory path");
   const value = input.trim();
-  if (value.includes("\\0") || value.includes("\\\\") || value.startsWith("/")) throw new Error("Invalid directory path");
+  if (value.includes("\0") || value.includes("\\") || value.startsWith("/")) throw new Error("Invalid directory path");
   const segments = value.split("/");
   if (segments.some(part => !part || DENIED_SEGMENTS.has(part) || part.startsWith("."))) throw new Error("Path is protected or malformed");
   const normalized = path.posix.normalize(value);
