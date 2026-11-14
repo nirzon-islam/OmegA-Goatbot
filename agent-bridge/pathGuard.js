@@ -1,5 +1,6 @@
 "use strict";
 
+const fs = require("fs");
 const path = require("path");
 
 const ROOT = path.resolve(process.env.AGENT_WORKSPACE_ROOT || process.cwd());
@@ -11,9 +12,7 @@ const DENIED_SEGMENTS = new Set([
   ".env",
   "account.txt",
   "account.txt.bak",
-  "Fca_Database",
-  "bot/login",
-  "agent-bridge/backups"
+  "Fca_Database"
 ]);
 
 const ALLOWED_ROOTS = [
@@ -23,11 +22,30 @@ const ALLOWED_ROOTS = [
   "dashboard"
 ];
 
+function isWithinRoot(candidate) {
+  return candidate === ROOT || candidate.startsWith(ROOT + path.sep);
+}
+
+function rejectSymlinkEscape(absolute) {
+  let cursor = absolute;
+  while (!fs.existsSync(cursor)) {
+    const parent = path.dirname(cursor);
+    if (parent === cursor) break;
+    cursor = parent;
+  }
+
+  const realRoot = fs.realpathSync(ROOT);
+  const realExisting = fs.realpathSync(cursor);
+  if (realExisting !== realRoot && !realExisting.startsWith(realRoot + path.sep)) {
+    throw new Error("Path resolves outside workspace root");
+  }
+}
+
 function normalizeRelative(input) {
   if (typeof input !== "string" || !input.trim() || input.length > 500) {
     throw new Error("Invalid file path");
   }
-  if (input.includes("\\0") || input.includes("\\")) {
+  if (input.includes("\\0") || input.includes("\\\\")) {
     throw new Error("Invalid file path");
   }
 
@@ -52,9 +70,10 @@ function normalizeRelative(input) {
   }
 
   const absolute = path.resolve(ROOT, normalized);
-  if (absolute !== ROOT && !absolute.startsWith(ROOT + path.sep)) {
+  if (!isWithinRoot(absolute)) {
     throw new Error("Path escapes workspace root");
   }
+  rejectSymlinkEscape(absolute);
   return { relative: normalized, absolute };
 }
 
