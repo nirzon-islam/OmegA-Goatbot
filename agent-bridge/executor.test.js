@@ -11,13 +11,17 @@ process.env.AGENT_WORKSPACE_ROOT = root;
 const { normalizeRelative } = require("./pathGuard");
 const { executeApprovedAction } = require("./executor");
 
-test("only language workspace paths are allowed", () => {
+test("allows supported repository source while protecting sensitive paths", () => {
   assert.equal(normalizeRelative("languages/bn.lang").relative, "languages/bn.lang");
-  assert.throws(() => normalizeRelative("scripts/cmds/example.js"));
-  assert.throws(() => normalizeRelative("dashboard/app.js"));
+  assert.equal(normalizeRelative("scripts/cmds/example.js").relative, "scripts/cmds/example.js");
+  assert.equal(normalizeRelative("dashboard/app.css").relative, "dashboard/app.css");
+  assert.equal(normalizeRelative("README.md").relative, "README.md");
   assert.throws(() => normalizeRelative("languages/../config.json"));
   assert.throws(() => normalizeRelative("languages/.env"));
-  assert.throws(() => normalizeRelative("languages/hidden.txt"));
+  assert.throws(() => normalizeRelative("config.json"));
+  assert.throws(() => normalizeRelative("scripts/package-lock.json"));
+  assert.throws(() => normalizeRelative("scripts/hidden.bin"));
+  assert.throws(() => normalizeRelative("account.txt"));
 });
 
 test("create refuses overwrite and edit makes a backup", () => {
@@ -32,10 +36,12 @@ test("create refuses overwrite and edit makes a backup", () => {
 });
 
 test("read and syntax test do not execute code", () => {
-  const dir = path.join(root, "languages");
-  fs.writeFileSync(path.join(dir, "safe.js"), "globalThis.__agentExecuted = true;");
-  assert.equal(executeApprovedAction({ type: "read", path: "languages/safe.js" }).content.includes("__agentExecuted"), true);
-  assert.equal(executeApprovedAction({ type: "test", path: "languages/safe.js" }).passed, true);
+  const dir = path.join(root, "scripts", "cmds");
+  fs.mkdirSync(dir, { recursive: true });
+  const file = path.join(dir, "safe.js");
+  fs.writeFileSync(file, "globalThis.__agentExecuted = true;");
+  assert.equal(executeApprovedAction({ type: "read", path: "scripts/cmds/safe.js" }).content.includes("__agentExecuted"), true);
+  assert.equal(executeApprovedAction({ type: "test", path: "scripts/cmds/safe.js" }).passed, true);
   assert.equal(globalThis.__agentExecuted, undefined);
 });
 
@@ -44,22 +50,21 @@ test("dangerous and unsupported operations are rejected", () => {
   assert.throws(() => executeApprovedAction({ type: "install", path: "languages/bn.lang" }), /not supported/);
 });
 
-
-test("approved plans can list and read multiple language files", () => {
-  const dir = path.join(root, "languages");
-  fs.mkdirSync(path.join(dir, "nested"), { recursive: true });
-  fs.writeFileSync(path.join(dir, "bn.lang"), "hello-bn");
-  fs.writeFileSync(path.join(dir, "nested", "en.lang"), "hello-en");
-  const listing = executeApprovedAction({ type: "list", path: "languages" });
-  assert.ok(listing.entries.some(item => item.path === "languages/bn.lang"));
+test("approved plans can list and read supported repository text files", () => {
+  const dir = path.join(root, "scripts", "cmds", "nested");
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(root, "scripts", "cmds", "main.js"), "module.exports = {};");
+  fs.writeFileSync(path.join(dir, "notes.md"), "notes");
+  const listing = executeApprovedAction({ type: "list", path: "scripts/cmds" });
+  assert.ok(listing.entries.some(item => item.path === "scripts/cmds/main.js"));
   const result = executeApprovedAction({
     type: "plan",
-    summary: "Read-only language inventory",
+    summary: "Read-only source inventory",
     steps: [
-      { type: "list", path: "languages" },
-      { type: "readMany", path: "languages" }
+      { type: "list", path: "scripts/cmds" },
+      { type: "readMany", path: "scripts/cmds" }
     ]
   });
   assert.equal(result.steps.length, 2);
-  assert.ok(result.steps[1].entries.some(item => item.path === "languages/nested/en.lang" && item.content === "hello-en"));
+  assert.ok(result.steps[1].entries.some(item => item.path === "scripts/cmds/nested/notes.md" && item.content === "notes"));
 });
