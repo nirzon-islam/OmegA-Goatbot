@@ -31,7 +31,7 @@ const commandModule = {
         const { createBridgeClient } = require("../../agent-bridge/client");
         const status = await createBridgeClient().getRequestStatus(senderId, args[1]);
         const task = status.task;
-        return message.reply("📋 Task: " + task.taskId + "\\nStatus: " + task.status + (task.error ? "\\nReason: " + task.error : "") + (task.result ? "\\nResult: " + task.result : ""));
+        return message.reply("📋 Task: " + task.taskId + "\nStatus: " + task.status + (task.error ? "\nReason: " + task.error : "") + (task.result ? "\nResult: " + task.result : ""));
       } catch (error) {
         return message.reply("❌ Task status পাওয়া যায়নি। Task ID পরীক্ষা করুন।");
       }
