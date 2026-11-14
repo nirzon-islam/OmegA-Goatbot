@@ -23,5 +23,6 @@ jobs:
           node --check agent-bridge/client.js
           node --check agent-bridge/pathGuard.js
           node --check agent-bridge/backup.js
+          node --check agent-bridge/executor.js
       - name: Unit tests
         run: node --test agent-bridge/*.test.js
