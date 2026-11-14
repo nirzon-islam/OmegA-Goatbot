@@ -8,8 +8,8 @@ const { normalizeRelative, normalizeDirectory } = require("./pathGuard");
 const { backupFile } = require("./backup");
 
 const MAX_FILE_BYTES = 64 * 1024;
-const MAX_READ_FILES = 40;
-const MAX_READ_TOTAL_BYTES = 256 * 1024;
+const MAX_READ_FILES = 30;
+const MAX_READ_TOTAL_BYTES = 30000;
 
 function executeApprovedAction(action) {
   if (!action || typeof action !== "object" || Array.isArray(action)) {
