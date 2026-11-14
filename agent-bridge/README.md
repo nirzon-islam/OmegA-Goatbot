@@ -38,3 +38,28 @@ enabling it, add backend action-schema validation at approval creation, bind tas
 type to action type, add integration tests against MongoDB replica-set transactions,
 and verify deployment environment variables. No Railway service is started by this
 code.
+
+
+## Deployment preparation and credential hygiene
+
+### Important: rotate exposed credentials before any deployment
+
+The current tracked `config.json` contains credential material in fields for MongoDB, Pastebin, Google OAuth, and reCAPTCHA. Treat every value previously committed there as compromised, even if it is later blanked or removed. Revoke/rotate those credentials at their respective providers, review Git history, and do not reuse the old values. Also review Facebook account credentials and session files before sharing or deploying the repository. Never paste secrets into GitHub issues, PRs, or chat.
+
+The bot's existing `config.json` currently stores several integrations directly in JSON. The `.env.example` in this directory documents the *new bridge variables only*; it does not magically move existing config values to environment variables. Do not delete or replace existing config fields until the bot's config loader has been deliberately migrated and tested.
+
+### Bridge status
+
+The bridge is a scaffold only. It is not wired into the Messenger command loader or bot startup, and backend request intake/planning is not complete. Keep `AGENT_BRIDGE_ENABLED=false`. Do not set a live bridge secret or run a worker until the backend integration and sender authorization are implemented and tested.
+
+### Railway manual setup (when integration is complete)
+
+- Runtime: Node.js 20.x.
+- Start command: `npm start`.
+- Add bridge variables from `.env.example` in Railway Variables.
+- `AGENT_BACKEND_URL` must be the deployed backend base URL (no trailing slash).
+- Use the exact same randomly generated `AGENT_BRIDGE_SECRET` / backend `BRIDGE_SECRET`, 32+ characters.
+- Set `AGENT_WORKSPACE_ROOT` only to the intended bot workspace; verify it resolves to the deployed checkout.
+- Do not enable the worker until the owner/sender allowlist and approval path are verified.
+
+This project has not been deployed or runtime-integrated by this preparation.
