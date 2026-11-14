@@ -47,7 +47,7 @@ function executeApprovedAction(action) {
         if (stat.isSymbolicLink()) continue;
         const child = rel + "/" + name;
         if (stat.isDirectory()) { if (entries.length < MAX_READ_FILES) walk(full, child); }
-        else if (stat.isFile() && /\\.(lang|js)$/.test(name) && entries.length < MAX_READ_FILES) {
+        else if (stat.isFile() && /\.(lang|js)$/.test(name) && entries.length < MAX_READ_FILES) {
           if (type === "list") entries.push({ path: child, type: "file", size: stat.size });
           else {
             if (stat.size > MAX_FILE_BYTES) throw new Error("File exceeds the 64 KiB read limit: " + child);
