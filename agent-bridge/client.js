@@ -84,7 +84,18 @@ function createBridgeClient() {
     return data;
   }
 
-  return Object.freeze({ post });
+  return Object.freeze({
+    post,
+    getQueue(limit = 5) {
+      return post("/api/bridge/queue", { limit });
+    },
+    claim(taskId) {
+      return post("/api/bridge/claim", { taskId });
+    },
+    reportResult(payload) {
+      return post("/api/bridge/result", payload);
+    }
+  });
 }
 
 module.exports = { createBridgeClient, createSignedHeaders };
