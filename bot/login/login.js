@@ -987,7 +987,7 @@ async function startBot(_0x3cad9e) {
           } catch (guardError) {
             log.warn("SESSION GUARD", "Replacement guard could not start");
           }
-          await progress("online", "Replacement Facebook MQTT listener is ready");
+          await progress("online", "Replacement Facebook MQTT listener is ready").catch(() => {});
           return { state: "online", message: "Facebook session restored" };
         } catch (error) {
           if (previousAccount) {
