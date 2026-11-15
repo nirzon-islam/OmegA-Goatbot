@@ -26,7 +26,7 @@ jobs:
         with:
           node-version: 20
           cache: npm
-      - run: npm ci
+      - run: npm install --ignore-scripts --no-audit --no-fund
       - run: npm run test:secure-session
       - run: node --check bot/login/login.js
       - run: node --check agent-bridge/worker.js
