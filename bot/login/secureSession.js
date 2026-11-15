@@ -24,17 +24,17 @@ function validateAppState(raw, expectedBotId) {
   const cookies = new Map();
   for (const item of state) {
     if (!item || typeof item !== "object" || Array.isArray(item) ||
-        typeof item.name !== "string" || typeof item.value !== "string" ||
+        typeof (item.key || item.name) !== "string" || typeof item.value !== "string" ||
         typeof item.domain !== "string" || !/(^|\.)facebook\.com$/i.test(item.domain.replace(/^\./, ""))) {
       throw new Error("Appstate contains an invalid Facebook cookie");
     }
     if (item.value.length > 16_384) throw new Error("Appstate cookie value is too large");
-    cookies.set(item.name, item.value);
+    cookies.set(item.key || item.name, item.value);
   }
   if (cookies.get("c_user") !== expectedBotId || !cookies.get("xs")) {
     throw new Error("Appstate account does not match the requested Bot ID");
   }
-  return state;
+  return state.map(item => { const { name, ...rest } = item; return { ...rest, key: item.key || name }; });
 }
 
 function writeAppStateAtomic(filePath, state) {
@@ -80,33 +80,23 @@ function loginCandidate(login, appState, options = {}, timeoutMs = READY_TIMEOUT
 function listenUntilReady(api, callback, timeoutMs = READY_TIMEOUT_MS) {
   return new Promise((resolve, reject) => {
     let settled = false;
-    let listener;
     const timer = setTimeout(() => finish(new Error("Facebook MQTT readiness timed out")), timeoutMs);
-    function cleanup() {
-      clearTimeout(timer);
-      if (listener && typeof listener.removeListener === "function") {
-        listener.removeListener("ready", onReady);
-        listener.removeListener("error", onError);
-      }
-    }
-    function finish(error) {
+    function finish(error, value) {
       if (settled) return;
       settled = true;
-      cleanup();
-      if (error) reject(error);
-      else resolve(listener);
+      clearTimeout(timer);
+      if (error) reject(error); else resolve(value);
     }
-    function onReady() { finish(); }
-    function onError(error) { finish(error instanceof Error ? error : new Error("Facebook MQTT connection failed")); }
-
     try {
-      listener = api.listenMqtt(callback);
-      if (!listener || typeof listener.once !== "function") {
-        finish(new Error("FCA listener does not expose readiness events"));
-        return;
-      }
-      listener.once("ready", onReady);
-      listener.once("error", onError);
+      // FCA emits ready as the first callback argument: { type: "ready" }.
+      api.listenMqtt((first, second) => {
+        const event = second || first;
+        if (event && event.type === "ready") return finish(null, event);
+        if (first && (first instanceof Error || first.type === "stop_listen" || first.error)) {
+          return finish(first instanceof Error ? first : new Error("Facebook MQTT connection failed"));
+        }
+        callback(first, second);
+      });
     } catch (error) { finish(error); }
   });
 }
