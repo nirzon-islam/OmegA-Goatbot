@@ -59,7 +59,7 @@ test("recovery worker can switch to a different target Bot ID without current-ID
     async reportRecoveryResult(payload) { calls.push(["result", payload]); }
   };
   let received;
-  const worker = createWorker({ client, recoverSession: () => async payload => { received = payload; return { state: "online" }; } });
+  const worker = createWorker({ client, execute: async () => null, recoverSession: () => async payload => { received = payload; return { state: "online" }; } });
   try {
     const result = await worker.pollRecovery();
     assert.equal(result.success, true);
