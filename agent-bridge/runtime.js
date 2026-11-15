@@ -29,11 +29,13 @@ function startBridgeWorker({ log = console, intervalMs = 15000, getAccountStatus
     reporting = true;
     try {
       const status = getAccountStatus() || {};
-      const allowed = new Set(["online", "logged_out", "checkpoint", "error"]);
-      if (!allowed.has(status.state)) return;
-      const state = status.state;
+      const allowed = new Set(["online", "logged_out", "checkpoint", "error", "unknown"]);
+      const sessionState = allowed.has(status.sessionState) ? status.sessionState :
+        (allowed.has(status.state) ? status.state : "unknown");
       await client.reportAccountStatus({
-        state,
+        workerState: "online",
+        sessionState,
+        state: sessionState,
         accountId: typeof status.accountId === "string" ? status.accountId.slice(0, 128) : "",
         message: typeof status.message === "string" ? status.message.slice(0, 500) : ""
       });
