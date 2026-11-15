@@ -51,7 +51,7 @@ function normalizeSegments(input, maxLength) {
     throw new Error("Invalid file path");
   }
   const value = input.trim();
-  if (value.includes("\\0") || value.includes("\\\\") || value.startsWith("/")) {
+  if (value.includes("\0") || value.includes("\\") || value.startsWith("/")) {
     throw new Error("Invalid file path");
   }
   const segments = value.split("/");
