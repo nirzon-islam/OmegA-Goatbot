@@ -7,8 +7,7 @@ const ROOT = path.resolve(process.env.AGENT_WORKSPACE_ROOT || process.cwd());
 const DENIED_SEGMENTS = new Set([
   ".", "..", ".git", "node_modules", ".env", ".env.local", ".env.production",
   "account.txt", "account.txt.bak", "Fca_Database", "cache", "secrets",
-  "appstate", "appstates", "sessions", "session", "credentials", "cookies",
-  "agent-bridge/backups"
+  "appstate", "appstates", "sessions", "session", "credentials", "cookies", "backups"
 ]);
 const DENIED_NAMES = /^(?:\.env(?:\..*)?|.*(?:appstate|cookie|credential|secret|token|private.?key|account.?txt|session.?store).*)$/i;
 const ALLOWED_EXTENSIONS = new Set([
@@ -91,5 +90,6 @@ function normalizeDirectory(input) {
 module.exports = {
   normalizeRelative,
   normalizeDirectory,
+  isDeniedSegment,
   ALLOWED_EXTENSIONS: Object.freeze([...ALLOWED_EXTENSIONS])
 };
