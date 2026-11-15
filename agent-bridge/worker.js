@@ -65,7 +65,7 @@ function createWorker({ client, execute = executeApprovedAction, recoverSession 
       handoff = response && response.recovery;
       if (!handoff) return { skipped: true, reason: "no_pending_recovery" };
       botId = String(handoff.botId || "");
-      if (!/^\\d{5,30}$/.test(botId) || typeof handoff.requestId !== "string" ||
+      if (!/^\d{5,30}$/.test(botId) || typeof handoff.requestId !== "string" ||
           !/^[a-f0-9]{48}$/.test(handoff.requestId) || typeof handoff.cookie !== "string" ||
           !handoff.cookie.startsWith("[")) {
         throw new Error("Recovery handoff validation failed");
