@@ -2,7 +2,7 @@
 
 const crypto = require("crypto");
 
-const MAX_CLOCK_DRIFT_MS = 5 * 60 * 1000;
+const MAX_CLOCK_DRIFT_MS = 5 * 60 * 1000;\nconst BRIDGE_REQUEST_TIMEOUT_MS = 60 * 1000;
 
 function requiredEnv(name) {
   const value = process.env[name];
@@ -72,7 +72,7 @@ function createBridgeClient() {
       method: "POST",
       headers,
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(15000)
+      signal: AbortSignal.timeout(BRIDGE_REQUEST_TIMEOUT_MS)
     });
 
     const data = await response.json().catch(() => ({}));
