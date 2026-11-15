@@ -2,7 +2,6 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { EventEmitter } = require("node:events");
 const {
   validateAppState,
   writeAppStateAtomic,
@@ -13,11 +12,13 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 
-const cookie = (name, value) => ({ name, value, domain: ".facebook.com", path: "/", hostOnly: false, creation: Date.now() });
+const cookie = (name, value) => ({ key: name, value, domain: ".facebook.com", path: "/", hostOnly: false, creation: Date.now() });
 
 test("validates appstate identity and required session cookies", () => {
-  const state = [cookie("c_user", "123456789"), cookie("xs", "session")];
-  assert.deepEqual(validateAppState(JSON.stringify(state), "123456789"), state);
+  const state = [{ name: "c_user", value: "123456789", domain: ".facebook.com" }, { name: "xs", value: "session", domain: ".facebook.com" }];
+  const normalized = validateAppState(JSON.stringify(state), "123456789");
+  assert.equal(normalized[0].key, "c_user");
+  assert.equal(normalized[0].name, undefined);
   assert.throws(() => validateAppState(JSON.stringify(state), "987654321"), /does not match/);
   assert.throws(() => validateAppState("not-json", "123456789"), /valid JSON/);
   assert.throws(() => validateAppState(JSON.stringify([cookie("c_user", "123456789"), cookie("datr", "other")]), "123456789"), /does not match/);
@@ -46,14 +47,13 @@ test("loginCandidate forces MQTT ready events and validates API shape", async ()
 });
 
 test("listenUntilReady resolves only after explicit ready event", async () => {
-  const emitter = new EventEmitter();
-  const api = { listenMqtt() { return emitter; } };
-  const pending = listenUntilReady(api, () => {}, 500);
-  setImmediate(() => emitter.emit("ready"));
-  assert.equal(await pending, emitter);
+  const api = { listenMqtt(callback) { setImmediate(() => callback({ type: "ready", error: null })); } };
+  assert.deepEqual(await listenUntilReady(api, () => {}, 500), { type: "ready", error: null });
 });
 
 test("listenUntilReady rejects on timeout", async () => {
-  const api = { listenMqtt() { return new EventEmitter(); } };
+  const api = { listenMqtt() {}; };
   await assert.rejects(listenUntilReady(api, () => {}, 10), /readiness timed out/);
 });
+
+test("listenUntilReady handles FCA callback events", async () => { let forwarded; const api = { listenMqtt(callback) { callback(null, { type: "message", body: "hello" }); callback({ type: "ready", error: null }); } }; await listenUntilReady(api, (_error, event) => { forwarded = event; }, 100); assert.equal(forwarded.body, "hello"); const bad = { listenMqtt(callback) { callback({ type: "stop_listen", error: "offline" }); } }; await assert.rejects(listenUntilReady(bad, () => {}, 100), /connection failed/); });
