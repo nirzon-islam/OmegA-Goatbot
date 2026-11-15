@@ -96,7 +96,12 @@ function listenUntilReady(api, callback, timeoutMs = READY_TIMEOUT_MS, stableMs 
         if (value && typeof value === "object" &&
             (value.type === "stop_listen" || value.type === "account_inactive" ||
              value.type === "login_blocked" || value.error)) {
-          return new Error("Facebook MQTT connection rejected the candidate session");
+          const reason = [value.error, value.type].find(item =>
+            typeof item === "string" &&
+            /^(login_blocked|account_inactive|stop_listen|not_logged_in|connection_refused|server_unavailable|checkpoint)$/i.test(item)
+          );
+          return new Error("Facebook MQTT connection rejected the candidate session" +
+            (reason ? " (" + reason + ")" : ""));
         }
       }
       return null;
