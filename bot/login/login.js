@@ -831,7 +831,11 @@ async function startBot(_0x3cad9e) {
               });
               _0x54729a = true;
             }
-            if (global.GoatBot.config.autoRestartWhenListenMqttError) {
+            // Definitive Facebook auth failures must wait for a fresh appstate.
+            // Restarting here reloads the same rejected account.txt and creates a login loop.
+            // Keep the process alive so the account-file watcher can accept a new cookie.
+            const definitiveAuthFailure = /account_inactive|login_blocked|not logged in|authentication|invalid session/.test(_statusErrorText);
+            if (global.GoatBot.config.autoRestartWhenListenMqttError && !definitiveAuthFailure) {
               process.exit(0x2);
             }
             return;
