@@ -1,7 +1,7 @@
-FACEBOOK LOGIN COOKIES
+🍪 FACEBOOK LOGIN COOKIES
 
-Paste your Facebook login cookies here if you want the bot to use your account.
+Bot-কে তোমার Facebook অ্যাকাউন্ট দিয়ে চালাতে চাইলে এখানে Facebook Login Cookie পেস্ট করো।
 
-You can also give the cookies to the Agent after deployment, if that option is available.
+🤖 চাইলে Deploy করার পর Agent-এর মাধ্যমেও Cookie দেওয়া যাবে—যদি সেই অপশনটি চালু থাকে।
 
-Keep your cookies private. They work like your Facebook password.
+🔒 সতর্কতা: Cookie কখনো কারও সঙ্গে শেয়ার করবে না। এটি তোমার Facebook Password-এর মতোই গোপনীয়।
