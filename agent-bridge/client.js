@@ -98,6 +98,15 @@ function createBridgeClient() {
     getRequestStatus(senderId, taskId) {
       return post("/api/bridge/status", { senderId, taskId });
     },
+    getPendingApprovals(senderId) {
+      return post("/api/bridge/approvals/pending", { senderId });
+    },
+    approveRequest(senderId, reference) {
+      return post("/api/bridge/approvals/approve", { senderId, reference });
+    },
+    rejectRequest(senderId, reference) {
+      return post("/api/bridge/approvals/reject", { senderId, reference });
+    },
     reportResult(payload) {
       return post("/api/bridge/result", payload);
     },
