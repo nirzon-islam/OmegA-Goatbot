@@ -2,7 +2,8 @@
 
 const crypto = require("crypto");
 
-const MAX_CLOCK_DRIFT_MS = 5 * 60 * 1000;\nconst BRIDGE_REQUEST_TIMEOUT_MS = 60 * 1000;
+const MAX_CLOCK_DRIFT_MS = 5 * 60 * 1000;
+const BRIDGE_REQUEST_TIMEOUT_MS = 60 * 1000;
 
 function requiredEnv(name) {
   const value = process.env[name];
