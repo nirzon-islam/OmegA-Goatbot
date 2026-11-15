@@ -61,12 +61,26 @@ node index.js
 
 ### 2. Railway-তে Deploy
 
-1. Railway-তে নতুন project তৈরি করো।
-2. GitHub থেকে এই repository connect করো।
-3. Start command হিসেবে `node index.js` ব্যবহার করো।
-4. Deploy logs দেখে bot চালু হয়েছে কি না নিশ্চিত হও।
+1. [Railway](https://railway.com/) খুলে **New Project → Deploy from GitHub Repo** নির্বাচন করো।
+2. `OmegA-Goatbot` repository connect করো।
+3. **Settings → Deploy**-এ Start Command হিসেবে দাও:
 
-VPS-এও একইভাবে `npm install` এবং `node index.js` চালাতে পারো। Bot সবসময় চালু রাখতে process manager ব্যবহার করতে পারো।
+```bash
+npm start
+```
+
+4. **Variables** tab-এ গিয়ে মনে রাখবে:
+
+```env
+PORT
+```
+
+Railway নিজে থেকেই `PORT` তৈরি করে দেয়—সাধারণত আলাদা করে value বসানোর দরকার নেই। এই repository-র বর্তমান code-এ `PORT` ছাড়া Railway-এর জন্য অন্য কোনো custom Environment Variable বাধ্যতামূলক নয়। তাই অকারণে `MONGODB_URI`, `COOKIE` বা অন্য variable যোগ কোরো না।
+
+5. Facebook login-এর জন্য project-এর `account.txt` ফাইলে cookies JSON array format-এ দিতে হবে। Bot-এর settings যেমন prefix ও admin UID `config.json` থেকে নিয়ন্ত্রণ করা হয়।
+6. **Deploy** করো এবং **Deployments → View Logs** থেকে login ও startup status দেখো।
+
+VPS-এও একইভাবে `npm install` এবং `npm start` চালাতে পারো। Bot সবসময় চালু রাখতে process manager ব্যবহার করতে পারো।
 
 **Render ব্যবহার কোরো না:** এই bot-এর persistent MQTT/WebSocket connection এবং filesystem session storage দরকার, যা Render-এ compatible নয়।
 
