@@ -1,20 +1,7 @@
-FACEBOOK ACCOUNT LOGIN
-======================
+FACEBOOK LOGIN COOKIES
 
-This file is reserved for Facebook login cookies.
+Paste your Facebook login cookies here if you want the bot to use your account.
 
-To connect a Facebook account:
-1. Export the login cookies for the Facebook account you want the bot to use.
-2. Paste the complete cookie JSON into this file, keeping the original JSON structure.
-3. Save the file and restart/redeploy the bot so the account session can be loaded.
+You can also give the cookies to the Agent after deployment, if that option is available.
 
-ALTERNATIVE:
-You may provide the Facebook login cookies after deployment through the Agent's account-connection/setup flow, when that option is available. This lets you connect or update the account without editing this file manually.
-
-SECURITY NOTICE:
-- Never share your Facebook cookies publicly or commit real session cookies to a public repository.
-- Treat cookies like a password: anyone who has them may be able to access your account.
-- Use a private repository and restrict access to trusted administrators only.
-- If cookies were exposed, log out of other sessions / revoke the affected sessions in Facebook, then generate a fresh cookie set.
-
-No Facebook login cookies are currently stored in this file.
+Keep your cookies private. They work like your Facebook password.
