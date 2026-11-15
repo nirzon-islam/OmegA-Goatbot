@@ -77,30 +77,51 @@ function loginCandidate(login, appState, options = {}, timeoutMs = READY_TIMEOUT
   });
 }
 
-function listenUntilReady(api, callback, timeoutMs = READY_TIMEOUT_MS) {
+function listenUntilReady(api, callback, timeoutMs = READY_TIMEOUT_MS, stableMs = 10_000) {
   return new Promise((resolve, reject) => {
     let settled = false;
+    let readyEvent = null;
+    let stableTimer = null;
     const timer = setTimeout(() => finish(new Error("Facebook MQTT readiness timed out")), timeoutMs);
     function finish(error, value) {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      if (stableTimer) clearTimeout(stableTimer);
       if (error) reject(error); else resolve(value);
     }
+    function connectionError(first, second) {
+      for (const value of [first, second]) {
+        if (value instanceof Error) return value;
+        if (value && typeof value === "object" &&
+            (value.type === "stop_listen" || value.type === "account_inactive" ||
+             value.type === "login_blocked" || value.error)) {
+          return new Error("Facebook MQTT connection rejected the candidate session");
+        }
+      }
+      return null;
+    }
     try {
-      // FCA emits ready as the first callback argument: { type: "ready" }.
+      // A single ready callback is provisional. Keep the candidate isolated
+      // until it survives a short stability window without auth/transport errors.
       api.listenMqtt((first, second) => {
         const event = second || first;
-        if (event && event.type === "ready") return finish(null, event);
-        if (first && (first instanceof Error || first.type === "stop_listen" || first.error)) {
-          return finish(first instanceof Error ? first : new Error("Facebook MQTT connection failed"));
+        const error = connectionError(first, second);
+        if (error) {
+          if (!readyEvent || !settled) return finish(error);
+          callback(first, second);
+          return;
+        }
+        if (event && event.type === "ready" && !readyEvent) {
+          readyEvent = event;
+          stableTimer = setTimeout(() => finish(null, readyEvent), stableMs);
+          return;
         }
         callback(first, second);
       });
     } catch (error) { finish(error); }
   });
 }
-
 module.exports = {
   MAX_APPSTATE_BYTES,
   READY_TIMEOUT_MS,
