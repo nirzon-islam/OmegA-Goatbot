@@ -36,7 +36,10 @@ function startBridgeWorker({ log = console, intervalMs = 15000, getAccountStatus
     if (!worker || running) return;
     running = true;
     try {
-      if (worker) await worker.pollOnce(5);
+      if (worker) {
+        await worker.pollOnce(5);
+        await worker.pollRecovery();
+      }
     } catch (error) {
       log.warn("AGENT BRIDGE", "Poll failed: " + String(error.message || "unknown error"));
     } finally {
