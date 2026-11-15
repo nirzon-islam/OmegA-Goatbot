@@ -212,10 +212,24 @@ try {
   global.GoatBot.agentBridgeWorker = startBridgeWorker({
     log,
     getAccountStatus: () => {
-      const status = global.statusAccountBot;
-      if (status === "good") return { state: "online", accountId: global.GoatBot.botID || "" };
-      if (status === "can't login") return { state: "logged_out", accountId: global.GoatBot.botID || "", message: "Facebook session is no longer authenticated." };
-      return { state: null };
+      const raw = String(global.statusAccountBot || "unknown").toLowerCase();
+      const sessionState = raw === "good" ? "online" :
+        raw === "checkpoint" ? "checkpoint" :
+        raw === "can't login" || raw === "logged_out" ? "logged_out" :
+        raw === "error" ? "error" : "unknown";
+      const messages = {
+        online: "Facebook session is authenticated and the listener is active.",
+        logged_out: "Facebook session is no longer authenticated.",
+        checkpoint: "Facebook checkpoint requires manual completion.",
+        error: "Facebook listener reported an authentication or connection error.",
+        unknown: "Facebook authentication has not yet been confirmed."
+      };
+      return {
+        workerState: "online",
+        sessionState,
+        accountId: String(global.GoatBot.botID || global.botID || ""),
+        message: messages[sessionState]
+      };
     }
   });
 } catch (error) {
