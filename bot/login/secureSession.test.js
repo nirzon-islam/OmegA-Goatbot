@@ -52,7 +52,7 @@ test("listenUntilReady resolves only after explicit ready event", async () => {
 });
 
 test("listenUntilReady rejects on timeout", async () => {
-  const api = { listenMqtt() {}; };
+  const api = { listenMqtt() {} };
   await assert.rejects(listenUntilReady(api, () => {}, 10), /readiness timed out/);
 });
 
