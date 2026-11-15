@@ -980,6 +980,7 @@ async function startBot(_0x3cad9e) {
           global.GoatBot.fcaApi = candidateApi;
           global.GoatBot.botID = String(botId);
           global.botID = String(botId);
+          global.statusAccountBot = "good";
           global.GoatBot.Listening = candidateListener;
           global.GoatBot.callBackListen = (err, event) => _0x290401(err, event, candidateApi);
           sessionSwapped = true;
