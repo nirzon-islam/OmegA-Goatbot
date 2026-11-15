@@ -1,0 +1,32 @@
+name: Runtime recovery tests
+
+on:
+  push:
+    branches:
+      - feature/runtime-appstate-recovery
+    paths:
+      - "bot/login/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/runtime-recovery-tests.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "bot/login/**"
+      - "package.json"
+      - "package-lock.json"
+
+jobs:
+  secure-session:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run test:secure-session
+      - run: node --check bot/login/login.js
+      - run: node --check agent-bridge/worker.js
