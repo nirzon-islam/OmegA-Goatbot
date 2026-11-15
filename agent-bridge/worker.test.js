@@ -53,6 +53,8 @@ test("recovery worker can switch to a different target Bot ID without current-ID
     async getQueue() { return { success: true, tasks: [] }; },
     async claim() { throw new Error("not used"); },
     async reportResult() { return { success: true }; },
+    async claim() { throw new Error("task claim not used"); },
+    async reportResult() { return { success: true }; },
     async claimRecovery(...args) {
       calls.push(["claimRecovery", args]);
       return { success: true, recovery: { requestId: "a".repeat(48), botId: targetId, cookie: '[{"key":"c_user","value":"' + targetId + '","domain":".facebook.com"},{"key":"xs","value":"secret","domain":".facebook.com"}]' } };
