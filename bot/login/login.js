@@ -921,6 +921,8 @@ async function startBot(_0x3cad9e) {
         const oldApi = _0x4d5048;
         const accountPath = path.join(process.cwd(), "account.txt");
         let previousAccount;
+        let oldListenerStopped = false;
+        let sessionSwapped = false;
         try {
           if (String(global.GoatBot.botID || global.botID || "") !== String(botId)) {
             throw new Error("Requested Bot ID does not match the active worker account");
@@ -970,6 +972,7 @@ async function startBot(_0x3cad9e) {
               if (!finished) { finished = true; clearTimeout(timer); reject(error); }
             }
           });
+          oldListenerStopped = true;
 
           try { oldApi.stopSessionGuard?.(); } catch {}
           _0x4d5048 = candidateApi;
@@ -979,6 +982,7 @@ async function startBot(_0x3cad9e) {
           global.botID = String(botId);
           global.GoatBot.Listening = candidateListener;
           global.GoatBot.callBackListen = (err, event) => _0x290401(err, event, candidateApi);
+          sessionSwapped = true;
           applyHumanizerToApi(candidateApi, global.GoatBot.config);
           try {
             if (typeof candidateApi.sessionGuard === "function") {
@@ -990,11 +994,26 @@ async function startBot(_0x3cad9e) {
           await progress("online", "Replacement Facebook MQTT listener is ready").catch(() => {});
           return { state: "online", message: "Facebook session restored" };
         } catch (error) {
-          if (previousAccount) {
+          // Once the new API is active, never roll its account file back underneath it.
+          if (!sessionSwapped && previousAccount) {
             try { fs.writeFileSync(accountPath, previousAccount, { mode: 0o600 }); } catch {}
           }
-          if (candidateApi && candidateApi !== global.GoatBot.fcaApi) {
+          if (!sessionSwapped && candidateApi) {
             try { candidateApi.stopListening?.(() => {}); } catch {}
+          }
+          // If stopping the old listener failed after it was actually stopped,
+          // restore service on the still-active old API before returning failure.
+          if (!sessionSwapped && oldListenerStopped && oldApi === _0x4d5048) {
+            try {
+              global.GoatBot.Listening = oldApi.listenMqtt(_0xb703d8(undefined, oldApi));
+              global.GoatBot.callBackListen = (err, event) => _0x290401(err, event, oldApi);
+              applyHumanizerToApi(oldApi, global.GoatBot.config);
+              if (typeof oldApi.sessionGuard === "function") {
+                oldApi.sessionGuard(accountPath, { interval: 3 * 60 * 1000, debounce: 30 * 1000 });
+              }
+            } catch (restoreError) {
+              log.err("SESSION RECOVERY", "Previous listener could not be restored; manual intervention required");
+            }
           }
           const message = String(error && error.message || "Recovery failed")
             .replace(/cookie|appstate|xs|c_user/ig, "[redacted]").slice(0, 220);
