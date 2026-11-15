@@ -799,7 +799,19 @@ async function startBot(_0x3cad9e) {
       async function _0x290401(_0x570bf7, _0xb100c2, _apiOverride = _0x4d5048) {
         if (_0x570bf7) {
           global.responseUptimeCurrent = responseUptimeError;
-          if (_0x570bf7.error == "Not logged in" || _0x570bf7.error == "Not logged in." || _0x570bf7.error == "Connection refused: Server unavailable") {
+          const _statusErrorText = String(
+            (_0x570bf7 && typeof _0x570bf7 === "object"
+              ? [_0x570bf7.type, _0x570bf7.error, _0x570bf7.message].filter(Boolean).join(" ")
+              : _0x570bf7) || ""
+          ).toLowerCase();
+          if (/checkpoint|two.factor|two-factor|approvals_code/.test(_statusErrorText)) {
+            global.statusAccountBot = "checkpoint";
+          } else if (/not logged in|account_inactive|login_blocked|server unavailable|connection refused|authentication|invalid session/.test(_statusErrorText)) {
+            global.statusAccountBot = "can't login";
+          } else {
+            global.statusAccountBot = "error";
+          }
+          if (_0x570bf7.error == "Not logged in" || _0x570bf7.error == "Not logged in." || _0x570bf7.error == "Connection refused: Server unavailable" || /account_inactive|login_blocked/.test(_statusErrorText)) {
             const _safeErr2 = _0x570bf7 && typeof _0x570bf7 === 'object' ? { error: _0x570bf7.error || String(_0x570bf7) } : _0x570bf7;
             log.err("NOT LOGGEG IN", getText("login", "notLoggedIn"), _safeErr2);
             global.responseUptimeCurrent = responseUptimeError;
