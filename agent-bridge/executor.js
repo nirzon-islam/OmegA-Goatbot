@@ -55,6 +55,7 @@ function executeApprovedAction(action) {
     function walk(current, rel) {
       for (const name of fs.readdirSync(current).sort()) {
         if (entries.length >= MAX_READ_FILES) break;
+        if (isDeniedSegment(name)) continue;
         const full = path.join(current, name);
         const stat = fs.lstatSync(full);
         if (stat.isSymbolicLink()) continue;
