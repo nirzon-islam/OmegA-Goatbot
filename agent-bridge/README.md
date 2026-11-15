@@ -1,46 +1,61 @@
-# Railway Agent Bridge
+# Railway Agent Bridge (বাংলা নির্দেশিকা)
 
-The `!agent` command is loaded through the existing command loader. It submits a plain-language request to Agent Backend. The backend AI planner converts the request into a restricted action or a bounded multi-step plan; the Owner must approve the exact plan before the worker can claim it.
+`!agent` কমান্ডটি বটের বর্তমান command loader-এর মাধ্যমে চালু হয়। এই কমান্ড দিয়ে সাধারণ ভাষায় নির্দেশ দিলে সেটি Agent Backend-এ পাঠানো হয়। Backend-এর AI Planner নির্দেশটিকে নির্দিষ্ট সীমার মধ্যে থাকা কোনো কাজ অথবা কয়েকটি ধাপের পরিকল্পনায় রূপ দেয়। Worker কাজটি নেওয়ার আগে Owner-কে Dashboard থেকে সম্পূর্ণ পরিকল্পনাটি অনুমোদন করতে হবে।
 
-The background worker is started from `EryXenX.js` only when both `AGENT_BRIDGE_ENABLED=true` and `AGENT_WORKER_ENABLED=true`. The command itself requires `AGENT_BRIDGE_ENABLED=true` and the sender ID to be present in `AGENT_ALLOWED_SENDER_IDS`.
+`EryXenX.js` থেকে Background Worker চালু হবে কেবল তখনই, যখন `AGENT_BRIDGE_ENABLED=true` এবং `AGENT_WORKER_ENABLED=true` — দুটোই সেট করা থাকবে। `!agent` কমান্ড ব্যবহারের জন্য `AGENT_BRIDGE_ENABLED=true` থাকতে হবে এবং বার্তাপ্রেরকের Sender ID `AGENT_ALLOWED_SENDER_IDS`-এর তালিকায় থাকতে হবে।
 
-## Supported actions
+## যেসব কাজ করা যাবে
 
-- `read`: read one regular file under `languages/`.
-- `list`: list supported `.lang` and `.js` files under a language directory.
-- `readMany`: read bounded supported files under a language directory.
-- `create`: create a new `.lang` or `.js` file under `languages/`; never overwrites.
-- `edit`: update an existing supported file under `languages/`; creates a content-addressed backup first.
-- `test`: compile-check a JavaScript file with `vm.Script`; it does not execute it.
-- `plan`: sequentially execute 1-12 validated steps after the Owner approves the complete plan.
+- `read`: `languages/` ফোল্ডারের ভেতরের একটি সাধারণ ফাইল পড়তে পারবে।
+- `list`: কোনো language directory-এর সমর্থিত `.lang` ও `.js` ফাইলের তালিকা দেখাতে পারবে।
+- `readMany`: নির্দিষ্ট সীমার মধ্যে একাধিক সমর্থিত ফাইল পড়তে পারবে।
+- `create`: `languages/`-এর ভেতরে নতুন `.lang` অথবা `.js` ফাইল তৈরি করতে পারবে। আগে থেকে থাকা ফাইলের ওপর লিখতে পারবে না।
+- `edit`: `languages/`-এর ভেতরের সমর্থিত কোনো ফাইল সম্পাদনা করতে পারবে। সম্পাদনার আগে একটি content-addressed backup তৈরি হবে।
+- `test`: `vm.Script` ব্যবহার করে JavaScript ফাইলের syntax/compile check করবে; ফাইলটি execute করবে না।
+- `plan`: Owner সম্পূর্ণ পরিকল্পনাটি অনুমোদন করার পর ধারাবাহিকভাবে ১–১২টি যাচাইকৃত ধাপ চালাতে পারবে।
 
-No shell, eval, package scripts, arbitrary test runners, delete, install, or runtime code paths are supported. Individual file reads and writes are limited to 64 KiB. Directory reads are bounded to 30 files and 30 KiB combined content. Symlinks and hidden paths are skipped/rejected. The workspace allowlist is deliberately limited to `languages/`.
+**যেসব কাজ সমর্থিত নয়:** Shell command, `eval`, package script, ইচ্ছামতো test runner, ফাইল delete, package install অথবা runtime code path-এ পরিবর্তন করা যাবে না।
 
-## Approval and execution flow
+একটি ফাইল পড়া বা লেখার সর্বোচ্চ সীমা ৬৪ KiB। Directory থেকে সর্বোচ্চ ৩০টি ফাইল এবং সব মিলিয়ে ৩০ KiB content পড়া যাবে। Symlink ও hidden path বাদ দেওয়া হবে অথবা প্রত্যাখ্যান করা হবে। নিরাপত্তার জন্য কাজের অনুমোদিত জায়গা শুধু `languages/` ফোল্ডার।
 
-1. `!agent <request>` submits the sender-scoped request to the signed backend API.
-2. The backend planner validates the structured action/plan and creates one Owner approval record.
-3. The Owner approves or rejects the exact plan in the backend dashboard.
-4. The Railway worker polls the approved-task queue, claims the task once, and executes the approved payload.
-5. The worker reports the bounded result; the Owner dashboard and `!agent status <taskId>` can show task status.
+## অনুমোদন ও কাজ সম্পন্ন হওয়ার ধাপ
 
-The executor never derives commands or file paths from the original free-text request. Only the exact action stored in the backend approval record and returned by the single-use claim endpoint is passed to the executor.
+1. `!agent <request>` পাঠালে Sender ID-ভিত্তিক অনুরোধটি signed API-এর মাধ্যমে Agent Backend-এ যায়।
+2. Backend Planner অনুরোধ থেকে তৈরি action/plan যাচাই করে এবং Owner-এর জন্য একটি approval record তৈরি করে।
+3. Owner Backend Dashboard থেকে নির্দিষ্ট পরিকল্পনাটি অনুমোদন অথবা বাতিল করেন।
+4. Railway Worker অনুমোদিত কাজের queue পরীক্ষা করে, কাজটি একবারের জন্য claim করে এবং অনুমোদিত payload অনুযায়ী কাজ সম্পন্ন করে।
+5. Worker কাজের ফলাফল Backend-এ পাঠায়। Owner Dashboard অথবা `!agent status <taskId>` দিয়ে কাজের অবস্থা দেখা যায়।
 
-## Required runtime settings
+Executor মূল free-text অনুরোধ থেকে নিজে কোনো command বা file path তৈরি করে না। Backend-এর approval record-এ সংরক্ষিত এবং single-use claim endpoint থেকে পাওয়া নির্দিষ্ট action-ই Executor-এর কাছে পাঠানো হয়।
 
-Set these in Railway Variables only after the backend integration tests and database transaction checks pass:
+## Railway-এর প্রয়োজনীয় Environment Variables
 
-- `AGENT_BRIDGE_ENABLED=false` initially; set true only after backend is verified.
-- `AGENT_WORKER_ENABLED=false` initially; set true only when approved execution is intentionally enabled.
-- `AGENT_BACKEND_URL`: deployed backend base URL, without a trailing slash.
-- `AGENT_BRIDGE_SECRET`: same randomly generated 32+ character secret as backend `BRIDGE_SECRET`.
-- `AGENT_ALLOWED_SENDER_IDS`: comma-separated Facebook sender IDs allowed to submit requests.
-- `AGENT_WORKSPACE_ROOT`: intended deployed bot workspace; verify it resolves to the checked-out repository.
+Backend integration test এবং database transaction check সফলভাবে সম্পন্ন হওয়ার পরই Railway → Variables-এ নিচের variable-গুলো সেট করবে।
 
-Backend must also have matching `BRIDGE_SECRET`, the same sender allowlist, `BRIDGE_ENABLED=true`, and a configured AI provider. MongoDB must support replica-set transactions.
+```env
+AGENT_BRIDGE_ENABLED=false
+AGENT_WORKER_ENABLED=false
+AGENT_BACKEND_URL=
+AGENT_BRIDGE_SECRET=
+AGENT_ALLOWED_SENDER_IDS=
+AGENT_WORKSPACE_ROOT=
+```
 
-## Verification status
+**Variable-গুলোর কাজ:**
 
-Unit tests and syntax checks run in GitHub Actions. They do not replace a live MongoDB replica-set integration test or an end-to-end test across backend, dashboard approval, Railway worker, and task result reporting. Keep both worker flags false until those runtime checks pass.
+- `AGENT_BRIDGE_ENABLED`: Agent Bridge চালু/বন্ধ রাখে। Backend যাচাই না হওয়া পর্যন্ত `false` রাখবে।
+- `AGENT_WORKER_ENABLED`: Background Worker চালু/বন্ধ রাখে। অনুমোদিত কাজ চালানোর সিদ্ধান্ত না নেওয়া পর্যন্ত `false` রাখবে।
+- `AGENT_BACKEND_URL`: Deploy করা Agent Backend-এর Base URL। শেষে `/` দেবে না।
+- `AGENT_BRIDGE_SECRET`: Backend-এর `BRIDGE_SECRET`-এর সঙ্গে একই, এলোমেলোভাবে তৈরি করা কমপক্ষে ৩২ অক্ষরের Secret দিতে হবে।
+- `AGENT_ALLOWED_SENDER_IDS`: যেসব Facebook Sender ID `!agent` ব্যবহার করতে পারবে, সেগুলো কমা দিয়ে আলাদা করে লিখবে।
+- `AGENT_WORKSPACE_ROOT`: Deploy করা Bot-এর workspace path দিতে হবে। এটি যেন checkout করা repository-তেই নির্দেশ করে, তা যাচাই করবে।
 
-Do not replace or edit the bot's existing `config.json` as part of bridge setup. The bridge uses the environment variables above and remains isolated from existing login/session and command configuration.
+Backend-এও একই `BRIDGE_SECRET`, একই Sender ID allowlist, `BRIDGE_ENABLED=true` এবং একটি AI provider configure করা থাকতে হবে। MongoDB-তে replica-set transaction সমর্থন থাকতে হবে।
+
+## পরীক্ষা ও নিরাপত্তা
+
+GitHub Actions-এ Unit Test এবং syntax check চলে। তবে এগুলো Live MongoDB replica-set integration test অথবা Backend, Dashboard approval, Railway Worker ও task result reporting-এর End-to-End test-এর বিকল্প নয়।
+
+এই runtime পরীক্ষাগুলো সফল না হওয়া পর্যন্ত Worker-সংক্রান্ত দুইটি flag `false` রাখবে।
+
+**Bridge setup করার জন্য বটের আগের `config.json` পরিবর্তন বা প্রতিস্থাপন করবে না।** এই Bridge উপরের Environment Variables ব্যবহার করে এবং বটের বর্তমান login/session ও command configuration থেকে আলাদা থাকে।
