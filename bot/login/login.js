@@ -924,7 +924,7 @@ async function startBot(_0x3cad9e) {
         let oldListenerStopped = false;
         let sessionSwapped = false;
         try {
-          if (typeof botId !== "string" || !/^\\d{5,30}$/.test(botId)) {
+          if (typeof botId !== "string" || !/^\d{5,30}$/.test(botId)) {
             throw new Error("Invalid target Facebook Bot ID");
           }
           const appState = secureSession.validateAppState(cookie, String(botId));
