@@ -20,7 +20,7 @@
 
 ## ◈ About
 
-Assalamu Alaikum! **GoatBot-Pro** is an enhanced fork of [Goat Bot V2](https://github.com/ntkhang03/Goat-Bot-V2) by **ntkhang03**, rebuilt and maintained by **EryXenX (Mohammad Akash)** with new features, multi-language support, and custom commands.
+Assalamu Alaikum! **OmegA-Goatbot** is based on [Goat Bot V2](https://github.com/ntkhang03/Goat-Bot-V2) by **ntkhang03** and includes improvements and custom features. Maintained and customized by **Md SalmaN (NirZon)**. Original fork credits are preserved below.
 
 | Feature | Description |
 |---|---|
@@ -32,6 +32,62 @@ Assalamu Alaikum! **GoatBot-Pro** is an enhanced fork of [Goat Bot V2](https://g
 | 🔧 **Setting Command** | Full bot config control via chat — no need to edit files manually |
 
 > ⚠️ For educational purposes only. Any misuse or illegal activity is solely the user's responsibility.
+
+
+## ◈ সহজ Setup Guide (বাংলা)
+
+### যা লাগবে
+- GitHub account
+- Node.js 20 (Local setup-এর জন্য)
+- Facebook account-এর valid login cookies
+- Railway অথবা VPS
+- Agent ব্যবহার করতে চাইলে Agent Backend ও MongoDB
+
+### 1. GoatBot চালু করো
+
+Repository clone/download করে project folder-এ terminal খুলে চালাও:
+
+```bash
+npm install
+```
+
+Facebook login cookies JSON array format-এ project-এর root folder-এর `account.txt` ফাইলে রাখো। তারপর `config.json`-এ নিজের Facebook UID `adminBot`-এ এবং পছন্দের prefix সেট করো।
+
+Bot চালু করো:
+
+```bash
+node index.js
+```
+
+### 2. Railway-তে Deploy
+
+1. Railway-তে নতুন project তৈরি করো।
+2. GitHub থেকে এই repository connect করো।
+3. Start command হিসেবে `node index.js` ব্যবহার করো।
+4. Deploy logs দেখে bot চালু হয়েছে কি না নিশ্চিত হও।
+
+VPS-এও একইভাবে `npm install` এবং `node index.js` চালাতে পারো। Bot সবসময় চালু রাখতে process manager ব্যবহার করতে পারো।
+
+**Render ব্যবহার কোরো না:** এই bot-এর persistent MQTT/WebSocket connection এবং filesystem session storage দরকার, যা Render-এ compatible নয়।
+
+### 3. Agent Backend (ঐচ্ছিক)
+
+Agent ব্যবহার করতে চাইলে [Agent Backend](https://github.com/nirzon-islam/Agent-Backend) আলাদাভাবে Render Web Service হিসেবে deploy করো। সেখানে MongoDB URI, Admin login এবং অন্তত একটি AI provider-এর API key configure করতে হবে। বিস্তারিত variable list ও setup ওই repository-র README / setup guide-এ দেওয়া আছে।
+
+**নোট:** শুধু Agent Backend deploy করলেই GoatBot-এর সঙ্গে connection তৈরি হবে না। GoatBot-এর ব্যবহৃত branch-এ Agent integration support থাকতে হবে এবং প্রয়োজনীয় bridge configuration থাকতে হবে।
+
+### দরকারি লিংক
+- [OmegA-Goatbot Repository](https://github.com/nirzon-islam/OmegA-Goatbot)
+- [Agent Backend](https://github.com/nirzon-islam/Agent-Backend)
+- [Railway](https://railway.com/)
+- [Render](https://render.com/)
+- [MongoDB Atlas](https://www.mongodb.com/atlas)
+- [Node.js](https://nodejs.org/)
+
+### নিরাপত্তা
+- `account.txt`-এর cookies, API key, database URI বা password কাউকে দেবে না।
+- এগুলো কখনো GitHub-এ upload কোরো না।
+- নিজের Facebook UID ছাড়া অন্য কাউকে bot admin কোরো না।
 
 ---
 
