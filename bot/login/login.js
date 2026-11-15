@@ -587,6 +587,7 @@ async function startBot(_0x3cad9e) {
       pushI_user(_0x812929, facebookAccount.i_user);
     }
     let _0x54729a = false;
+    let definitiveAuthFailureHandled = false;
     login({
       'appState': _0x812929
     }, Object.assign({}, global.GoatBot.config.optionsFca, {
@@ -835,6 +836,14 @@ async function startBot(_0x3cad9e) {
             // Restarting here reloads the same rejected account.txt and creates a login loop.
             // Keep the process alive so the account-file watcher can accept a new cookie.
             const definitiveAuthFailure = /account_inactive|login_blocked|not logged in|authentication|invalid session/.test(_statusErrorText);
+            if (definitiveAuthFailure && !definitiveAuthFailureHandled) {
+              definitiveAuthFailureHandled = true;
+              // Stop the rejected listener and its periodic session saver. Keep the
+              // process and Agent Bridge alive so only a fresh owner-submitted appstate
+              // can start the next login attempt.
+              try { _apiOverride.stopSessionGuard?.(); } catch {}
+              try { _apiOverride.stopListening?.(() => {}); } catch {}
+            }
             if (global.GoatBot.config.autoRestartWhenListenMqttError && !definitiveAuthFailure) {
               process.exit(0x2);
             }
