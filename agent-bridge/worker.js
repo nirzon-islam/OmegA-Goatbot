@@ -48,7 +48,7 @@ function createWorker({ client, execute = executeApprovedAction, recoverSession 
     }
   }
 
-  // Claim credentials only when a live runtime recovery handler is registered.
+  // Claim the next owner-approved account switch, regardless of the worker's current Bot ID.
   let recoveryRunning = false;
   async function pollRecovery() {
     if (recoveryRunning) return { skipped: true, reason: "recovery_busy" };
@@ -57,25 +57,26 @@ function createWorker({ client, execute = executeApprovedAction, recoverSession 
         typeof client.reportRecoveryProgress !== "function" || typeof client.reportRecoveryResult !== "function") {
       return { skipped: true, reason: "recovery_handler_unavailable" };
     }
-    const botId = String(global.GoatBot && global.GoatBot.botID || "");
-    if (!/^\d{5,30}$/.test(botId)) return { skipped: true, reason: "bot_id_unavailable" };
     recoveryRunning = true;
     let handoff;
+    let botId = "";
     try {
-      const response = await client.claimRecovery(botId);
+      const response = await client.claimRecovery();
       handoff = response && response.recovery;
       if (!handoff) return { skipped: true, reason: "no_pending_recovery" };
-      const requestId = handoff.requestId;
-      if (handoff.botId !== botId || typeof requestId !== "string" || !/^[a-f0-9]{48}$/.test(requestId) || typeof handoff.cookie !== "string" || !handoff.cookie.startsWith("[")) {
+      botId = String(handoff.botId || "");
+      if (!/^\\d{5,30}$/.test(botId) || typeof handoff.requestId !== "string" ||
+          !/^[a-f0-9]{48}$/.test(handoff.requestId) || typeof handoff.cookie !== "string" ||
+          !handoff.cookie.startsWith("[")) {
         throw new Error("Recovery handoff validation failed");
       }
+      const requestId = handoff.requestId;
       const progress = (state, message) => client.reportRecoveryProgress({ requestId, botId, state, message });
-      await progress("validating", "Worker received appstate; validating runtime session");
+      await progress("validating", "Worker received appstate; validating target account");
       await progress("login_started", "Starting isolated Facebook session login");
       const result = await handler({ requestId, botId, cookie: handoff.cookie, progress });
       if (!result || result.state !== "online") {
-        const checkpoint = result && result.state === "checkpoint";
-        const state = checkpoint ? "checkpoint" : "error";
+        const state = result && result.state === "checkpoint" ? "checkpoint" : "error";
         const message = String(result && result.message || "Facebook session did not become ready").slice(0, 240);
         await progress(state, message);
         await client.reportRecoveryResult({ botId, state, message });
@@ -85,7 +86,7 @@ function createWorker({ client, execute = executeApprovedAction, recoverSession 
       await client.reportRecoveryResult({ botId, state: "online", message: "Facebook session restored" });
       return { requestId, success: true, state: "online" };
     } catch (error) {
-      if (handoff && handoff.requestId) {
+      if (handoff && handoff.requestId && botId) {
         const message = String(error && error.message || "Recovery failed").replace(/cookie|appstate|xs|c_user/ig, "[redacted]").slice(0, 240);
         await client.reportRecoveryProgress({ requestId: handoff.requestId, botId, state: "error", message }).catch(() => {});
         await client.reportRecoveryResult({ botId, state: "error", message }).catch(() => {});
