@@ -12,7 +12,7 @@ const commandModule = {
     shortDescription: "Submit a request to the secure Agent Backend",
     longDescription: "Queues a non-executable request for owner review and planning.",
     category: "owner",
-    guide: "{pn} <request> | {pn} status <taskId>"
+    guide: "{pn} <request> | {pn} pending | {pn} approve <taskId> | {pn} reject <taskId> | {pn} status <taskId>"
   },
 
   onStart: async function ({ message, args, event }) {
