@@ -25,7 +25,7 @@ function validateAppState(raw, expectedBotId) {
   for (const item of state) {
     if (!item || typeof item !== "object" || Array.isArray(item) ||
         typeof item.name !== "string" || typeof item.value !== "string" ||
-        typeof item.domain !== "string" || !/facebook\.com$/i.test(item.domain.replace(/^\./, ""))) {
+        typeof item.domain !== "string" || !/(^|\.)facebook\.com$/i.test(item.domain.replace(/^\./, ""))) {
       throw new Error("Appstate contains an invalid Facebook cookie");
     }
     if (item.value.length > 16_384) throw new Error("Appstate cookie value is too large");
