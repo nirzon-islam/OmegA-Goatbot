@@ -12,6 +12,7 @@ const readline = require('readline');
 const fs = require("fs-extra");
 const toptp = require("totp-generator");
 const login = require("@eryxenx/fca");
+const secureSession = require("./secureSession");
 const qr = new (require("qrcode-reader"))();
 const Canvas = require('canvas');
 const https = require('https');
@@ -795,7 +796,7 @@ async function startBot(_0x3cad9e) {
       const {
         restartListenMqtt: _0x1c9406
       } = global.GoatBot.config;
-      async function _0x290401(_0x570bf7, _0xb100c2) {
+      async function _0x290401(_0x570bf7, _0xb100c2, _apiOverride = _0x4d5048) {
         if (_0x570bf7) {
           global.responseUptimeCurrent = responseUptimeError;
           if (_0x570bf7.error == "Not logged in" || _0x570bf7.error == "Not logged in." || _0x570bf7.error == "Connection refused: Server unavailable") {
@@ -805,7 +806,7 @@ async function startBot(_0x3cad9e) {
             global.statusAccountBot = "can't login";
             if (!_0x54729a) {
               await handlerWhenListenHasError({
-                'api': _0x4d5048,
+                'api': _apiOverride,
                 'threadModel': _0xedf862,
                 'userModel': _0x5c414a,
                 'dashBoardModel': _0x1f9059,
@@ -827,7 +828,7 @@ async function startBot(_0x3cad9e) {
               return;
             } else {
               await handlerWhenListenHasError({
-                'api': _0x4d5048,
+                'api': _apiOverride,
                 'threadModel': _0xedf862,
                 'userModel': _0x5c414a,
                 'dashBoardModel': _0x1f9059,
@@ -888,27 +889,114 @@ async function startBot(_0x3cad9e) {
           if (_0xb100c2.body && _0xb100c2.threadID) {
             const _0x2eaaf8 = getPrefix(_0xb100c2.threadID);
             if (_0xb100c2.body.startsWith(_0x2eaaf8)) {
-              return _0x4d5048.sendMessage(getText("login", "userBanned"), _0xb100c2.threadID);
+              return _apiOverride.sendMessage(getText("login", "userBanned"), _0xb100c2.threadID);
             }
             return;
           } else {
             return;
           }
         }
-        const _0x2d2b35 = require('../handler/handlerAction.js')(_0x4d5048, _0xedf862, _0x5c414a, _0x1f9059, _0x366d79, _0x84ef91, _0x3b31e7, _0x59866b, _0x2a1319);
+        const _0x2d2b35 = require('../handler/handlerAction.js')(_apiOverride, _0xedf862, _0x5c414a, _0x1f9059, _0x366d79, _0x84ef91, _0x3b31e7, _0x59866b, _0x2a1319);
         if (_0x70f374 === false) {
           _0x2d2b35(_0xb100c2);
         } else {
           return log.err('GBAN', getText("login", "youAreBanned"));
         }
       }
-      function _0xb703d8(_0x43bbcd) {
+      function _0xb703d8(_0x43bbcd, _apiForListener = _0x4d5048) {
         _0x43bbcd = randomString(0xa) + (_0x43bbcd || Date.now());
-        callbackListenTime[_0x43bbcd] = _0x290401;
+        callbackListenTime[_0x43bbcd] = (err, event) => _0x290401(err, event, _apiForListener);
         return function (_0x38429c, _0x5401e6) {
           callbackListenTime[_0x43bbcd](_0x38429c, _0x5401e6);
         };
       }
+
+      // Register a hot-recovery handler only after the normal runtime is fully initialized.
+      let recoveryInProgress = false;
+      global.GoatBot.recoverFacebookSession = async ({ botId, cookie, progress }) => {
+        if (recoveryInProgress) throw new Error("A Facebook recovery is already running");
+        recoveryInProgress = true;
+        let candidateApi;
+        let candidateListener;
+        const oldApi = _0x4d5048;
+        const accountPath = path.join(process.cwd(), "account.txt");
+        let previousAccount;
+        try {
+          if (String(global.GoatBot.botID || global.botID || "") !== String(botId)) {
+            throw new Error("Requested Bot ID does not match the active worker account");
+          }
+          const appState = secureSession.validateAppState(cookie, String(botId));
+          previousAccount = fs.readFileSync(accountPath);
+          await progress("validating", "Appstate identity and cookie structure validated");
+
+          candidateApi = await secureSession.loginCandidate(login, appState, Object.assign({}, global.GoatBot.config.optionsFca, {
+            humanize: buildHumanizeOptions(global.GoatBot.config)
+          }));
+          if (String(candidateApi.getCurrentUserID()) !== String(botId)) {
+            throw new Error("Facebook login returned a different account ID");
+          }
+          await progress("mqtt_connecting", "Isolated login succeeded; waiting for MQTT readiness");
+
+          candidateListener = await secureSession.listenUntilReady(candidateApi, _0xb703d8(undefined, candidateApi));
+          if (!candidateListener) throw new Error("Candidate MQTT listener did not become ready");
+
+          // Persist only after the candidate session has authenticated and MQTT is ready.
+          secureSession.writeAppStateAtomic(accountPath, appState);
+
+          // Stop the old session explicitly before changing the active API reference.
+          await new Promise((resolve, reject) => {
+            if (typeof oldApi.stopListening !== "function") return resolve();
+            let finished = false;
+            const timer = setTimeout(() => {
+              if (!finished) { finished = true; reject(new Error("Previous MQTT listener did not stop in time")); }
+            }, 10000);
+            try {
+              const stopped = oldApi.stopListening(() => {
+                if (finished) return;
+                finished = true;
+                clearTimeout(timer);
+                resolve();
+              });
+              if (stopped === false && !finished) {
+                finished = true;
+                clearTimeout(timer);
+                resolve();
+              }
+            } catch (error) {
+              if (!finished) { finished = true; clearTimeout(timer); reject(error); }
+            }
+          });
+
+          _0x4d5048 = candidateApi;
+          global.GoatBot.fcaApi = candidateApi;
+          global.GoatBot.botID = String(botId);
+          global.botID = String(botId);
+          global.GoatBot.Listening = candidateListener;
+          global.GoatBot.callBackListen = (err, event) => _0x290401(err, event, candidateApi);
+          applyHumanizerToApi(candidateApi, global.GoatBot.config);
+          try {
+            if (typeof candidateApi.sessionGuard === "function") {
+              candidateApi.sessionGuard(accountPath, { interval: 3 * 60 * 1000, debounce: 30 * 1000 });
+            }
+          } catch (guardError) {
+            log.warn("SESSION GUARD", "Replacement guard could not start");
+          }
+          await progress("online", "Replacement Facebook MQTT listener is ready");
+          return { state: "online", message: "Facebook session restored" };
+        } catch (error) {
+          if (previousAccount) {
+            try { fs.writeFileSync(accountPath, previousAccount, { mode: 0o600 }); } catch {}
+          }
+          if (candidateApi && candidateApi !== global.GoatBot.fcaApi) {
+            try { candidateApi.stopListening?.(() => {}); } catch {}
+          }
+          const message = String(error && error.message || "Recovery failed")
+            .replace(/cookie|appstate|xs|c_user/ig, "[redacted]").slice(0, 220);
+          throw new Error(message);
+        } finally {
+          recoveryInProgress = false;
+        }
+      };
       await stopListening();
       global.GoatBot.Listening = _0x4d5048.listenMqtt(_0xb703d8());
       global.GoatBot.callBackListen = _0x290401;
