@@ -4,11 +4,11 @@ const { executeApprovedAction } = require("./executor");
 
 const MAX_RESULT_CHARS = 50000;
 
-function createWorker({ client, execute = executeApprovedAction }) {
+function createWorker({ client, execute = executeApprovedAction, recoverSession = () => global.GoatBot && global.GoatBot.recoverFacebookSession }) {
   if (!client || typeof client.getQueue !== "function" ||
       typeof client.claim !== "function" ||
       typeof client.reportResult !== "function" ||
-      typeof execute !== "function") {
+      typeof execute !== "function" || typeof recoverSession !== "function") {
     throw new Error("Worker requires a Bridge client and executor");
   }
 
@@ -48,6 +48,52 @@ function createWorker({ client, execute = executeApprovedAction }) {
     }
   }
 
+  // Claim credentials only when a live runtime recovery handler is registered.
+  let recoveryRunning = false;
+  async function pollRecovery() {
+    if (recoveryRunning) return { skipped: true, reason: "recovery_busy" };
+    const handler = recoverSession();
+    if (typeof handler !== "function" || typeof client.claimRecovery !== "function" ||
+        typeof client.reportRecoveryProgress !== "function" || typeof client.reportRecoveryResult !== "function") {
+      return { skipped: true, reason: "recovery_handler_unavailable" };
+    }
+    const botId = String(global.GoatBot && global.GoatBot.botID || "");
+    if (!/^\\d{5,30}$/.test(botId)) return { skipped: true, reason: "bot_id_unavailable" };
+    recoveryRunning = true;
+    let handoff;
+    try {
+      const response = await client.claimRecovery(botId);
+      handoff = response && response.recovery;
+      if (!handoff) return { skipped: true, reason: "no_pending_recovery" };
+      const requestId = handoff.requestId;
+      if (handoff.botId !== botId || typeof requestId !== "string" || !/^[a-f0-9]{48}$/.test(requestId) || typeof handoff.cookie !== "string" || !handoff.cookie.startsWith("[")) {
+        throw new Error("Recovery handoff validation failed");
+      }
+      const progress = (state, message) => client.reportRecoveryProgress({ requestId, botId, state, message });
+      await progress("validating", "Worker received appstate; validating runtime session");
+      await progress("login_started", "Starting isolated Facebook session login");
+      const result = await handler({ requestId, botId, cookie: handoff.cookie, progress });
+      if (!result || result.state !== "online") {
+        const checkpoint = result && result.state === "checkpoint";
+        const state = checkpoint ? "checkpoint" : "error";
+        const message = String(result && result.message || "Facebook session did not become ready").slice(0, 240);
+        await progress(state, message);
+        await client.reportRecoveryResult({ botId, state, message });
+        return { requestId, success: false, state };
+      }
+      await progress("online", "Facebook MQTT listener is ready");
+      await client.reportRecoveryResult({ botId, state: "online", message: "Facebook session restored" });
+      return { requestId, success: true, state: "online" };
+    } catch (error) {
+      if (handoff && handoff.requestId) {
+        const message = String(error && error.message || "Recovery failed").replace(/cookie|appstate|xs|c_user/ig, "[redacted]").slice(0, 240);
+        await client.reportRecoveryProgress({ requestId: handoff.requestId, botId, state: "error", message }).catch(() => {});
+        await client.reportRecoveryResult({ botId, state: "error", message }).catch(() => {});
+      }
+      return { success: false, error: String(error && error.message || "Recovery failed").slice(0, 240) };
+    } finally { handoff = null; recoveryRunning = false; }
+  }
+
   async function pollOnce(limit = 5) {
     const queue = await client.getQueue(limit);
     if (!queue || queue.success !== true || !Array.isArray(queue.tasks)) {
@@ -61,7 +107,7 @@ function createWorker({ client, execute = executeApprovedAction }) {
     return results;
   }
 
-  return Object.freeze({ pollOnce, processTask });
+  return Object.freeze({ pollOnce, processTask, pollRecovery });
 }
 
 module.exports = { createWorker };
