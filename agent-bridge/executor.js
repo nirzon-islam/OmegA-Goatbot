@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
 const crypto = require("crypto");
-const { normalizeRelative, normalizeDirectory, ALLOWED_EXTENSIONS } = require("./pathGuard");
+const { normalizeRelative, normalizeDirectory, isDeniedSegment, ALLOWED_EXTENSIONS } = require("./pathGuard");
 const { backupFile } = require("./backup");
 
 const MAX_FILE_BYTES = 64 * 1024;
@@ -60,7 +60,7 @@ function executeApprovedAction(action) {
         if (stat.isSymbolicLink()) continue;
         const child = rel === "." ? name : rel + "/" + name;
         if (stat.isDirectory()) {
-          if (!name.startsWith(".")) walk(full, child);
+          if (!isDeniedSegment(name)) walk(full, child);
         } else if (stat.isFile() && ALLOWED_EXTENSIONS.includes(path.extname(name).toLowerCase())) {
           if (type === "list") entries.push({ path: child, type: "file", size: stat.size });
           else {
