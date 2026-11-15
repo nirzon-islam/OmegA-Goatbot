@@ -42,13 +42,13 @@ const commandModule = {
         if (!approvals.length) return message.reply("📭 কোনো pending Messenger approval নেই।");
         const lines = approvals.map((item, index) =>
           (index + 1) + ". Task: " + item.taskId +
-          "\\nApproval: " + item.approvalId +
-          "\\nType: " + item.actionType +
-          "\\nRequest: " + item.description +
-          "\\nApprove: !agent approve " + item.taskId +
-          "\\nReject: !agent reject " + item.taskId
+          "\nApproval: " + item.approvalId +
+          "\nType: " + item.actionType +
+          "\nRequest: " + item.description +
+          "\nApprove: !agent approve " + item.taskId +
+          "\nReject: !agent reject " + item.taskId
         );
-        return message.reply("🛡️ Pending approvals (" + approvals.length + ")\\n\\n" + lines.join("\\n\\n"));
+        return message.reply("🛡️ Pending approvals (" + approvals.length + ")\n\n" + lines.join("\n\n"));
       }
 
       if (command === "approve" || command === "reject") {
@@ -59,17 +59,17 @@ const commandModule = {
           : await client.rejectRequest(senderId, reference);
         return message.reply(
           (command === "approve" ? "✅ Approved" : "❌ Rejected") +
-          "\\nTask: " + response.approval.taskId +
-          "\\nStatus: " + response.approval.status
+          "\nTask: " + response.approval.taskId +
+          "\nStatus: " + response.approval.status
         );
       }
 
       if (command === "status" && reference) {
         const status = await client.getRequestStatus(senderId, reference);
         const task = status.task;
-        return message.reply("📋 Task: " + task.taskId + "\\nStatus: " + task.status +
-          (task.error ? "\\nReason: " + task.error : "") +
-          (task.result ? "\\nResult: " + task.result : ""));
+        return message.reply("📋 Task: " + task.taskId + "\nStatus: " + task.status +
+          (task.error ? "\nReason: " + task.error : "") +
+          (task.result ? "\nResult: " + task.result : ""));
       }
 
       const description = Array.isArray(args) ? args.join(" ").trim() : "";
@@ -88,9 +88,9 @@ const commandModule = {
 
       const response = await client.submitRequest(senderId, description);
       return message.reply(
-        "✅ Request backend-এ জমা হয়েছে।\\n" +
-        "Task: " + response.task.taskId + "\\n" +
-        "Status: " + response.task.status + "\\n" +
+        "✅ Request backend-এ জমা হয়েছে।\n" +
+        "Task: " + response.task.taskId + "\n" +
+        "Status: " + response.task.status + "\n" +
         "Owner Messenger থেকে !agent pending দিয়ে approval দিতে পারবেন।"
       );
     } catch (error) {
