@@ -58,7 +58,7 @@ function createWorker({ client, execute = executeApprovedAction, recoverSession 
       return { skipped: true, reason: "recovery_handler_unavailable" };
     }
     const botId = String(global.GoatBot && global.GoatBot.botID || "");
-    if (!/^\\d{5,30}$/.test(botId)) return { skipped: true, reason: "bot_id_unavailable" };
+    if (!/^\d{5,30}$/.test(botId)) return { skipped: true, reason: "bot_id_unavailable" };
     recoveryRunning = true;
     let handoff;
     try {
