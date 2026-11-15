@@ -3,7 +3,19 @@
 const { createBridgeClient } = require("./client");
 const { createWorker } = require("./worker");
 
-function startBridgeWorker({ log = console, intervalMs = 15000, getAccountStatus = () => ({ state: "unknown" }) } = {}) {
+function startBridgeWorker({ log = console, intervalMs = 15000, getAccountStatus = () => {
+  const raw = global.statusAccountBot;
+  const state = raw === "good" ? "online" : raw === "checkpoint" ? "checkpoint" :
+    raw === "can't login" || raw === "logged_out" ? "logged_out" : "unknown";
+  return {
+    state,
+    accountId: global.GoatBot?.botID || global.botID || "",
+    message: state === "online" ? "Facebook session active" :
+      state === "logged_out" ? "Facebook session is logged out or disconnected" :
+      state === "checkpoint" ? "Facebook checkpoint requires manual completion" :
+      "Bot status is not yet verified"
+  };
+} } = {}) {
   if (process.env.AGENT_BRIDGE_ENABLED !== "true") return null;
 
   const client = createBridgeClient();
