@@ -20,7 +20,7 @@ test("validates appstate identity and required session cookies", () => {
   assert.deepEqual(validateAppState(JSON.stringify(state), "123456789"), state);
   assert.throws(() => validateAppState(JSON.stringify(state), "987654321"), /does not match/);
   assert.throws(() => validateAppState("not-json", "123456789"), /valid JSON/);
-  assert.throws(() => validateAppState(JSON.stringify([cookie("c_user", "123456789")]), "123456789"), /does not match/);
+  assert.throws(() => validateAppState(JSON.stringify([cookie("c_user", "123456789"), cookie("datr", "other")]), "123456789"), /does not match/);
 });
 
 test("writes appstate atomically with restrictive permissions", () => {
