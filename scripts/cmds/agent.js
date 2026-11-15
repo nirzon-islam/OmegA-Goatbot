@@ -40,9 +40,9 @@ const commandModule = {
       const response = await client.submitRequest(senderId, description);
 
       return message.reply(
-        "✅ Request backend-এ জমা হয়েছে.\\n" +
-        "Task: " + response.task.taskId + "\\n" +
-        "Status: " + response.task.status + "\\n" +
+        "✅ Request backend-এ জমা হয়েছে.\n" +
+        "Task: " + response.task.taskId + "\n" +
+        "Status: " + response.task.status + "\n" +
         "এটি এখনো শুধু request—Owner approval ছাড়া কোনো file change বা execution হবে না।"
       );
     } catch (error) {
