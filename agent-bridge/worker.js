@@ -90,7 +90,7 @@ function createWorker({ client, execute = executeApprovedAction, recoverSession 
         await client.reportRecoveryProgress({ requestId: handoff.requestId, botId, state: "error", message }).catch(() => {});
         await client.reportRecoveryResult({ botId, state: "error", message }).catch(() => {});
       }
-      return { success: false, error: String(error && error.message || "Recovery failed").slice(0, 240) };
+      return { success: false, error: "Recovery failed; see the sanitized recovery timeline" };
     } finally { handoff = null; recoveryRunning = false; }
   }
 
