@@ -103,6 +103,15 @@ function createBridgeClient() {
     },
     reportAccountStatus(payload) {
       return post("/api/bridge/account-status", payload);
+    },
+    claimRecovery(botId) {
+      return post("/api/bridge/recovery/claim", { botId });
+    },
+    reportRecoveryProgress(payload) {
+      return post("/api/bridge/recovery/progress", payload);
+    },
+    reportRecoveryResult(payload) {
+      return post("/api/bridge/recovery/result", payload);
     }
   });
 }
