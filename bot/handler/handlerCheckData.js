@@ -30,6 +30,42 @@ module.exports = async function (usersData, threadsData, event) {
 		}
 		catch (err) {
 			if (err.name != "DATA_ALREADY_EXISTS") {
+				// Facebook may temporarily reject getThreadInfo with GraphQL error
+				// 1357004 even while MQTT messages are arriving normally. Do not
+				// permanently blacklist that thread: create a minimal local record
+				// so message commands can still be parsed and handled.
+				const errorText = String(err?.message || err);
+				const transientFacebookThreadError =
+					/1357004|Sorry, something went wrong/i.test(errorText) ||
+					String(err?.error || "") === "1357004";
+				if (transientFacebookThreadError) {
+					try {
+						const participantIDs = Array.isArray(event.participantIDs)
+							? event.participantIDs
+							: [];
+						const fallbackThreadInfo = {
+							threadName: event.threadName || (event.isGroup ? `Group ${threadID}` : `Chat ${threadID}`),
+							userInfo: participantIDs.map(id => ({
+								id: String(id),
+								name: "",
+								gender: null
+							})),
+							adminIDs: [],
+						nicknames: {},
+							threadType: event.isGroup ? 2 : 1,
+							threadTheme: null,
+						emoji: null,
+						imageSrc: null,
+						approvalMode: false
+						};
+						const fallbackData = await threadsData.create(threadID, fallbackThreadInfo);
+						log.warn("DATABASE", `Facebook thread info unavailable for ${threadID}; using minimal local thread data so commands remain available`);
+						return;
+					}
+					catch (fallbackError) {
+						log.err("DATABASE", `Fallback thread creation failed for ${threadID}`, fallbackError);
+					}
+				}
 				global.temp.createThreadDataError.push(threadID);
 				log.err("DATABASE", getText("handlerCheckData", "cantCreateThread", threadID), err);
 			}
