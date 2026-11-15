@@ -937,7 +937,11 @@ async function startBot(_0x3cad9e) {
           }
           await progress("mqtt_connecting", "Isolated login succeeded; waiting for MQTT readiness");
 
-          candidateListener = await secureSession.listenUntilReady(candidateApi, _0xb703d8(undefined, candidateApi));
+          let candidateActivated = false;
+          candidateListener = await secureSession.listenUntilReady(candidateApi, (err, event) => {
+            // Do not process candidate events until the active API swap is complete.
+            if (candidateActivated) void _0x290401(err, event, candidateApi);
+          });
           if (!candidateListener) throw new Error("Candidate MQTT listener did not become ready");
 
           // Persist only after the candidate session has authenticated and MQTT is ready.
@@ -967,7 +971,9 @@ async function startBot(_0x3cad9e) {
             }
           });
 
+          try { oldApi.stopSessionGuard?.(); } catch {}
           _0x4d5048 = candidateApi;
+          candidateActivated = true;
           global.GoatBot.fcaApi = candidateApi;
           global.GoatBot.botID = String(botId);
           global.botID = String(botId);
