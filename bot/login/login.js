@@ -924,8 +924,8 @@ async function startBot(_0x3cad9e) {
         let oldListenerStopped = false;
         let sessionSwapped = false;
         try {
-          if (String(global.GoatBot.botID || global.botID || "") !== String(botId)) {
-            throw new Error("Requested Bot ID does not match the active worker account");
+          if (typeof botId !== "string" || !/^\\d{5,30}$/.test(botId)) {
+            throw new Error("Invalid target Facebook Bot ID");
           }
           const appState = secureSession.validateAppState(cookie, String(botId));
           previousAccount = fs.readFileSync(accountPath);
