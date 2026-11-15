@@ -104,8 +104,8 @@ function createBridgeClient() {
     reportAccountStatus(payload) {
       return post("/api/bridge/account-status", payload);
     },
-    claimRecovery(botId) {
-      return post("/api/bridge/recovery/claim", { botId });
+    claimRecovery() {
+      return post("/api/bridge/recovery/claim", {});
     },
     reportRecoveryProgress(payload) {
       return post("/api/bridge/recovery/progress", payload);
