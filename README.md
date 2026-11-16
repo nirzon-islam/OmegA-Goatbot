@@ -56,7 +56,7 @@ Facebook login cookies JSON array format-এ project-এর root folder-এর `
 Bot চালু করো:
 
 ```bash
-node index.js
+npm start
 ```
 
 ### 2. Railway-তে Deploy
@@ -141,10 +141,10 @@ Agent ব্যবহার করতে চাইলে [Agent Backend](https:/
 ## ◈ Setup
 
 ```bash
-git clone https://github.com/EryXenX/GoatBot-Pro.git
-cd GoatBot-Pro
+git clone https://github.com/nirzon-islam/OmegA-Goatbot.git
+cd OmegA-Goatbot
 npm install
-node index.js
+npm start
 ```
 
 Add your Facebook cookies to `account.txt` (JSON array format from EditThisCookie), then configure `config.json`.
@@ -180,7 +180,7 @@ valid `account.txt`, the bot can't log in.
 
 ```bash
 npm install
-node index.js
+npm start
 ```
 
 On Railway, just connect the repo and it builds/runs the same way. On a
