@@ -975,8 +975,8 @@ async function startBot(_0x3cad9e) {
           });
           if (!candidateListener) throw new Error("Candidate MQTT listener did not become ready");
 
-          // Stop the old listener before persisting the replacement credentials.
-          // This prevents the old session guard from racing and overwriting account.txt.
+          // Stop the old listener and its periodic appstate saver before replacing
+          // account.txt; otherwise the old guard can overwrite the new credentials.
           await new Promise((resolve, reject) => {
             if (typeof oldApi.stopListening !== "function") return resolve();
             let finished = false;
@@ -1001,11 +1001,11 @@ async function startBot(_0x3cad9e) {
           });
           oldListenerStopped = true;
 
-          // Persist only after the candidate is ready and the old listener is stopped.
-          // If this atomic write fails, the catch path restores the old listener.
+          // The old listener is now stopped, so stop its saver before the atomic
+          // replacement. If writing fails, the catch path restores both listener and guard.
+          try { oldApi.stopSessionGuard?.(); } catch {}
           secureSession.writeAppStateAtomic(accountPath, appState);
 
-          try { oldApi.stopSessionGuard?.(); } catch {}
           _0x4d5048 = candidateApi;
           candidateActivated = true;
           global.GoatBot.fcaApi = candidateApi;
@@ -1102,6 +1102,9 @@ async function startBot(_0x3cad9e) {
           logColor("#f5ab00", character);
         }
         const _0x4091cc = setInterval(async function () {
+          // Account switching owns the listener lifecycle; never let the periodic
+          // restart task stop a candidate or the restored old listener mid-switch.
+          if (recoveryInProgress) return;
           if (_0x1c9406.enable == false) {
             clearInterval(_0x4091cc);
             return log.warn("LISTEN_MQTT", getText("login", 'stopRestartListenMessage'));
