@@ -5,6 +5,7 @@ const canvas = require("canvas");
 module.exports = {
   config: {
     name: "mia",
+    version: "1.0.0",
     aliases: ["mia khalifa"],
     author: "Otineeeeyyyy",//fixed by Denish and updated 
     countDown: 5,
