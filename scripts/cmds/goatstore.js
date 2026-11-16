@@ -20,9 +20,28 @@ async function storeGet(pathSuffix, config) {
   return await axios.get(`${base}${pathSuffix}`, config);
 }
 
-async function storePost(pathSuffix, data, config) {
+async function storePost(pathSuffix, data, config = {}) {
   const base = await getApiBase();
-  return await axios.post(`${base}${pathSuffix}`, data, config);
+  return await axios.post(`${base}${pathSuffix}`, data, {
+    timeout: 30000,
+    ...config
+  });
+}
+
+async function storePostWithRetry(pathSuffix, data, config = {}, maxAttempts = 3) {
+  let lastError;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await storePost(pathSuffix, data, config);
+    } catch (err) {
+      lastError = err;
+      const status = err.response?.status;
+      const retryable = !status || status === 408 || status === 425 || status === 429 || status >= 500;
+      if (!retryable || attempt === maxAttempts) throw err;
+      await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+    }
+  }
+  throw lastError;
 }
 
 const premium = (function () {
@@ -267,8 +286,7 @@ function detectFramework(code) {
   if (hasAuthor && hasRole) return "goat";
 
   const isGoatStructure =
-    (/module\.exports\s*=\s*\{/.test(code) ||
-     (/const\s+\w+\s*=\s*\{/.test(code) && /module\.exports\s*=\s*\w+/.test(code))) &&
+    /module\.exports\s*=\s*\{/.test(code) &&
     /onStart\s*[:(]|onChat\s*[:(]|onLoad\s*[:(]/.test(code);
   if (isGoatStructure) return "goat";
 
@@ -414,6 +432,7 @@ async function runAutoSync() {
     warn: (tag, msg) => console.warn(`[${tag}] ${msg}`)
   };
   let uploaded = 0, updated = 0, skipped = 0, failed = 0, consecutiveErrors = 0;
+  let lastError = "";
   const folders = [
     { dir: getCmdsDir(), kind: "command" },
     { dir: getEventsDir(), kind: "event" }
@@ -445,10 +464,18 @@ async function runAutoSync() {
                     || "Unknown";
         const category = content.match(/category\s*:\s*["'`](.*?)["'`]/)?.[1] || "Uncategorized";
         const stampedContent = await stampUploadCode(content);
-        const res = await storePost(`/miraistore/upload`, { rawCode: stampedContent, framework: "goat", kind, author, category });
+        const res = await storePostWithRetry(`/miraistore/upload`, {
+          rawCode: stampedContent, framework: "goat", kind, author, category
+        }, {}, 3);
         if (res.data?.error) {
-          skipped++;
-          log.warn("GOATSTORE", `AutoSync skipped ${file}: ${res.data.error}`);
+          const reason = String(res.data.error);
+          if (/already exists|version already exists|version too low|duplicate/i.test(reason)) {
+            skipped++;
+          } else {
+            failed++;
+            lastError = res.data.message || reason;
+            log.warn("GOATSTORE", `AutoSync rejected ${file}: ${lastError}`);
+          }
         } else if (res.data?.updated) {
           updated++;
           cache[cacheKey] = hash;
@@ -458,24 +485,13 @@ async function runAutoSync() {
         }
         consecutiveErrors = 0;
       } catch (err) {
-        const status = err.response?.status;
-        const apiError = err.response?.data?.error || err.response?.data?.message || err.message;
-
-        // Axios rejects HTTP 4xx/5xx responses. Version conflicts and invalid
-        // source files are per-file skips, not API connectivity failures.
-        if (status >= 400 && status < 500 && status !== 429) {
-          skipped++;
-          consecutiveErrors = 0;
-          log.warn("GOATSTORE", `AutoSync skipped ${file} (HTTP ${status}): ${apiError}`);
-        } else {
-          failed++;
-          consecutiveErrors++;
-          log.warn("GOATSTORE", `AutoSync request failed for ${file}: ${apiError}`);
-          if (consecutiveErrors >= 5) {
-            saveSyncCache(cache);
-            log.warn("GOATSTORE", `AutoSync stopped after 5 consecutive API/network errors: ${apiError}`);
-            return { uploaded, updated, skipped, failed, stopped: true };
-          }
+        failed++;
+        lastError = err.response?.data?.message || err.response?.data?.error || err.message;
+        log.warn("GOATSTORE", `AutoSync request failed for ${file}: ${lastError}`);
+        if (++consecutiveErrors >= 5) {
+          saveSyncCache(cache);
+          log.warn("GOATSTORE", `AutoSync paused after 5 consecutive API failures: ${lastError}`);
+          return { uploaded, updated, skipped, failed, stopped: true, lastError };
         }
       }
 
@@ -486,7 +502,7 @@ async function runAutoSync() {
   saveSyncCache(cache);
   if (uploaded || updated || failed || skipped)
     log.info("GOATSTORE", `AutoSync done — ${uploaded} uploaded, ${updated} updated, ${skipped} skipped, ${failed} failed`);
-  return { uploaded, updated, skipped, failed };
+  return { uploaded, updated, skipped, failed, lastError };
 }
 
 const buildBar = pct => "█".repeat(Math.floor(pct / 10)) + "░".repeat(10 - Math.floor(pct / 10));
@@ -1013,7 +1029,7 @@ module.exports = {
   config: {
     name: "goatstore",
     aliases: ["gs", "cmdstore", "commandstore"],
-    version: "3.1.3",
+    version: "3.1.0",
     author: "NirZon",
     countDown: 3,
     role: 2,
@@ -1368,12 +1384,16 @@ module.exports = {
       try {
         const stats = await runAutoSync() || { uploaded: 0, updated: 0, skipped: 0, failed: 0 };
         const msg =
-          `✅ OmegA Store — Sync Complete\n\n` +
+          `${stats.failed ? "⚠️" : "✅"} OmegA Store — Sync ${stats.stopped || stats.failed ? "Finished with errors" : "Complete"}\n\n` +
           `✦ Uploaded: ${stats.uploaded || 0}\n` +
           `✦ Updated: ${stats.updated || 0}\n` +
           `✦ Skipped: ${stats.skipped || 0}\n` +
           `✦ Failed: ${stats.failed || 0}\n\n` +
-          (stats.stopped ? `⚠️ Sync stopped after repeated API errors.` : `All detected files have been checked.`);
+          (stats.stopped
+            ? `⚠️ Sync paused after repeated API errors.${stats.lastError ? `\nReason: ${stats.lastError}` : ""}`
+            : stats.failed
+              ? `⚠️ Some files could not be synced.${stats.lastError ? `\nReason: ${stats.lastError}` : ""}`
+              : `All detected files have been checked.`);
         api.sendMessage(msg, threadID);
       } catch (err) {
         api.sendMessage(`❌ OmegA Store — Sync Failed\n\nReason: ${err.message}\n\nPlease try again later.`, threadID);
