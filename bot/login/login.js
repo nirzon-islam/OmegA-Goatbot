@@ -595,8 +595,11 @@ async function startBot(_0x3cad9e) {
       humanize: buildHumanizeOptions(global.GoatBot.config)
     }), async function (_0x3f689f, _0x4d5048) {
       if (_0x3f689f) {
+        // Keep the process and Agent Bridge alive so a fresh account session
+        // can be submitted without restarting or losing the recovery worker.
+        global.statusAccountBot = "can't login";
         log.err("LOGIN FACEBOOK", "Login failed:", _0x3f689f);
-        process.exit(1);
+        return;
       }
       global.GoatBot.fcaApi = _0x4d5048;
       global.GoatBot.botID = _0x4d5048.getCurrentUserID();
