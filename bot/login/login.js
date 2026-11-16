@@ -206,7 +206,8 @@ function filterKeysAppState(_0x46da08) {
 global.responseUptimeCurrent = responseUptimeSuccess;
 global.responseUptimeSuccess = responseUptimeSuccess;
 global.responseUptimeError = responseUptimeError;
-global.statusAccountBot = "good";
+// Facebook is not authenticated until the login callback and MQTT listener confirm it.
+global.statusAccountBot = "unknown";
 let changeFbStateByCode = false;
 let latestChangeContentAccount = fs.statSync(dirAccount).mtimeMs;
 let dashBoardIsRunning = false;
