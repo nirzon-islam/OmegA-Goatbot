@@ -267,7 +267,8 @@ function detectFramework(code) {
   if (hasAuthor && hasRole) return "goat";
 
   const isGoatStructure =
-    /module\.exports\s*=\s*\{/.test(code) &&
+    (/module\.exports\s*=\s*\{/.test(code) ||
+     (/const\s+\w+\s*=\s*\{/.test(code) && /module\.exports\s*=\s*\w+/.test(code))) &&
     /onStart\s*[:(]|onChat\s*[:(]|onLoad\s*[:(]/.test(code);
   if (isGoatStructure) return "goat";
 
