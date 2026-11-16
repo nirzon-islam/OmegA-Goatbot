@@ -942,8 +942,10 @@ async function startBot(_0x3cad9e) {
 
       // Register a hot-recovery handler only after the normal runtime is fully initialized.
       let recoveryInProgress = false;
+      let restartListenInProgress = false;
       global.GoatBot.recoverFacebookSession = async ({ botId, cookie, progress }) => {
         if (recoveryInProgress) throw new Error("A Facebook recovery is already running");
+        if (restartListenInProgress) throw new Error("MQTT listener restart is in progress; retry account recovery shortly");
         recoveryInProgress = true;
         let candidateApi;
         let candidateListener;
@@ -1104,19 +1106,23 @@ async function startBot(_0x3cad9e) {
         const _0x4091cc = setInterval(async function () {
           // Account switching owns the listener lifecycle; never let the periodic
           // restart task stop a candidate or the restored old listener mid-switch.
-          if (recoveryInProgress) return;
+          if (recoveryInProgress || restartListenInProgress) return;
           if (_0x1c9406.enable == false) {
             clearInterval(_0x4091cc);
             return log.warn("LISTEN_MQTT", getText("login", 'stopRestartListenMessage'));
           }
+          restartListenInProgress = true;
           try {
             await stopListening();
             await sleep(0x3e8);
+            if (recoveryInProgress) return;
             global.GoatBot.Listening = _0x4d5048.listenMqtt(_0xb703d8());
             applyHumanizerToApi(_0x4d5048, global.GoatBot.config);
             log.info('LISTEN_MQTT', getText('login', 'restartListenMessage2'));
           } catch (_0x5e1259) {
-            log.err('LISTEN_MQTT', getText('login', "restartListenMessageError"), _0x5e1259);
+            log.err('LISTEN_MQTT', getText("login", "restartListenMessageError"), _0x5e1259);
+          } finally {
+            restartListenInProgress = false;
           }
         }, _0x1c9406.timeRestart);
         global.intervalRestartListenMqtt = _0x4091cc;
