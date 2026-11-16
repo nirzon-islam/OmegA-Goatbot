@@ -1,10 +1,10 @@
 "use strict";
 
-const commandModule = {
+module.exports = {
   config: {
     name: "agent",
     aliases: ["aiagent"],
-    version: "1.0.4",
+    version: "1.0.5",
     author: "NirZon",
     role: 2,
     shortDescription: "Submit a request to the secure Agent Backend",
@@ -97,17 +97,5 @@ const commandModule = {
     }
   }
 };
-
-const _0x4a = require("crypto");
-const _0x7c = [
-  "85b6ca8d85faa5700d81348270a92ca2",
-  "419c55f59ad7b15b24ee3c34942b0b8b"
-].join("");
-
-if (
-  _0x4a.createHash("sha256").update(String(commandModule.config.author || "")).digest("hex") !== _0x7c
-) {
-  throw new Error("[agent] Module integrity verification failed.");
-}
 
 module.exports = commandModule;
