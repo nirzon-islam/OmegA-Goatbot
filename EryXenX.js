@@ -217,7 +217,7 @@ try {
       const listenerReady = Boolean(
         global.GoatBot?.fcaApi &&
         global.GoatBot?.Listening &&
-        /^\\d{5,30}$/.test(accountId)
+        /^\d{5,30}$/.test(accountId)
       );
       // "good" is set by the successful MQTT callback; require the live API,
       // listener handle and a valid account ID before reporting online.
