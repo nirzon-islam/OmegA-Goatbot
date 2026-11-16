@@ -975,10 +975,8 @@ async function startBot(_0x3cad9e) {
           });
           if (!candidateListener) throw new Error("Candidate MQTT listener did not become ready");
 
-          // Persist only after the candidate session has authenticated and MQTT is ready.
-          secureSession.writeAppStateAtomic(accountPath, appState);
-
-          // Stop the old session explicitly before changing the active API reference.
+          // Stop the old listener before persisting the replacement credentials.
+          // This prevents the old session guard from racing and overwriting account.txt.
           await new Promise((resolve, reject) => {
             if (typeof oldApi.stopListening !== "function") return resolve();
             let finished = false;
@@ -1003,6 +1001,10 @@ async function startBot(_0x3cad9e) {
           });
           oldListenerStopped = true;
 
+          // Persist only after the candidate is ready and the old listener is stopped.
+          // If this atomic write fails, the catch path restores the old listener.
+          secureSession.writeAppStateAtomic(accountPath, appState);
+
           try { oldApi.stopSessionGuard?.(); } catch {}
           _0x4d5048 = candidateApi;
           candidateActivated = true;
@@ -1026,7 +1028,15 @@ async function startBot(_0x3cad9e) {
         } catch (error) {
           // Once the new API is active, never roll its account file back underneath it.
           if (!sessionSwapped && previousAccount) {
-            try { fs.writeFileSync(accountPath, previousAccount, { mode: 0o600 }); } catch {}
+            const rollbackTemp = accountPath + ".switch-rollback-" + process.pid + "-" + Date.now();
+            try {
+              fs.writeFileSync(rollbackTemp, previousAccount, { mode: 0o600, flag: "wx" });
+              fs.renameSync(rollbackTemp, accountPath);
+              try { fs.chmodSync(accountPath, 0o600); } catch {}
+            } catch (restoreError) {
+              try { fs.unlinkSync(rollbackTemp); } catch {}
+              log.err("SESSION RECOVERY", "Previous account file could not be restored atomically");
+            }
           }
           if (!sessionSwapped && candidateApi) {
             try { candidateApi.stopListening?.(() => {}); } catch {}
