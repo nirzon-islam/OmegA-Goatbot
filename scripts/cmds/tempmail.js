@@ -1,9 +1,9 @@
 const axios = require('axios');
 
-module.exports.config = {
+const config = {
   name: "tempmail",
   aliases: ["tm"],
-  version: "4.0",
+  version: "4.0.1",
   role: 0,
   countdown: 5,
   author: "MOHAMMAD AKASH",
@@ -73,3 +73,6 @@ module.exports.onStart = async ({ api, event, args }) => {
     return api.sendMessage("❌ Error generating temp mail or fetching inbox.", event.threadID);
   }
 };
+
+
+module.exports = { config, onStart };
