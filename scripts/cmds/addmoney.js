@@ -2,7 +2,7 @@ module.exports = {
   config: {
     name: "addmoney",
     aliases: ["adm", "givemoney"],
-    version: "1.0.1",
+    version: "1.0.0",
     author: "NirZon",
     countDown: 3,
     role: 2,
