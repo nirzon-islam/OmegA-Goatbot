@@ -4,7 +4,7 @@ module.exports = {
   config: {
     name: "age",
     aliases: ["myage"],
-    version: "6.0.2",
+    version: "6.0.1",
     author: "𝐌𝐨𝐡𝐚ᴍᴍᴀᴅ 𝐀ᴋᴀsʜ",
     role: 0,
     category: "AI",
