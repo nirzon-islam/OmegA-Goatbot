@@ -88,7 +88,7 @@ module.exports = {
   config: {
     name: "4k",
     aliases: ["upscale"],
-    version: "1.0.0",
+    version: "1.0.1",
     role: 0,
     author: "NirZon",
     countDown: 5,
