@@ -1012,7 +1012,7 @@ module.exports = {
   config: {
     name: "goatstore",
     aliases: ["gs", "cmdstore", "commandstore"],
-    version: "3.1.2",
+    version: "3.1.3",
     author: "NirZon",
     countDown: 3,
     role: 2,
