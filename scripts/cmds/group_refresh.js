@@ -1,6 +1,6 @@
-const config = {
+exports.config = {
   name: "group_refresh",
-  version: "1.2.1",
+  version: "1.2",
   author: "MOHAMMAD AKASH",
   countDown: 0,
   role: 2,
@@ -5030,6 +5030,3 @@ exports.onChat = async function({event, api}){
     last[t] = now;
   }
 };
-
-
-module.exports = { config, onStart, onChat };
