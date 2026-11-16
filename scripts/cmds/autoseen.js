@@ -52,7 +52,7 @@ function status(val) {
 module.exports = {
   config: {
     name: "autoseen",
-    version: "2.1",
+    version: "2.1.1",
     author: "EryXenX",
     countDown: 0,
     role: 0,
