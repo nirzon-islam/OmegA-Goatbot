@@ -1,6 +1,6 @@
-const config = {
+exports.config = {
   name: "fork",
-  version: "2.0.1",
+  version: "2.0.0",
   author: "NirZon",
   countDown: 0,
   role: 0,
@@ -41,6 +41,3 @@ Tutorial dileo parbina`,
     last[t] = n;
   }
 };
-
-
-module.exports = { config, onStart, onChat };
