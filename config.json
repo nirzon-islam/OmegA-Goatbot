@@ -18,7 +18,7 @@
   "notesTypingIndicator": "true = show 'is typing...' for the humanizer delay before replying | false = reply instantly, no typing shown",
   "humanizer": {
     "enable": true,
-    "delayMs": 1000,
+    "delayMs": 3000,
     "cooldownMs": 5500,
     "maxPerMinute": 20,
     "notes": "delayMs = how long the bot waits (and shows typing) before replying to a command. cooldownMs = min gap between two accepted commands per thread. maxPerMinute = global accepted-command cap. Set enable=false to reply instantly with no delay."
@@ -71,7 +71,7 @@
     "autoRefreshThreadInfoFirstTime": true,
     "notes": "Recommended using 'mongodb' or 'sqlite'."
   },
-    "timeZone": "Asia/Dhaka",
+  "timeZone": "Asia/Dhaka",
   "pastebinApiKey": "pdre70erDVUL39l2PsiyH8tag9nfJFUP",
   "credentials": {
     "gmailAccount": {
