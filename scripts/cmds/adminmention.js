@@ -1,7 +1,7 @@
 module.exports = {
   config: {
     name: "adminmention",
-    version: "2.0.0",
+    version: "2.0.1",
     author: "NirZon",
     countDown: 0,
     role: 0,
