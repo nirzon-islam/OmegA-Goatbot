@@ -4,7 +4,7 @@ const commandModule = {
   config: {
     name: "agent",
     aliases: ["aiagent"],
-    version: "1.0.3",
+    version: "1.0.4",
     author: "NirZon",
     role: 2,
     shortDescription: "Submit a request to the secure Agent Backend",
