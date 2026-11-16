@@ -20,7 +20,7 @@ const commandModule = {
     const ownerIds = (process.env.AGENT_OWNER_SENDER_IDS || "")
       .split(",").map(value => value.trim()).filter(Boolean);
 
-    if (!senderId || !allowedIds.includes(senderId)) {
+    if (!senderId || (!allowedIds.includes(senderId) && !ownerIds.includes(senderId))) {
       return message.reply("⛔ এই Agent command ব্যবহারের অনুমতি নেই।");
     }
     if (process.env.AGENT_BRIDGE_ENABLED !== "true") {
