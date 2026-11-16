@@ -1,15 +1,16 @@
-module.exports.config = {
+module.exports = {
+config: {
  name: "daily",
  aliases: ["claim"],
- version: "1.0",
+ version: "1.0.1",
  author: "MOHAMMAD AKASH",
  countDown: 5,
  role: 0,
  shortDescription: "Claim daily reward",
- category: "economy"
-};
+ category: "economy" 
+},
 
-module.exports.onStart = async function ({ api, event, usersData }) {
+onStart: async function ({ api, event, usersData }) {
  const { senderID, threadID, messageID } = event;
 
  const cooldown = 24 * 60 * 60 * 1000; // 24h
@@ -54,4 +55,5 @@ module.exports.onStart = async function ({ api, event, usersData }) {
  threadID,
  messageID
  );
+}
 };
