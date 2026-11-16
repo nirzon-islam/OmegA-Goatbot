@@ -46,9 +46,10 @@ test("loginCandidate forces MQTT ready events and validates API shape", async ()
   assert.equal(optionsSeen.emitReady, true);
 });
 
-test("listenUntilReady waits for a stable MQTT connection after ready", async () => {
-  const api = { listenMqtt(callback) { setImmediate(() => callback({ type: "ready", error: null })); } };
-  assert.deepEqual(await listenUntilReady(api, () => {}, 500, 5), { type: "ready", error: null });
+test("listenUntilReady returns the real listener handle after a stable ready event", async () => {
+  const listenerHandle = { stop() {} };
+  const api = { listenMqtt(callback) { setImmediate(() => callback({ type: "ready", error: null })); return listenerHandle; } };
+  assert.equal(await listenUntilReady(api, () => {}, 500, 5), listenerHandle);
 });
 
 test("listenUntilReady rejects if Facebook blocks the candidate after ready", async () => {
@@ -57,6 +58,7 @@ test("listenUntilReady rejects if Facebook blocks the candidate after ready", as
       callback({ type: "ready", error: null });
       setTimeout(() => callback({ error: "login_blocked", type: "account_inactive" }), 2);
     });
+    return { stop() {} };
   } };
   await assert.rejects(listenUntilReady(api, () => {}, 500, 20), /connection rejected/);
 });
@@ -66,4 +68,4 @@ test("listenUntilReady rejects on timeout", async () => {
   await assert.rejects(listenUntilReady(api, () => {}, 10), /readiness timed out/);
 });
 
-test("listenUntilReady handles FCA callback events", async () => { let forwarded; const api = { listenMqtt(callback) { callback(null, { type: "message", body: "hello" }); callback({ type: "ready", error: null }); } }; await listenUntilReady(api, (_error, event) => { forwarded = event; }, 100, 1); assert.equal(forwarded.body, "hello"); const bad = { listenMqtt(callback) { callback({ type: "stop_listen", error: "offline" }); } }; await assert.rejects(listenUntilReady(bad, () => {}, 100), /connection rejected.*stop_listen/); });
+test("listenUntilReady handles FCA callback events", async () => { let forwarded; const listenerHandle = { stop() {} }; const api = { listenMqtt(callback) { callback(null, { type: "message", body: "hello" }); callback({ type: "ready", error: null }); return listenerHandle; } }; assert.equal(await listenUntilReady(api, (_error, event) => { forwarded = event; }, 100, 1), listenerHandle); assert.equal(forwarded.body, "hello"); const bad = { listenMqtt(callback) { callback({ type: "stop_listen", error: "offline" }); } }; await assert.rejects(listenUntilReady(bad, () => {}, 100), /connection rejected.*stop_listen/); });
