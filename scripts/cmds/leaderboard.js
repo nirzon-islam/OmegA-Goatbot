@@ -3,10 +3,10 @@ const path = require("path");
 const { createCanvas, loadImage } = require("canvas");
 const axios = require("axios");
 
-const config = {
+module.exports.config = {
   name: "leaderboard",
   aliases: ["lb", "top"],
-  version: "6.0.1",
+  version: "6.0",
   author: "MOHAMMAD AKASH",
   countDown: 10,
   role: 0,
@@ -196,6 +196,3 @@ module.exports.onStart = async function ({ api, event, usersData }) {
   await api.sendMessage({ attachment: fs.createReadStream(filePath) }, threadID, messageID);
   setTimeout(() => fs.remove(filePath), 10000);
 };
-
-
-module.exports = { config, onStart };
