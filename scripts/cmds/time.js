@@ -2,9 +2,9 @@ const { createCanvas } = require('canvas');
 const fs = require('fs');
 const path = require('path');
 
-module.exports.config = {
+const config = {
   name: "time",
-  version: "11.0",
+  version: "11.0.1",
   author: "MOHAMMAD AKASH",
   countDown: 5,
   role: 0,
@@ -192,3 +192,6 @@ function roundRect(ctx, x, y, w, h, r, fill = false, stroke = false) {
   if (fill) ctx.fill();
   if (stroke) ctx.stroke();
 }
+
+
+module.exports = { config, onStart };
