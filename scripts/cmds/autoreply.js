@@ -229,6 +229,7 @@ async function getBabyReply(api, event, query) {
 }
 
 module.exports = {
+  config: { name: "autoreply", version: "1.0.1", author: "NirZon", countDown: 5, role: 0, shortDescription: "Automatic keyword replies", category: "utility" },
 config: {
   name: "autoreply",
   version: "3.3.2",
