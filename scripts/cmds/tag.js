@@ -1,6 +1,7 @@
 module.exports = {
   config: {
     name: "tag",
+    version: "1.0.0",
     category: "box chat",
     role: 0,
     author: "EryXenX",
