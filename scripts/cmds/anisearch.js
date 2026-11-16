@@ -23,7 +23,7 @@ module.exports = {
     name: "anisearch",
     aliases: [],
     author: "Vex_kshitiz",
-    version: "1.0.1",
+    version: "1.0",
     shortDescription: {
       en: "get anime edit",
     },
