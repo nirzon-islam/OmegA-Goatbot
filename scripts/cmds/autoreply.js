@@ -228,18 +228,19 @@ async function getBabyReply(api, event, query) {
   }
 }
 
-module.exports.config = {
+module.exports = {
+config: {
   name: "autoreply",
-  version: "3.3.1",
+  version: "3.3.2",
   author: "NirZon",
   countDown: 1,
   role: 0,
   description: "Group AutoReply with Baby API fallback",
   category: "system",
   guide: "Reply to the menu message to manage AutoReply."
-};
+},
 
-module.exports.onStart = async function ({ api, event, args }) {
+onStart: async function ({ api, event, args }) {
   if (!isBotAdmin(event.senderID)) {
     return api.sendMessage(
       "⛔ এই মেনু শুধু Bot Admin ব্যবহার করতে পারবে।",
@@ -248,9 +249,9 @@ module.exports.onStart = async function ({ api, event, args }) {
   }
 
   sendUsage(api, event);
-};
+},
 
-module.exports.onReply = async function ({ api, event, Reply }) {
+onReply: async function ({ api, event, Reply }) {
   if (!Reply || !event.body) return;
 
   const senderID = String(event.senderID);
@@ -398,9 +399,9 @@ module.exports.onReply = async function ({ api, event, Reply }) {
     event,
     "❓ Command বুঝতে পারিনি। Menu থেকে সঠিক format ব্যবহার করো।"
   );
-};
+},
 
-module.exports.onChat = async function ({ api, event }) {
+onChat: async function ({ api, event }) {
   if (!event || !event.body || !event.threadID || !event.senderID) return;
 
   // Group chat only
@@ -424,4 +425,5 @@ module.exports.onChat = async function ({ api, event }) {
       threadID: String(event.threadID)
     });
   });
+}
 };
