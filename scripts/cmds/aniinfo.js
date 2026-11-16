@@ -6,7 +6,7 @@ module.exports = {
   config: {
     name: "aniinfo",
     aliases: ["animeinfo", "a-info"],
-    version: "1.0",
+    version: "1.0.1",
     author: "nexo_here",
     countDown: 0,
     role: 0,
