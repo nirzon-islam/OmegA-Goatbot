@@ -1,7 +1,7 @@
 module.exports = {
   config: {
     name: "autoreact",
-    version: "4.4.1",
+    version: "4.4.0",
     author: "MOHAMMAD AKASH",
     role: 0,
     category: "system",
