@@ -6,7 +6,7 @@ module.exports = {
 	config: {
 		name: "adminonly",
 		aliases: ["adonly", "onlyad", "onlyadmin"],
-		version: "1.5.2",
+		version: "1.5.1",
 		author: "NTKhang",
 		countDown: 5,
 		role: 1,
