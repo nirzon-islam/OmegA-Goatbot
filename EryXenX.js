@@ -212,14 +212,46 @@ try {
   global.GoatBot.agentBridgeWorker = startBridgeWorker({
     log,
     getAccountStatus: () => {
-      const status = global.statusAccountBot;
-      if (status === "good") return { state: "online", accountId: global.GoatBot.botID || "" };
-      if (status === "can't login") return { state: "logged_out", accountId: global.GoatBot.botID || "", message: "Facebook session is no longer authenticated." };
-      return { state: null };
+      const raw = String(global.statusAccountBot || "unknown").toLowerCase();
+      const accountId = String(global.GoatBot?.botID || global.botID || "");
+      const listenerReady = Boolean(
+        global.GoatBot?.fcaApi &&
+        global.GoatBot?.Listening &&
+        /^\d{5,30}$/.test(accountId)
+      );
+      // "good" is set by the successful MQTT callback; require the live API,
+      // listener handle and a valid account ID before reporting online.
+      const sessionState = raw === "good" && listenerReady ? "online" :
+        raw === "checkpoint" ? "checkpoint" :
+        raw === "can't login" || raw === "logged_out" ? "logged_out" :
+        raw === "error" ? "error" : "unknown";
+      const messages = {
+        online: "Facebook session is authenticated and the listener is active.",
+        logged_out: "Facebook session is no longer authenticated.",
+        checkpoint: "Facebook checkpoint requires manual completion.",
+        error: "Facebook listener reported an authentication or connection error.",
+        unknown: "Facebook authentication has not yet been confirmed."
+      };
+      return {
+        workerState: "online",
+        sessionState,
+        accountId: String(global.GoatBot.botID || global.botID || ""),
+        message: messages[sessionState]
+      };
     }
   });
 } catch (error) {
   log.warn("AGENT BRIDGE", "Worker not started: " + String(error.message || "configuration error"));
+}
+
+// Allow Agent Bridge to accept the first Facebook account before normal login
+// has created the full in-process recovery handler. login.js replaces this
+// bootstrap with its live-session switcher once GoatBot is initialized.
+try {
+  const { bootstrapFacebookLogin } = require("./agent-bridge/bootstrapRecovery");
+  global.GoatBot.recoverFacebookSession = bootstrapFacebookLogin;
+} catch (error) {
+  log.warn("AGENT BRIDGE", "Initial Facebook login handler unavailable: " + String(error.message || "configuration error"));
 }
 
 // ———————————————— LOAD LANGUAGE ———————————————— //

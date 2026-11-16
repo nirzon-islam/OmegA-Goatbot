@@ -2,7 +2,7 @@
 
 const { executeApprovedAction } = require("./executor");
 
-const MAX_RESULT_CHARS = 50000;
+const MAX_RESULT_CHARS = 600 * 1024;
 
 function createWorker({ client, execute = executeApprovedAction, recoverSession = () => global.GoatBot && global.GoatBot.recoverFacebookSession }) {
   if (!client || typeof client.getQueue !== "function" ||

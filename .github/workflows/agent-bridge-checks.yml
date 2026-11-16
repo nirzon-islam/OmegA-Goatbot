@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - 'feature/**'
+      - 'fix/facebook-session-monitor'
   pull_request:
     branches:
       - main
@@ -26,6 +27,9 @@ jobs:
           node --check agent-bridge/backup.js
           node --check agent-bridge/executor.js
           node --check agent-bridge/worker.js
+          node --check agent-bridge/bootstrapRecovery.js
+          node --check bot/login/secureSession.js
+          node --check bot/login/login.js
           node --check agent-bridge/runtime.js
           node --check scripts/cmds/agent.js
           node --check EryXenX.js

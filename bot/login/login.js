@@ -206,7 +206,8 @@ function filterKeysAppState(_0x46da08) {
 global.responseUptimeCurrent = responseUptimeSuccess;
 global.responseUptimeSuccess = responseUptimeSuccess;
 global.responseUptimeError = responseUptimeError;
-global.statusAccountBot = "good";
+// Facebook is not authenticated until the login callback and MQTT listener confirm it.
+global.statusAccountBot = "unknown";
 let changeFbStateByCode = false;
 let latestChangeContentAccount = fs.statSync(dirAccount).mtimeMs;
 let dashBoardIsRunning = false;
@@ -594,8 +595,11 @@ async function startBot(_0x3cad9e) {
       humanize: buildHumanizeOptions(global.GoatBot.config)
     }), async function (_0x3f689f, _0x4d5048) {
       if (_0x3f689f) {
+        // Keep the process and Agent Bridge alive so a fresh account session
+        // can be submitted without restarting or losing the recovery worker.
+        global.statusAccountBot = "can't login";
         log.err("LOGIN FACEBOOK", "Login failed:", _0x3f689f);
-        process.exit(1);
+        return;
       }
       global.GoatBot.fcaApi = _0x4d5048;
       global.GoatBot.botID = _0x4d5048.getCurrentUserID();
@@ -938,8 +942,10 @@ async function startBot(_0x3cad9e) {
 
       // Register a hot-recovery handler only after the normal runtime is fully initialized.
       let recoveryInProgress = false;
+      let restartListenInProgress = false;
       global.GoatBot.recoverFacebookSession = async ({ botId, cookie, progress }) => {
         if (recoveryInProgress) throw new Error("A Facebook recovery is already running");
+        if (restartListenInProgress) throw new Error("MQTT listener restart is in progress; retry account recovery shortly");
         recoveryInProgress = true;
         let candidateApi;
         let candidateListener;
@@ -971,10 +977,8 @@ async function startBot(_0x3cad9e) {
           });
           if (!candidateListener) throw new Error("Candidate MQTT listener did not become ready");
 
-          // Persist only after the candidate session has authenticated and MQTT is ready.
-          secureSession.writeAppStateAtomic(accountPath, appState);
-
-          // Stop the old session explicitly before changing the active API reference.
+          // Stop the old listener and its periodic appstate saver before replacing
+          // account.txt; otherwise the old guard can overwrite the new credentials.
           await new Promise((resolve, reject) => {
             if (typeof oldApi.stopListening !== "function") return resolve();
             let finished = false;
@@ -999,7 +1003,11 @@ async function startBot(_0x3cad9e) {
           });
           oldListenerStopped = true;
 
+          // The old listener is now stopped, so stop its saver before the atomic
+          // replacement. If writing fails, the catch path restores both listener and guard.
           try { oldApi.stopSessionGuard?.(); } catch {}
+          secureSession.writeAppStateAtomic(accountPath, appState);
+
           _0x4d5048 = candidateApi;
           candidateActivated = true;
           global.GoatBot.fcaApi = candidateApi;
@@ -1022,7 +1030,15 @@ async function startBot(_0x3cad9e) {
         } catch (error) {
           // Once the new API is active, never roll its account file back underneath it.
           if (!sessionSwapped && previousAccount) {
-            try { fs.writeFileSync(accountPath, previousAccount, { mode: 0o600 }); } catch {}
+            const rollbackTemp = accountPath + ".switch-rollback-" + process.pid + "-" + Date.now();
+            try {
+              fs.writeFileSync(rollbackTemp, previousAccount, { mode: 0o600, flag: "wx" });
+              fs.renameSync(rollbackTemp, accountPath);
+              try { fs.chmodSync(accountPath, 0o600); } catch {}
+            } catch (restoreError) {
+              try { fs.unlinkSync(rollbackTemp); } catch {}
+              log.err("SESSION RECOVERY", "Previous account file could not be restored atomically");
+            }
           }
           if (!sessionSwapped && candidateApi) {
             try { candidateApi.stopListening?.(() => {}); } catch {}
@@ -1088,18 +1104,25 @@ async function startBot(_0x3cad9e) {
           logColor("#f5ab00", character);
         }
         const _0x4091cc = setInterval(async function () {
+          // Account switching owns the listener lifecycle; never let the periodic
+          // restart task stop a candidate or the restored old listener mid-switch.
+          if (recoveryInProgress || restartListenInProgress) return;
           if (_0x1c9406.enable == false) {
             clearInterval(_0x4091cc);
             return log.warn("LISTEN_MQTT", getText("login", 'stopRestartListenMessage'));
           }
+          restartListenInProgress = true;
           try {
             await stopListening();
             await sleep(0x3e8);
+            if (recoveryInProgress) return;
             global.GoatBot.Listening = _0x4d5048.listenMqtt(_0xb703d8());
             applyHumanizerToApi(_0x4d5048, global.GoatBot.config);
             log.info('LISTEN_MQTT', getText('login', 'restartListenMessage2'));
           } catch (_0x5e1259) {
-            log.err('LISTEN_MQTT', getText('login', "restartListenMessageError"), _0x5e1259);
+            log.err('LISTEN_MQTT', getText("login", "restartListenMessageError"), _0x5e1259);
+          } finally {
+            restartListenInProgress = false;
           }
         }, _0x1c9406.timeRestart);
         global.intervalRestartListenMqtt = _0x4091cc;
