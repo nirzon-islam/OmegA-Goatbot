@@ -4,7 +4,7 @@ const path = require("path");
 const config = {
   name: "trading",
   aliases: ["trade", "tr"],
-  version: "2.1.0",
+  version: "2.1.1",
   author: "NirZon",
   role: 0,
   countDown: 3,
@@ -549,7 +549,7 @@ ${result === "WIN"
 // MAIN COMMAND
 // ======================================
 
-module.exports.config = config;
+const config = config;
 
 module.exports.onStart = async function ({
   api,
@@ -1092,3 +1092,6 @@ Status: WAITING...`,
     messageID
   );
 };
+
+
+module.exports = { config, onStart };
