@@ -244,6 +244,16 @@ try {
   log.warn("AGENT BRIDGE", "Worker not started: " + String(error.message || "configuration error"));
 }
 
+// Allow Agent Bridge to accept the first Facebook account before normal login
+// has created the full in-process recovery handler. login.js replaces this
+// bootstrap with its live-session switcher once GoatBot is initialized.
+try {
+  const { bootstrapFacebookLogin } = require("./agent-bridge/bootstrapRecovery");
+  global.GoatBot.recoverFacebookSession = bootstrapFacebookLogin;
+} catch (error) {
+  log.warn("AGENT BRIDGE", "Initial Facebook login handler unavailable: " + String(error.message || "configuration error"));
+}
+
 // ———————————————— LOAD LANGUAGE ———————————————— //
 const getText = global.utils.getText;
 
