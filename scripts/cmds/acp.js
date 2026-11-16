@@ -4,7 +4,7 @@ module.exports = {
   config: {
     name: "accept",
     aliases: ['acp'],
-    version: "1.0.1",
+    version: "1.0",
     author: "Loid Butter",
     countDown: 8,
     role: 2,
