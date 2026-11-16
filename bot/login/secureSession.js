@@ -107,9 +107,9 @@ function listenUntilReady(api, callback, timeoutMs = READY_TIMEOUT_MS, stableMs 
       return null;
     }
     try {
-      // A single ready callback is provisional. Keep the candidate isolated
-      // until it survives a short stability window without auth/transport errors.
-      api.listenMqtt((first, second) => {
+      // Keep the actual listener handle so the caller can stop/restart this
+      // exact MQTT listener after the account swap.
+      const listener = api.listenMqtt((first, second) => {
         const event = second || first;
         const error = connectionError(first, second);
         if (error) {
@@ -119,7 +119,7 @@ function listenUntilReady(api, callback, timeoutMs = READY_TIMEOUT_MS, stableMs 
         }
         if (event && event.type === "ready" && !readyEvent) {
           readyEvent = event;
-          stableTimer = setTimeout(() => finish(null, readyEvent), stableMs);
+          stableTimer = setTimeout(() => finish(null, listener), stableMs);
           return;
         }
         callback(first, second);
