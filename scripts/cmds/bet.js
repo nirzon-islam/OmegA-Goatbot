@@ -1,13 +1,14 @@
-module.exports.config = {
+module.exports = {
+config: {
   name: "bet",
-  version: "3.0",
+  version: "3.0.1",
   author: "MOHAMMAD AKASH",
   role: 0,
   category: "economy",
-  shortDescription: "Casino betting game"
-};
+  shortDescription: "Casino betting game" 
+},
 
-module.exports.onStart = async function ({ api, event, args, usersData }) {
+onStart: async function ({ api, event, args, usersData }) {
   const { senderID, threadID, messageID } = event;
 
   if (!args[0])
@@ -56,4 +57,5 @@ module.exports.onStart = async function ({ api, event, args, usersData }) {
 💰 New balance: ${balance}$`;
 
   api.sendMessage(msg, threadID, messageID);
+}
 };
