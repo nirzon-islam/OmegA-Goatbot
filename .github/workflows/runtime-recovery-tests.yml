@@ -3,7 +3,7 @@ name: Runtime recovery tests
 on:
   push:
     branches:
-      - feature/runtime-appstate-recovery
+      - fix/facebook-session-monitor
     paths:
       - "bot/login/**"
       - "package.json"
