@@ -20,7 +20,7 @@ module.exports = {
   config: {
     name: "amarbondhu",
     aliases: ["12vatari"],
-    version: "1.4.1",
+    version: "1.4.2",
     author: "EryXenX",
     countDown: 8,
     role: 0,
