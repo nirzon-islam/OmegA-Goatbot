@@ -6,9 +6,9 @@ const baseApiUrl = async () => {
   return base.data.mahmud;
 };
 
-const config = {
+module.exports.config = {
   name: "mygirl",
-  version: "1.7.1",
+  version: "1.7",
   role: 0,
   author: "MahMUD",
   category: "fun",
@@ -48,6 +48,3 @@ module.exports.onStart = async ({ event, api, args }) => {
     api.sendMessage("🥹error, contact MahMUD.", event.threadID, event.messageID);
   }
 };
-
-
-module.exports = { config, onStart };
