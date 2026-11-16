@@ -495,7 +495,7 @@ function compressVideo(input, id) {
 module.exports = {
   config: {
     name: "autolink",
-    version: "2.0",
+    version: "2.0.1",
     author: "Zihad",
     countDown: 3,
     role: 0,
