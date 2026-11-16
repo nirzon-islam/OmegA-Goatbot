@@ -213,7 +213,15 @@ try {
     log,
     getAccountStatus: () => {
       const raw = String(global.statusAccountBot || "unknown").toLowerCase();
-      const sessionState = raw === "good" ? "online" :
+      const accountId = String(global.GoatBot?.botID || global.botID || "");
+      const listenerReady = Boolean(
+        global.GoatBot?.fcaApi &&
+        global.GoatBot?.Listening &&
+        /^\\d{5,30}$/.test(accountId)
+      );
+      // "good" is set by the successful MQTT callback; require the live API,
+      // listener handle and a valid account ID before reporting online.
+      const sessionState = raw === "good" && listenerReady ? "online" :
         raw === "checkpoint" ? "checkpoint" :
         raw === "can't login" || raw === "logged_out" ? "logged_out" :
         raw === "error" ? "error" : "unknown";
