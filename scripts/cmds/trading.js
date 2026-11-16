@@ -549,7 +549,6 @@ ${result === "WIN"
 // MAIN COMMAND
 // ======================================
 
-const config = config;
 
 module.exports.onStart = async function ({
   api,
