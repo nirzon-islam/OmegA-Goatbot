@@ -123,10 +123,10 @@ function react(api, messageID, emoji) {
 	} catch (_) {}
 }
 
-const config = {
+module.exports.config = {
 	name: "sing",
 	aliases: ["song"],
-	version: "2.0.1",
+	version: "2.0.0",
 	author: "EryXenX",
 	countDown: 5,
 	role: 0,
@@ -177,6 +177,3 @@ module.exports.onStart = async function ({ api, event, args, message }) {
 		}
 	}
 };
-
-
-module.exports = { config, onStart };
