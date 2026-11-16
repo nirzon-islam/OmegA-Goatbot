@@ -1,8 +1,8 @@
 const axios = require("axios");
 
-module.exports.config = {
+const config = {
   name: "quiz",
-  version: "2.0",
+  version: "2.0.1",
   author: "EryXenX",
   role: 0,
   category: "economy",
@@ -140,3 +140,5 @@ module.exports.onReply = async function ({ api, event, usersData, Reply }) {
     );
   }
 };
+
+module.exports = { config, onStart, onReply };
