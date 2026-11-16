@@ -447,6 +447,7 @@ async function runAutoSync() {
         const res = await storePost(`/miraistore/upload`, { rawCode: stampedContent, framework: "goat", kind, author, category });
         if (res.data?.error) {
           skipped++;
+          log.warn("GOATSTORE", `AutoSync skipped ${file}: ${res.data.error}`);
         } else if (res.data?.updated) {
           updated++;
           cache[cacheKey] = hash;
@@ -456,11 +457,24 @@ async function runAutoSync() {
         }
         consecutiveErrors = 0;
       } catch (err) {
-        failed++;
-        if (++consecutiveErrors >= 5) {
-          saveSyncCache(cache);
-          log.warn("GOATSTORE", `AutoSync stopped: store API unreachable (${err.response?.data?.error || err.message})`);
-          return { uploaded, updated, skipped, failed, stopped: true };
+        const status = err.response?.status;
+        const apiError = err.response?.data?.error || err.response?.data?.message || err.message;
+
+        // Axios rejects HTTP 4xx/5xx responses. Version conflicts and invalid
+        // source files are per-file skips, not API connectivity failures.
+        if (status >= 400 && status < 500 && status !== 429) {
+          skipped++;
+          consecutiveErrors = 0;
+          log.warn("GOATSTORE", `AutoSync skipped ${file} (HTTP ${status}): ${apiError}`);
+        } else {
+          failed++;
+          consecutiveErrors++;
+          log.warn("GOATSTORE", `AutoSync request failed for ${file}: ${apiError}`);
+          if (consecutiveErrors >= 5) {
+            saveSyncCache(cache);
+            log.warn("GOATSTORE", `AutoSync stopped after 5 consecutive API/network errors: ${apiError}`);
+            return { uploaded, updated, skipped, failed, stopped: true };
+          }
         }
       }
 
