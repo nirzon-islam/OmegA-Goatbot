@@ -4,7 +4,7 @@ module.exports = {
   config: {
     name: "activemember",
     aliases: ["am"],
-    version: "1.0",
+    version: "1.0.1",
     author: "nexo_here",
     countDown: 5,
     role: 0,
