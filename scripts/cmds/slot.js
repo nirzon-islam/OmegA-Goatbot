@@ -1,6 +1,6 @@
-module.exports.config = {
+const config = {
   name: "slot",
-  version: "3.0.0",
+  version: "3.0.1",
   author: "EryXenX",
   role: 0,
   category: "economy",
@@ -88,3 +88,6 @@ module.exports.onStart = async function ({ api, event, args, usersData }) {
     })();
   }, messageID);
 };
+
+
+module.exports = { config, onStart };
