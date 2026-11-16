@@ -4,7 +4,7 @@ const { getStreamFromURL } = global.utils;
 module.exports = {
 	config: {
 		name: "appstore",
-		version: "1.2",
+		version: "1.2.1",
 		author: "NTKhang",
 		countDown: 5,
 		role: 0,
