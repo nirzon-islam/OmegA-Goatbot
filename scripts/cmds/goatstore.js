@@ -706,14 +706,14 @@ async function doBulkInstall(api, threadID, senderID, ids) {
     const c = counts();
     if (final) {
       const detailLines = results.map(x => `${x.status === "installed" ? "✅" : x.status === "skipped" ? "⏭️" : "❌"} ${x.id}${x.name ? ` — ${x.name}` : ""}${x.reason ? ` — ${x.reason}` : x.note ? ` — ${x.note}` : ""}`);
-      return `📦 OmegA Installer\\n\\n◖ Bulk installation complete\\n${bar} 100%\\n━━━━━━━━━━━━━━━━━━━━\\n✅ Installed: ${c.installed}\\n⏭️ Skipped: ${c.skipped}\\n❌ Failed: ${c.failed}\\n📊 Total: ${results.length}/${total}\\n\\nResults:\\n${detailLines.join("\\n")}`;
+      return `📦 OmegA Installer\n\n◖ Bulk installation complete\n${bar} 100%\n━━━━━━━━━━━━━━━━━━━━\n✅ Installed: ${c.installed}\n⏭️ Skipped: ${c.skipped}\n❌ Failed: ${c.failed}\n📊 Total: ${results.length}/${total}\n\nResults:\n${detailLines.join("\n")}`;
     }
     const current = results[results.length - 1];
     const statusLine = current ? `${current.status === "installed" ? "✅" : current.status === "skipped" ? "⏭️" : "❌"} ${current.name || `ID ${current.id}`}` : "Preparing commands...";
-    return `📦 OmegA Installer\\n\\n${frames[(milestoneIndex - 1 + frames.length) % frames.length]} Installing: ${statusLine}\\nCompleted: ${completed}/${total}\\n${bar} ${pct}%\\n━━━━━━━━━━━━━━━━━━━━\\n✅ ${c.installed}  ⏭️ ${c.skipped}  ❌ ${c.failed}`;
+    return `📦 OmegA Installer\n\n${frames[(milestoneIndex - 1 + frames.length) % frames.length]} Installing: ${statusLine}\nCompleted: ${completed}/${total}\n${bar} ${pct}%\n━━━━━━━━━━━━━━━━━━━━\n✅ ${c.installed}  ⏭️ ${c.skipped}  ❌ ${c.failed}`;
   };
   try {
-    const sent = await api.sendMessage(`📦 OmegA Installer\\n\\n${frames[0]} Preparing bulk installation\\nCommands: ${total}\\n${buildBar(0).replace(/█/g, "▰").replace(/░/g, "▱")} 0%\\n━━━━━━━━━━━━━━━━━━━━`, threadID);
+    const sent = await api.sendMessage(`📦 OmegA Installer\n\n${frames[0]} Preparing bulk installation\nCommands: ${total}\n${buildBar(0).replace(/█/g, "▰").replace(/░/g, "▱")} 0%\n━━━━━━━━━━━━━━━━━━━━`, threadID);
     messageID = sent?.messageID || null;
   } catch (_) {}
   for (const id of ids) {
@@ -759,7 +759,7 @@ async function doBulkInstall(api, threadID, senderID, ids) {
   }
   if (!messageID && results.length !== total) {
     const c = counts();
-    return api.sendMessage(`📦 OmegA Bulk Installer\\n\\n✅ Installed: ${c.installed}\\n⏭️ Skipped: ${c.skipped}\\n❌ Failed: ${c.failed}`, threadID);
+    return api.sendMessage(`📦 OmegA Bulk Installer\n\n✅ Installed: ${c.installed}\n⏭️ Skipped: ${c.skipped}\n❌ Failed: ${c.failed}`, threadID);
   }
   return messageID || undefined;
 }
