@@ -692,46 +692,77 @@ async function doInstallCore(api, threadID, senderID, id, forceKind = null) {
 
 async function doBulkInstall(api, threadID, senderID, ids) {
   const results = [];
+  const total = ids.length;
+  const milestones = [...new Set([Math.ceil(total * 0.25), Math.ceil(total * 0.5), Math.ceil(total * 0.75), total])].filter(n => n > 0);
+  let messageID = null, milestoneIndex = 0;
+  const counts = () => ({
+    installed: results.filter(x => x.status === "installed").length,
+    skipped: results.filter(x => x.status === "skipped").length,
+    failed: results.filter(x => x.status === "failed").length
+  });
+  const renderProgress = (completed, final = false) => {
+    const pct = total ? Math.floor(completed / total * 100) : 100;
+    const bar = buildBar(pct).replace(/█/g, "▰").replace(/░/g, "▱");
+    const c = counts();
+    if (final) {
+      const detailLines = results.map(x => `${x.status === "installed" ? "✅" : x.status === "skipped" ? "⏭️" : "❌"} ${x.id}${x.name ? ` — ${x.name}` : ""}${x.reason ? ` — ${x.reason}` : x.note ? ` — ${x.note}` : ""}`);
+      return `📦 OmegA Installer\\n\\n◖ Bulk installation complete\\n${bar} 100%\\n━━━━━━━━━━━━━━━━━━━━\\n✅ Installed: ${c.installed}\\n⏭️ Skipped: ${c.skipped}\\n❌ Failed: ${c.failed}\\n📊 Total: ${results.length}/${total}\\n\\nResults:\\n${detailLines.join("\\n")}`;
+    }
+    const current = results[results.length - 1];
+    const statusLine = current ? `${current.status === "installed" ? "✅" : current.status === "skipped" ? "⏭️" : "❌"} ${current.name || `ID ${current.id}`}` : "Preparing commands...";
+    return `📦 OmegA Installer\\n\\n${frames[(milestoneIndex - 1 + frames.length) % frames.length]} Installing: ${statusLine}\\nCompleted: ${completed}/${total}\\n${bar} ${pct}%\\n━━━━━━━━━━━━━━━━━━━━\\n✅ ${c.installed}  ⏭️ ${c.skipped}  ❌ ${c.failed}`;
+  };
+  try {
+    const sent = await api.sendMessage(`📦 OmegA Installer\\n\\n${frames[0]} Preparing bulk installation\\nCommands: ${total}\\n${buildBar(0).replace(/█/g, "▰").replace(/░/g, "▱")} 0%\\n━━━━━━━━━━━━━━━━━━━━`, threadID);
+    messageID = sent?.messageID || null;
+  } catch (_) {}
   for (const id of ids) {
     try {
       const res = await storeGet(`/miraistore/search?q=${encodeURIComponent(id)}&clientFp=${encodeURIComponent(senderID || "")}`);
       const data = res.data;
-      const cmd = !isNaN(id) && data?.rawCode && !Array.isArray(data) ? data :
-        Array.isArray(data?.commands) ? data.commands.find(item => String(item.id) === String(id)) : null;
-      if (!cmd?.rawCode) { results.push({ id, status: "failed", reason: "Not found" }); continue; }
-      if (String(cmd.framework || "").toLowerCase() !== "goat") { results.push({ id, status: "skipped", reason: "Not a GoatBot file" }); continue; }
-      if (String(cmd.kind || "command").toLowerCase() !== "command") { results.push({ id, status: "skipped", reason: "Event needs event installer" }); continue; }
-      if (premium.isPremiumCmd(cmd.name, cmd.author) && !premium.canExecutePremium(senderID)) { results.push({ id, status: "skipped", reason: "Premium only" }); continue; }
-      try { new Function(cmd.rawCode); } catch (err) { results.push({ id, status: "failed", reason: `Syntax: ${err.message}` }); continue; }
-
-      const name = String(cmd.name || `gs_${id}`).trim();
-      const safeName = name.replace(/[\\/:*?"<>|\s]+/g, "_");
-      const dir = getCmdsDir();
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-      const filePath = path.join(dir, safeName + ".js");
-      if (fs.existsSync(filePath)) {
-        const existing = fs.readFileSync(filePath, "utf8");
-        results.push(existing === cmd.rawCode
-          ? { id, status: "skipped", name, reason: "Already installed" }
-          : { id, status: "skipped", name, reason: "Local file exists; not overwritten" });
-        continue;
+      const cmd = !isNaN(id) && data?.rawCode && !Array.isArray(data) ? data : Array.isArray(data?.commands) ? data.commands.find(item => String(item.id) === String(id)) : null;
+      if (!cmd?.rawCode) results.push({ id, status: "failed", reason: "Not found" });
+      else if (String(cmd.framework || "").toLowerCase() !== "goat") results.push({ id, status: "skipped", reason: "Not a GoatBot file" });
+      else if (String(cmd.kind || "command").toLowerCase() !== "command") results.push({ id, status: "skipped", reason: "Event needs event installer" });
+      else if (premium.isPremiumCmd(cmd.name, cmd.author) && !premium.canExecutePremium(senderID, cmd.name, cmd.author)) results.push({ id, status: "skipped", name: cmd.name, reason: "Premium only" });
+      else {
+        let syntaxError = null;
+        try { new Function(cmd.rawCode); } catch (err) { syntaxError = err; }
+        if (syntaxError) results.push({ id, status: "failed", name: cmd.name, reason: `Syntax: ${syntaxError.message}` });
+        else {
+          const name = String(cmd.name || `gs_${id}`).trim();
+          const safeName = name.replace(/[\\\\/:*?"<>|\\s]+/g, "_");
+          const dir = getCmdsDir();
+          if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+          const filePath = path.join(dir, safeName + ".js");
+          if (fs.existsSync(filePath)) {
+            const existing = fs.readFileSync(filePath, "utf8");
+            results.push(existing === cmd.rawCode ? { id, status: "skipped", name, reason: "Already installed" } : { id, status: "skipped", name, reason: "Local file exists; not overwritten" });
+          } else {
+            fs.writeFileSync(filePath, cmd.rawCode, "utf8");
+            try { await storePost(`/miraistore/install/${cmd.id}`, { clientFp: senderID }); } catch (_) {}
+            const loaded = autoloadCommand(filePath);
+            results.push({ id, status: "installed", name, note: loaded.success ? "Live" : "Saved; restart may be required" });
+          }
+        }
       }
-      fs.writeFileSync(filePath, cmd.rawCode, "utf8");
-      try { await storePost(`/miraistore/install/${cmd.id}`, { clientFp: senderID }); } catch (_) {}
-      const loaded = autoloadCommand(filePath);
-      results.push({ id, status: "installed", name, note: loaded.success ? "Live" : "Saved; restart may be required" });
     } catch (err) {
       results.push({ id, status: "failed", reason: err.response?.data?.message || err.message || "Install error" });
     }
+    const completed = results.length;
+    if (milestoneIndex < milestones.length && completed >= milestones[milestoneIndex]) {
+      milestoneIndex++;
+      if (messageID) { try { await api.editMessage(renderProgress(completed, completed === total), messageID); } catch (_) {} }
+      else if (completed === total) { try { await api.sendMessage(renderProgress(completed, true), threadID); } catch (_) {} }
+    }
     await new Promise(resolve => setTimeout(resolve, 250));
   }
-  const installed = results.filter(x => x.status === "installed").length;
-  const skipped = results.filter(x => x.status === "skipped").length;
-  const failed = results.filter(x => x.status === "failed").length;
-  const lines = results.map(x => `${x.status === "installed" ? "✅" : x.status === "skipped" ? "⏭️" : "❌"} ${x.id}${x.name ? ` — ${x.name}` : ""}${x.reason ? ` — ${x.reason}` : x.note ? ` — ${x.note}` : ""}`);
-  return api.sendMessage(`📦 OmegA Bulk Installer\n\n✅ Installed: ${installed}\n⏭️ Skipped: ${skipped}\n❌ Failed: ${failed}\n📊 Total: ${results.length}\n\n━━━━━━━━━━━━━━━━━━\n${lines.join("\n")}`, threadID);
+  if (!messageID && results.length !== total) {
+    const c = counts();
+    return api.sendMessage(`📦 OmegA Bulk Installer\\n\\n✅ Installed: ${c.installed}\\n⏭️ Skipped: ${c.skipped}\\n❌ Failed: ${c.failed}`, threadID);
+  }
+  return messageID || undefined;
 }
-
 async function doSelfUpdateSilent(api, threadID, selfUpdate) {
   let cmdData = null;
   let tempPath = null;
@@ -1104,7 +1135,7 @@ module.exports = {
   config: {
     name: "goatstore",
     aliases: ["gs", "cmdstore", "commandstore"],
-    version: "3.1.3",
+    version: "3.1.4",
     author: "NirZon",
     countDown: 3,
     role: 2,
