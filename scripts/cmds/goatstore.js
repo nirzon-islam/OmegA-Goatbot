@@ -689,6 +689,49 @@ async function doInstallCore(api, threadID, senderID, id, forceKind = null) {
   }
 }
 
+
+async function doBulkInstall(api, threadID, senderID, ids) {
+  const results = [];
+  for (const id of ids) {
+    try {
+      const res = await storeGet(`/miraistore/search?q=${encodeURIComponent(id)}&clientFp=${encodeURIComponent(senderID || "")}`);
+      const data = res.data;
+      const cmd = !isNaN(id) && data?.rawCode && !Array.isArray(data) ? data :
+        Array.isArray(data?.commands) ? data.commands.find(item => String(item.id) === String(id)) : null;
+      if (!cmd?.rawCode) { results.push({ id, status: "failed", reason: "Not found" }); continue; }
+      if (String(cmd.framework || "").toLowerCase() !== "goat") { results.push({ id, status: "skipped", reason: "Not a GoatBot file" }); continue; }
+      if (String(cmd.kind || "command").toLowerCase() !== "command") { results.push({ id, status: "skipped", reason: "Event needs event installer" }); continue; }
+      if (premium.isPremiumCmd(cmd.name, cmd.author) && !premium.canExecutePremium(senderID)) { results.push({ id, status: "skipped", reason: "Premium only" }); continue; }
+      try { new Function(cmd.rawCode); } catch (err) { results.push({ id, status: "failed", reason: `Syntax: ${err.message}` }); continue; }
+
+      const name = String(cmd.name || `gs_${id}`).trim();
+      const safeName = name.replace(/[\\/:*?"<>|\\s]+/g, "_");
+      const dir = getCmdsDir();
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      const filePath = path.join(dir, safeName + ".js");
+      if (fs.existsSync(filePath)) {
+        const existing = fs.readFileSync(filePath, "utf8");
+        results.push(existing === cmd.rawCode
+          ? { id, status: "skipped", name, reason: "Already installed" }
+          : { id, status: "skipped", name, reason: "Local file exists; not overwritten" });
+        continue;
+      }
+      fs.writeFileSync(filePath, cmd.rawCode, "utf8");
+      try { await storePost(`/miraistore/install/${cmd.id}`, { clientFp: senderID }); } catch (_) {}
+      const loaded = autoloadCommand(filePath);
+      results.push({ id, status: "installed", name, note: loaded.success ? "Live" : "Saved; restart may be required" });
+    } catch (err) {
+      results.push({ id, status: "failed", reason: err.response?.data?.message || err.message || "Install error" });
+    }
+    await new Promise(resolve => setTimeout(resolve, 250));
+  }
+  const installed = results.filter(x => x.status === "installed").length;
+  const skipped = results.filter(x => x.status === "skipped").length;
+  const failed = results.filter(x => x.status === "failed").length;
+  const lines = results.map(x => `${x.status === "installed" ? "✅" : x.status === "skipped" ? "⏭️" : "❌"} ${x.id}${x.name ? ` — ${x.name}` : ""}${x.reason ? ` — ${x.reason}` : x.note ? ` — ${x.note}` : ""}`);
+  return api.sendMessage(`📦 OmegA Bulk Installer\\n\\n✅ Installed: ${installed}\\n⏭️ Skipped: ${skipped}\\n❌ Failed: ${failed}\\n📊 Total: ${results.length}\\n\\n━━━━━━━━━━━━━━━━━━\\n${lines.join("\\n")}`, threadID);
+}
+
 async function doSelfUpdateSilent(api, threadID, selfUpdate) {
   let cmdData = null;
   let tempPath = null;
@@ -1081,6 +1124,7 @@ module.exports = {
         "{pn} list [page] — Command list\n" +
         "{pn} list event [page] — Event list\n" +
         "{pn} install <id> — Install a command\n" +
+        "{pn} install <id1,id2,id3> — Bulk install up to 30 commands\\n" +
         "{pn} like <id> — Like\n" +
         "{pn} trend — Trending\n" +
         "{pn} upload <fileName> — Upload a command file\n" +
@@ -1375,6 +1419,7 @@ module.exports = {
         `╰━━━━━━━━━━━━━━━━━━━━╯\n\n` +
         `╭─ ⚡ 𝗜𝗡𝗦𝗧𝗔𝗟𝗟 & 𝗧𝗥𝗘𝗡𝗗𝗜𝗡𝗚\n` +
         `┊ ${prefix}gs install <id>  › Install command\n` +
+        `┊ ${prefix}gs install 78,36,144  › Bulk install\\n` +
         `┊ ${prefix}gs -e install <id>  › Install event\n` +
         `┊ ${prefix}gs like <id>  › Like a command\n` +
         `┊ ${prefix}gs trend  › Trending commands\n` +
@@ -1514,9 +1559,14 @@ module.exports = {
     }
 
     if (sub === "install") {
-      const id = args[1];
-      if (!id) return api.sendMessage(`❌ Usage: ${prefix}gs install <id>`, threadID);
-      return doInstall(api, threadID, senderID, id, null);
+      const rawIds = args.slice(1).join("").trim();
+      if (!rawIds) return api.sendMessage(`❌ Usage: ${prefix}gs install <id> or <id1,id2,id3>\\nExample: ${prefix}gs install 78,36,144`, threadID);
+      if (!/^\\d+(?:,\\d+)*$/.test(rawIds))
+        return api.sendMessage(`❌ Invalid ID list. Use comma-separated numeric IDs.\\nExample: ${prefix}gs install 78,36,144`, threadID);
+      const ids = [...new Set(rawIds.split(",").filter(Boolean))];
+      if (ids.length > 30) return api.sendMessage("❌ Maximum 30 commands per batch.", threadID);
+      if (ids.length === 1) return doInstall(api, threadID, senderID, ids[0], null);
+      return doBulkInstall(api, threadID, senderID, ids);
     }
 
     if (sub === "like") {
