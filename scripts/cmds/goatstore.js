@@ -259,19 +259,52 @@ function cmpVer(a, b) {
 }
 
 function extractConfigBlock(src) {
-  const idx = src.search(/\bconfig\s*[:=]\s*\{/);
-  if (idx === -1) return src;
-  const braceStart = src.indexOf("{", idx);
-  if (braceStart === -1) return src;
-  let depth = 0;
-  for (let i = braceStart; i < src.length; i++) {
-    if (src[i] === "{") depth++;
-    else if (src[i] === "}") {
-      depth--;
-      if (depth === 0) return src.slice(braceStart, i + 1);
-    }
+  const source = String(src || "");
+  const exportMatch = /module\.exports\s*=\s*\{/.exec(source);
+  if (!exportMatch) {
+    const directMatch = /module\.exports\.config\s*=\s*\{/.exec(source);
+    if (!directMatch) return "";
+    return readBalancedObject(source, source.indexOf("{", directMatch.index));
   }
-  return src.slice(braceStart);
+  const outer = readBalancedObject(source, source.indexOf("{", exportMatch.index));
+  if (!outer) return "";
+  const body = outer.slice(1, -1);
+  const configMatch = /(?:^|[, \t\r\n])config\s*:\s*\{/.exec(body);
+  if (!configMatch) return "";
+  const braceStart = body.indexOf("{", configMatch.index + configMatch[0].lastIndexOf("{"));
+  return braceStart < 0 ? "" : readBalancedObject(body, braceStart);
+}
+function readBalancedObject(source, start) {
+  if (start < 0 || source[start] !== "{") return "";
+  let depth = 0, quote = null, escaped = false, lineComment = false, blockComment = false;
+  for (let i = start; i < source.length; i++) {
+    const ch = source[i], next = source[i + 1];
+    if (lineComment) { if (ch === "\n") lineComment = false; continue; }
+    if (blockComment) { if (ch === "*" && next === "/") { blockComment = false; i++; } continue; }
+    if (quote) { if (escaped) escaped = false; else if (ch === "\\") escaped = true; else if (ch === quote) quote = null; continue; }
+    if (ch === "/" && next === "/") { lineComment = true; i++; continue; }
+    if (ch === "/" && next === "*") { blockComment = true; i++; continue; }
+    if (ch === '"' || ch === "'" || ch === "\`") { quote = ch; continue; }
+    if (ch === "{") depth++;
+    else if (ch === "}") { depth--; if (depth === 0) return source.slice(start, i + 1); }
+  }
+  return "";
+}
+function readConfigValue(config, key) {
+  if (!config) return "";
+  const escaped = key.replace(/[.*+?^$()|[\]\\]/g, "\\$&");
+  const match = config.match(new RegExp("(?:^|[,\\s])" + escaped + "\\s*:\\s*(?:\"([^\"]*)\"|'([^']*)'|\\x60([^\\x60]*)\\x60)"));
+  return String(match?.[1] ?? match?.[2] ?? match?.[3] ?? "").trim();
+}
+function extractConfigMetadata(src) {
+  const config = extractConfigBlock(src);
+  return {
+    name: readConfigValue(config, "name"),
+    author: readConfigValue(config, "author") || readConfigValue(config, "credits") || "Unknown",
+    version: readConfigValue(config, "version") || "N/A",
+    category: readConfigValue(config, "category") || "Uncategorized",
+    description: readConfigValue(config, "shortDescription") || readConfigValue(config, "description")
+  };
 }
 
 function detectFramework(code) {
@@ -459,10 +492,10 @@ async function runAutoSync() {
       if (fw !== "goat") continue;
 
       try {
-        const author = content.match(/author\s*:\s*["'`](.*?)["'`]/)?.[1]
-                    || content.match(/credits\s*:\s*["'`](.*?)["'`]/)?.[1]
-                    || "Unknown";
-        const category = content.match(/category\s*:\s*["'`](.*?)["'`]/)?.[1] || "Uncategorized";
+        const uploadMeta = extractConfigMetadata(content);
+        if (!uploadMeta.name) continue;
+        const author = uploadMeta.author;
+        const category = uploadMeta.category;
         const stampedContent = await stampUploadCode(content);
         const res = await storePostWithRetry(`/miraistore/upload`, {
           rawCode: stampedContent, framework: "goat", kind, author, category
@@ -940,7 +973,8 @@ async function uploadFile(api, threadID, filePath, kind, senderID = null) {
   try { new Function(data); }
   catch (err) { return api.sendMessage(`❌ OmegA Store — Upload Failed\n\nReason: Syntax error in file.\n${err.message}`, threadID); }
 
-  const displayName = data.match(/name\s*:\s*["'`](.*?)["'`]/)?.[1] || path.basename(filePath);
+  const uploadMeta = extractConfigMetadata(data);
+  const displayName = uploadMeta.name || path.basename(filePath);
   const detected = detectFramework(data);
   if (detected !== "goat")
     return api.sendMessage(
@@ -950,9 +984,7 @@ async function uploadFile(api, threadID, filePath, kind, senderID = null) {
       threadID
     );
 
-  const author = data.match(/author\s*:\s*["'`](.*?)["'`]/)?.[1]
-              || data.match(/credits\s*:\s*["'`](.*?)["'`]/)?.[1]
-              || "Unknown";
+  const author = uploadMeta.author;
 
   let pid;
   try { pid = await animateUpload(api, threadID, displayName, author); } catch (_) {}
@@ -987,8 +1019,8 @@ async function uploadFile(api, threadID, filePath, kind, senderID = null) {
       );
     }
 
-    const version = data.match(/version\s*:\s*["'`](.*?)["'`]/)?.[1] || "N/A";
-    const category = data.match(/category\s*:\s*["'`](.*?)["'`]/)?.[1] || "Uncategorized";
+    const version = uploadMeta.version;
+    const category = uploadMeta.category;
 
     const msg =
       `╭─ ✅ SUCCESS\n` +
