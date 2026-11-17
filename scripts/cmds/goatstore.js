@@ -293,7 +293,7 @@ function readBalancedObject(source, start) {
 function readConfigValue(config, key) {
   if (!config) return "";
   const escaped = key.replace(/[.*+?^$()|[\]\\]/g, "\\$&");
-  const match = config.match(new RegExp("(?:^|[,\\s])" + escaped + "\\s*:\\s*(?:\"([^\"]*)\"|'([^']*)'|\\x60([^\\x60]*)\\x60)"));
+  const match = config.match(new RegExp("(?:^|[,\s])" + escaped + "\s*:\s*(?:\"([^\"]*)\"|'([^']*)'|\\x60([^\\x60]*)\\x60)"));
   return String(match?.[1] ?? match?.[2] ?? match?.[3] ?? "").trim();
 }
 function extractConfigMetadata(src) {
@@ -705,7 +705,7 @@ async function doBulkInstall(api, threadID, senderID, ids) {
       try { new Function(cmd.rawCode); } catch (err) { results.push({ id, status: "failed", reason: `Syntax: ${err.message}` }); continue; }
 
       const name = String(cmd.name || `gs_${id}`).trim();
-      const safeName = name.replace(/[\\/:*?"<>|\\s]+/g, "_");
+      const safeName = name.replace(/[\\/:*?"<>|\s]+/g, "_");
       const dir = getCmdsDir();
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
       const filePath = path.join(dir, safeName + ".js");
@@ -729,7 +729,7 @@ async function doBulkInstall(api, threadID, senderID, ids) {
   const skipped = results.filter(x => x.status === "skipped").length;
   const failed = results.filter(x => x.status === "failed").length;
   const lines = results.map(x => `${x.status === "installed" ? "✅" : x.status === "skipped" ? "⏭️" : "❌"} ${x.id}${x.name ? ` — ${x.name}` : ""}${x.reason ? ` — ${x.reason}` : x.note ? ` — ${x.note}` : ""}`);
-  return api.sendMessage(`📦 OmegA Bulk Installer\\n\\n✅ Installed: ${installed}\\n⏭️ Skipped: ${skipped}\\n❌ Failed: ${failed}\\n📊 Total: ${results.length}\\n\\n━━━━━━━━━━━━━━━━━━\\n${lines.join("\\n")}`, threadID);
+  return api.sendMessage(`📦 OmegA Bulk Installer\n\n✅ Installed: ${installed}\n⏭️ Skipped: ${skipped}\n❌ Failed: ${failed}\n📊 Total: ${results.length}\n\n━━━━━━━━━━━━━━━━━━\n${lines.join("\n")}`, threadID);
 }
 
 async function doSelfUpdateSilent(api, threadID, selfUpdate) {
@@ -1124,7 +1124,7 @@ module.exports = {
         "{pn} list [page] — Command list\n" +
         "{pn} list event [page] — Event list\n" +
         "{pn} install <id> — Install a command\n" +
-        "{pn} install <id1,id2,id3> — Bulk install up to 30 commands\\n" +
+        "{pn} install <id1,id2,id3> — Bulk install up to 30 commands\n" +
         "{pn} like <id> — Like\n" +
         "{pn} trend — Trending\n" +
         "{pn} upload <fileName> — Upload a command file\n" +
@@ -1419,7 +1419,7 @@ module.exports = {
         `╰━━━━━━━━━━━━━━━━━━━━╯\n\n` +
         `╭─ ⚡ 𝗜𝗡𝗦𝗧𝗔𝗟𝗟 & 𝗧𝗥𝗘𝗡𝗗𝗜𝗡𝗚\n` +
         `┊ ${prefix}gs install <id>  › Install command\n` +
-        `┊ ${prefix}gs install 78,36,144  › Bulk install\\n` +
+        `┊ ${prefix}gs install 78,36,144  › Bulk install\n` +
         `┊ ${prefix}gs -e install <id>  › Install event\n` +
         `┊ ${prefix}gs like <id>  › Like a command\n` +
         `┊ ${prefix}gs trend  › Trending commands\n` +
@@ -1560,9 +1560,9 @@ module.exports = {
 
     if (sub === "install") {
       const rawIds = args.slice(1).join("").trim();
-      if (!rawIds) return api.sendMessage(`❌ Usage: ${prefix}gs install <id> or <id1,id2,id3>\\nExample: ${prefix}gs install 78,36,144`, threadID);
-      if (!/^\\d+(?:,\\d+)*$/.test(rawIds))
-        return api.sendMessage(`❌ Invalid ID list. Use comma-separated numeric IDs.\\nExample: ${prefix}gs install 78,36,144`, threadID);
+      if (!rawIds) return api.sendMessage(`❌ Usage: ${prefix}gs install <id> or <id1,id2,id3>\nExample: ${prefix}gs install 78,36,144`, threadID);
+      if (!/^\d+(?:,\d+)*$/.test(rawIds))
+        return api.sendMessage(`❌ Invalid ID list. Use comma-separated numeric IDs.\nExample: ${prefix}gs install 78,36,144`, threadID);
       const ids = [...new Set(rawIds.split(",").filter(Boolean))];
       if (ids.length > 30) return api.sendMessage("❌ Maximum 30 commands per batch.", threadID);
       if (ids.length === 1) return doInstall(api, threadID, senderID, ids[0], null);
