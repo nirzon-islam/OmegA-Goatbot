@@ -3,19 +3,38 @@
 const { createBridgeClient } = require("./client");
 const { createWorker } = require("./worker");
 
-function startBridgeWorker({ log = console, intervalMs = 3000, getAccountStatus = () => {
+function getDefaultAccountStatus() {
   const raw = global.statusAccountBot;
-  const state = raw === "good" ? "online" : raw === "checkpoint" ? "checkpoint" :
-    raw === "can't login" || raw === "logged_out" ? "logged_out" : "unknown";
+  const detail = global.facebookSessionStatus && typeof global.facebookSessionStatus === "object"
+    ? global.facebookSessionStatus : {};
+  const allowed = new Set(["online", "logged_out", "checkpoint", "error", "unknown"]);
+  const rawState = raw === "good" ? "online" : raw === "checkpoint" ? "checkpoint" :
+    raw === "can't login" || raw === "logged_out" ? "logged_out" :
+    raw === "error" ? "error" : "unknown";
+  // "online" is trusted only from the live GoatBot login state, never from cached recovery detail.
+  const state = rawState === "unknown" && ["logged_out", "checkpoint", "error"].includes(detail.state)
+    ? detail.state : rawState;
+  const defaultMessages = {
+    online: "Facebook session active",
+    logged_out: "Facebook session is logged out or disconnected",
+    checkpoint: "Facebook checkpoint requires manual completion",
+    error: "Facebook session encountered an error",
+    unknown: "Bot status is not yet verified"
+  };
   return {
     state,
-    accountId: global.GoatBot?.botID || global.botID || "",
-    message: state === "online" ? "Facebook session active" :
-      state === "logged_out" ? "Facebook session is logged out or disconnected" :
-      state === "checkpoint" ? "Facebook checkpoint requires manual completion" :
-      "Bot status is not yet verified"
+    accountId: (() => {
+      const activeId = String(global.GoatBot?.botID || global.botID || "");
+      if (/^\d{5,30}$/.test(activeId)) return activeId;
+      const recoveryId = String(detail.accountId || "");
+      return state === "checkpoint" && /^\d{5,30}$/.test(recoveryId) ? recoveryId : "";
+    })(),
+    message: detail.state === state && typeof detail.message === "string" && detail.message.trim()
+      ? detail.message.slice(0, 500) : defaultMessages[state]
   };
-} } = {}) {
+}
+
+function startBridgeWorker({ log = console, intervalMs = 3000, getAccountStatus = getDefaultAccountStatus } = {}) {
   if (process.env.AGENT_BRIDGE_ENABLED !== "true") return null;
 
   const client = createBridgeClient();
@@ -76,4 +95,4 @@ function startBridgeWorker({ log = console, intervalMs = 3000, getAccountStatus 
   });
 }
 
-module.exports = { startBridgeWorker };
+module.exports = { startBridgeWorker, getDefaultAccountStatus };

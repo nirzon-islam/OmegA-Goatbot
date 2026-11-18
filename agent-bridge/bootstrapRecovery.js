@@ -122,6 +122,12 @@ async function bootstrapFacebookLogin({ botId, cookie, progress = async () => {}
 
     // Clear stale state so an earlier account cannot satisfy the readiness check.
     global.statusAccountBot = "unknown";
+    global.facebookSessionStatus = {
+      state: "unknown",
+      accountId: botId,
+      message: "Facebook recovery is in progress; session status is not yet verified",
+      changedAt: Date.now()
+    };
     global.GoatBot.fcaApi = null;
     global.GoatBot.botID = null;
     global.GoatBot.Listening = null;
@@ -133,6 +139,12 @@ async function bootstrapFacebookLogin({ botId, cookie, progress = async () => {}
       throw new Error("GoatBot started with a different Facebook account");
     }
     accountWasReplaced = false;
+    global.facebookSessionStatus = {
+      state: "online",
+      accountId: botId,
+      message: "Facebook session active",
+      changedAt: Date.now()
+    };
     await progress("online", "Facebook account is online and the GoatBot listener is active");
     return { state: "online", message: "Facebook login completed" };
   } catch (error) {
@@ -143,6 +155,7 @@ async function bootstrapFacebookLogin({ botId, cookie, progress = async () => {}
       global.statusAccountBot = "checkpoint";
       global.facebookSessionStatus = {
         state: "checkpoint",
+        accountId: botId,
         message: "Facebook security checkpoint detected. Complete verification manually. " + safeMessage,
         changedAt: Date.now()
       };
@@ -163,7 +176,8 @@ async function bootstrapFacebookLogin({ botId, cookie, progress = async () => {}
           global.GoatBot.botID = null;
         }
         global.botID = null;
-        global.statusAccountBot = "unknown";
+        // Preserve a detected Facebook checkpoint so the Bridge can report it after rollback.
+        global.statusAccountBot = checkpoint ? "checkpoint" : "unknown";
       } catch {
         throw new Error("Facebook login failed and the previous account file could not be restored; stop the bot and restore the saved account file before retrying");
       }
