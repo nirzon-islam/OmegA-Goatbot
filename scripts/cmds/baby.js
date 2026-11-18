@@ -358,11 +358,27 @@ Baby is ready! 🍼
 `;
 }
 
+async function autoReplyFallback({ api, event, text }) {
+  try {
+    const input = String(text || event.body || "").trim();
+    if (!input) return;
+    const params = await getChatParams(api, event, input);
+    const data = await apiGet(params);
+    const reply = data.reply || "Ektu somossa hocche, abar bolo!";
+    await waitForBaby();
+    return sendThreeLines(api, event, reply);
+  } catch (error) {
+    console.error("Baby AutoReply fallback:", error.message);
+    return;
+  }
+}
+
 module.exports = {
+  autoReplyFallback,
   config: {
     name: "baby",
     aliases: ["bby", "bbz", "omega"],
-    version: "5.3.3",
+    version: "5.3.4",
     author: "NirZon",
     countDown: 2,
     role: 0,
