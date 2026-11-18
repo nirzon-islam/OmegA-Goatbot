@@ -459,51 +459,129 @@ async function getTrending(limit = 5) {
   return null;
 }
 
-async function runAutoSync() {
+async function fetchStoreIndex(kind) {
+  const all = [];
+  const limit = 100;
+  let offset = 0;
+  let total = Infinity;
+  while (offset < total && offset < 5000) {
+    const res = await storeGet(`/miraistore/list?limit=${limit}&offset=${offset}&framework=goat&kind=${kind}`);
+    const rows = Array.isArray(res.data?.commands) ? res.data.commands : [];
+    all.push(...rows);
+    total = Number(res.data?.total) || rows.length;
+    if (!rows.length || rows.length < limit) break;
+    offset += rows.length;
+  }
+  return all;
+}
+
+async function fetchStoreFile(id) {
+  const res = await storeGet(`/miraistore/search?q=${encodeURIComponent(id)}`);
+  const data = res.data;
+  if (!isNaN(id) && data?.rawCode && !Array.isArray(data)) return data;
+  if (Array.isArray(data?.commands)) return data.commands.find(item => String(item.id) === String(id)) || null;
+  return null;
+}
+
+async function runAutoSync(options = {}) {
+  const pullFromStore = options.pullFromStore === true;
   const log = global.utils?.log || {
     info: (tag, msg) => console.log(`[${tag}] ${msg}`),
     warn: (tag, msg) => console.warn(`[${tag}] ${msg}`)
   };
-  let uploaded = 0, updated = 0, skipped = 0, failed = 0, consecutiveErrors = 0;
+  let uploaded = 0, updated = 0, downloaded = 0, skipped = 0, failed = 0, consecutiveErrors = 0;
   let lastError = "";
   const folders = [
     { dir: getCmdsDir(), kind: "command" },
     { dir: getEventsDir(), kind: "event" }
   ].filter(f => fs.existsSync(f.dir));
 
-  const stats = { uploaded, updated, skipped, failed };
-  if (!folders.length) return stats;
-
+  if (!folders.length) return { uploaded, updated, downloaded, skipped, failed };
   const cache = loadSyncCache();
 
   for (const { dir, kind } of folders) {
-    const files = fs.readdirSync(dir).filter(f => f.endsWith(".js"));
-    for (const file of files) {
+    let storeFiles;
+    try {
+      storeFiles = await fetchStoreIndex(kind);
+    } catch (err) {
+      failed++;
+      lastError = err.response?.data?.message || err.message;
+      log.warn("GOATSTORE", `Could not read Store ${kind} index: ${lastError}`);
+      continue;
+    }
+
+    for (const file of fs.readdirSync(dir).filter(f => f.endsWith(".js"))) {
       const fullPath = path.join(dir, file);
       const cacheKey = `${kind}:${file}`;
       let content;
-      try { content = fs.readFileSync(fullPath, "utf8"); } catch (_) { continue; }
+      try { content = fs.readFileSync(fullPath, "utf8"); }
+      catch (err) { failed++; lastError = err.message; continue; }
+
+      try { new Function(content); }
+      catch (err) { skipped++; log.warn("GOATSTORE", `Skipped invalid local file ${file}: ${err.message}`); continue; }
+      if (detectFramework(content) !== "goat") { skipped++; continue; }
+
+      const localMeta = extractConfigMetadata(content);
+      if (!localMeta.name) { skipped++; log.warn("GOATSTORE", `Skipped ${file}: config.name could not be read.`); continue; }
+      const match = storeFiles.find(item =>
+        String(item.name || "").trim().toLowerCase() === localMeta.name.trim().toLowerCase() &&
+        String(item.author || "Unknown").trim().toLowerCase() === String(localMeta.author || "Unknown").trim().toLowerCase()
+      );
+
+      if (match && cmpVer(match.version || "0", localMeta.version || "0") > 0) {
+        if (!pullFromStore) {
+          skipped++;
+          log.info("GOATSTORE", `Store has newer ${localMeta.name} v${match.version}; local v${localMeta.version} left unchanged (manual sync required).`);
+          continue;
+        }
+        try {
+          const remote = await fetchStoreFile(match.id);
+          if (!remote?.rawCode) throw new Error("Store file source (rawCode) was not returned.");
+          if (remote.framework !== "goat" || (remote.kind && remote.kind !== kind))
+            throw new Error("Store file type does not match this local folder.");
+          new Function(remote.rawCode);
+          const remoteMeta = extractConfigMetadata(remote.rawCode);
+          if (!remoteMeta.name || remoteMeta.name.toLowerCase() !== localMeta.name.toLowerCase())
+            throw new Error("Downloaded file identity did not match the local file.");
+          if (cmpVer(remoteMeta.version || "0", localMeta.version || "0") <= 0)
+            throw new Error("Downloaded Store version is not newer than the local version.");
+          fs.writeFileSync(fullPath, remote.rawCode, "utf8");
+          cache[cacheKey] = hashContent(remote.rawCode);
+          downloaded++;
+          consecutiveErrors = 0;
+          log.info("GOATSTORE", `Downloaded ${localMeta.name}: v${localMeta.version} → v${remoteMeta.version}.`);
+        } catch (err) {
+          failed++;
+          lastError = err.response?.data?.message || err.message;
+          log.warn("GOATSTORE", `Could not download ${localMeta.name}: ${lastError}`);
+        }
+        await new Promise(resolve => setTimeout(resolve, 500));
+        continue;
+      }
+
+      if (match && cmpVer(localMeta.version || "0", match.version || "0") <= 0) {
+        skipped++;
+        cache[cacheKey] = hashContent(content);
+        continue;
+      }
 
       const hash = hashContent(content);
-      if (cache[cacheKey] === hash) continue;
-
-      try { new Function(content); } catch (_) { continue; }
-      const fw = detectFramework(content);
-      if (fw !== "goat") continue;
+      if (cache[cacheKey] === hash && match && cmpVer(localMeta.version || "0", match.version || "0") > 0) {
+        skipped++;
+        continue;
+      }
 
       try {
-        const uploadMeta = extractConfigMetadata(content);
-        if (!uploadMeta.name) continue;
-        const author = uploadMeta.author;
-        const category = uploadMeta.category;
         const stampedContent = await stampUploadCode(content);
-        const res = await storePostWithRetry(`/miraistore/upload`, {
-          rawCode: stampedContent, framework: "goat", kind, author, category
+        const res = await storePostWithRetry("/miraistore/upload", {
+          rawCode: stampedContent, framework: "goat", kind,
+          author: localMeta.author, category: localMeta.category
         }, {}, 3);
         if (res.data?.error) {
           const reason = String(res.data.error);
           if (/already exists|version already exists|version too low|duplicate/i.test(reason)) {
             skipped++;
+            log.info("GOATSTORE", `Upload skipped for ${file}: ${res.data.message || reason}`);
           } else {
             failed++;
             lastError = res.data.message || reason;
@@ -523,19 +601,18 @@ async function runAutoSync() {
         log.warn("GOATSTORE", `AutoSync request failed for ${file}: ${lastError}`);
         if (++consecutiveErrors >= 5) {
           saveSyncCache(cache);
-          log.warn("GOATSTORE", `AutoSync paused after 5 consecutive API failures: ${lastError}`);
-          return { uploaded, updated, skipped, failed, stopped: true, lastError };
+          log.warn("GOATSTORE", `Sync paused after 5 consecutive API failures: ${lastError}`);
+          return { uploaded, updated, downloaded, skipped, failed, stopped: true, lastError };
         }
       }
-
-      await new Promise(r => setTimeout(r, 500));
+      saveSyncCache(cache);
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
   }
 
   saveSyncCache(cache);
-  if (uploaded || updated || failed || skipped)
-    log.info("GOATSTORE", `AutoSync done — ${uploaded} uploaded, ${updated} updated, ${skipped} skipped, ${failed} failed`);
-  return { uploaded, updated, skipped, failed, lastError };
+  log.info("GOATSTORE", `Sync done — ${uploaded} uploaded, ${updated} Store entries updated, ${downloaded} downloaded to bot, ${skipped} skipped, ${failed} failed`);
+  return { uploaded, updated, downloaded, skipped, failed, lastError };
 }
 
 const buildBar = pct => "█".repeat(Math.floor(pct / 10)) + "░".repeat(10 - Math.floor(pct / 10));
@@ -1135,7 +1212,7 @@ module.exports = {
   config: {
     name: "goatstore",
     aliases: ["gs", "cmdstore", "commandstore"],
-    version: "3.1.4",
+    version: "3.1.5",
     author: "NirZon",
     countDown: 3,
     role: 2,
@@ -1488,23 +1565,24 @@ module.exports = {
     }
 
     if (sub === "sync") {
-      api.sendMessage("🔄 OmegA Store — File Sync\n\nSyncing bot files...\n⏳ Please wait while files are synchronized.", threadID);
+      api.sendMessage("🔄 OmegA Store — Two-way File Sync\\n\\nComparing local bot files with Store versions...\\n⏳ Newer Store files will be downloaded only during this manual sync.", threadID);
       try {
-        const stats = await runAutoSync() || { uploaded: 0, updated: 0, skipped: 0, failed: 0 };
+        const stats = await runAutoSync({ pullFromStore: true }) || { uploaded: 0, updated: 0, downloaded: 0, skipped: 0, failed: 0 };
         const msg =
-          `${stats.failed ? "⚠️" : "✅"} OmegA Store — Sync ${stats.stopped || stats.failed ? "Finished with errors" : "Complete"}\n\n` +
-          `✦ Uploaded: ${stats.uploaded || 0}\n` +
-          `✦ Updated: ${stats.updated || 0}\n` +
-          `✦ Skipped: ${stats.skipped || 0}\n` +
-          `✦ Failed: ${stats.failed || 0}\n\n` +
+          `${stats.failed ? "⚠️" : "✅"} OmegA Store — Sync ${stats.stopped || stats.failed ? "Finished with errors" : "Complete"}\\n\\n` +
+          `✦ Uploaded to Store: ${stats.uploaded || 0}\\n` +
+          `✦ Store entries updated: ${stats.updated || 0}\\n` +
+          `✦ Downloaded to bot: ${stats.downloaded || 0}\\n` +
+          `✦ Skipped: ${stats.skipped || 0}\\n` +
+          `✦ Failed: ${stats.failed || 0}\\n\\n` +
           (stats.stopped
-            ? `⚠️ Sync paused after repeated API errors.${stats.lastError ? `\nReason: ${stats.lastError}` : ""}`
+            ? `⚠️ Sync paused after repeated API errors.${stats.lastError ? `\\nReason: ${stats.lastError}` : ""}`
             : stats.failed
-              ? `⚠️ Some files could not be synced.${stats.lastError ? `\nReason: ${stats.lastError}` : ""}`
-              : `All detected files have been checked.`);
+              ? `⚠️ Some files could not be synchronized.${stats.lastError ? `\\nReason: ${stats.lastError}` : ""}`
+              : `All detected files have been compared with Store versions.`);
         api.sendMessage(msg, threadID);
       } catch (err) {
-        api.sendMessage(`❌ OmegA Store — Sync Failed\n\nReason: ${err.message}\n\nPlease try again later.`, threadID);
+        api.sendMessage(`❌ OmegA Store — Sync Failed\\n\\nReason: ${err.message}\\n\\nPlease try again later.`, threadID);
       }
       return;
     }
