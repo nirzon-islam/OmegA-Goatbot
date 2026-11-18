@@ -1,4 +1,5 @@
 const axios = require("axios");
+const yts = require("yt-search");
 const fs = require("fs-extra");
 const path = require("path");
 const https = require("https");
@@ -11,8 +12,8 @@ module.exports = {
   config: {
     name: "youtube",
     aliases: ["yt", "yts", "video"],
-    version: "1.0.1",
-    author: "NirZon, API Aminul",
+    version: "1.0.2",
+    author: "NirZon",
     role: 0,
     category: "media",
     shortDescription: "Search & download YouTube videos interactively",
@@ -37,13 +38,10 @@ module.exports = {
     }
 
     try {
-      const res = await axios.get(
-        `https://aminul-youtube-api.vercel.app/search?query=${encodeURIComponent(query)}`,
-        { timeout: 20000 }
-      );
-
-      const data = res.data;
-      if (!Array.isArray(data) || data.length === 0) {
+      // Search independently with the standard yt-search package.
+      const searchResponse = await yts(query);
+      const data = Array.isArray(searchResponse?.videos) ? searchResponse.videos : [];
+      if (data.length === 0) {
         return api.sendMessage(
           "😔 No videos found! Try another keyword.",
           threadID,
