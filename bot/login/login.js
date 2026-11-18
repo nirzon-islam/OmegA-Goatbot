@@ -811,12 +811,12 @@ async function startBot(_0x3cad9e) {
           ).toLowerCase();
           if (/checkpoint|two.factor|two-factor|approvals_code/.test(_statusErrorText)) {
             global.statusAccountBot = "checkpoint";
-          } else if (/not logged in|account_inactive|login_blocked|server unavailable|connection refused|authentication|invalid session/.test(_statusErrorText)) {
+          } else if (/not logged in|account_inactive|login_blocked|server unavailable|connection refused|authentication|invalid session|1357001|log in to continue|please log in to your account|login required|session expired|logged out/.test(_statusErrorText)) {
             global.statusAccountBot = "can't login";
           } else {
             global.statusAccountBot = "error";
           }
-          if (_0x570bf7.error == "Not logged in" || _0x570bf7.error == "Not logged in." || _0x570bf7.error == "Connection refused: Server unavailable" || /account_inactive|login_blocked/.test(_statusErrorText)) {
+          if (_0x570bf7.error == "Not logged in" || _0x570bf7.error == "Not logged in." || _0x570bf7.error == "Connection refused: Server unavailable" || /account_inactive|login_blocked|1357001|log in to continue|please log in to your account|login required|session expired|logged out/.test(_statusErrorText)) {
             const _safeErr2 = _0x570bf7 && typeof _0x570bf7 === 'object' ? { error: _0x570bf7.error || String(_0x570bf7) } : _0x570bf7;
             log.err("NOT LOGGEG IN", getText("login", "notLoggedIn"), _safeErr2);
             global.responseUptimeCurrent = responseUptimeError;
@@ -839,7 +839,7 @@ async function startBot(_0x3cad9e) {
             // Definitive Facebook auth failures must wait for a fresh appstate.
             // Restarting here reloads the same rejected account.txt and creates a login loop.
             // Keep the process alive so the account-file watcher can accept a new cookie.
-            const definitiveAuthFailure = /account_inactive|login_blocked|not logged in|authentication|invalid session/.test(_statusErrorText);
+            const definitiveAuthFailure = /account_inactive|login_blocked|not logged in|authentication|invalid session|1357001|log in to continue|please log in to your account|login required|session expired|logged out/.test(_statusErrorText);
             if (definitiveAuthFailure && !definitiveAuthFailureHandled) {
               definitiveAuthFailureHandled = true;
               // Stop the rejected listener and its periodic session saver. Keep the
