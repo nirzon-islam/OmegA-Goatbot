@@ -3,7 +3,7 @@ const { getTime } = global.utils;
 module.exports = {
   config: {
     name: "antileave",
-    version: "2.5.2",
+    version: "2.5.4",
     author: "EryXenX",
     category: "events"
   },
@@ -15,10 +15,32 @@ module.exports = {
     const leftID = logMessageData.leftParticipantFbId;
 
     if (leftID === author) {
-      const storedName = await usersData.getName(leftID);
-      const userName = typeof storedName === "string" && storedName.trim()
-        ? storedName
-        : "Unknown User";
+      let userName = null;
+
+      // Try the cached database name first.
+      try {
+        const storedName = await usersData.getName(leftID);
+        if (typeof storedName === "string" && storedName.trim()) {
+          userName = storedName.trim();
+        }
+      } catch (err) {
+        console.warn("[antileave] Cached name lookup failed:", err.message);
+      }
+
+      // If no cached name exists, fetch the profile through FCA.
+      if (!userName) {
+        try {
+          const userInfo = await api.getUserInfo([leftID]);
+          const profileName = userInfo && userInfo[leftID] && userInfo[leftID].name;
+          if (typeof profileName === "string" && profileName.trim()) {
+            userName = profileName.trim();
+          }
+        } catch (err) {
+          console.warn("[antileave] Facebook profile lookup failed:", err.message);
+        }
+      }
+
+      userName = userName || "Unknown User";
 
       const boldMap = {
         A: "𝗔", B: "𝗕", C: "𝗖", D: "𝗗", E: "𝗘", F: "𝗙", G: "𝗚", H: "𝗛", I: "𝗜", J: "𝗝",
@@ -35,7 +57,8 @@ module.exports = {
         body: `😹 ${boldName} haha tried to leave...  
 Without permission🫩
 🚫 Not allowed here!
-🔄 Added back 😇`
+🔄 Added back 😇`,
+        mentions: [{ tag: boldName, id: leftID }]
       };
 
       try {
