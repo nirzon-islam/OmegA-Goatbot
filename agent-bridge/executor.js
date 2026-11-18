@@ -8,8 +8,8 @@ const { normalizeRelative, normalizeDirectory, isDeniedSegment, ALLOWED_EXTENSIO
 const { backupFile } = require("./backup");
 
 const MAX_FILE_BYTES = 64 * 1024;
-const MAX_READ_FILES = 30;
-const MAX_READ_TOTAL_BYTES = 30000;
+const MAX_READ_FILES = 80;
+const MAX_READ_TOTAL_BYTES = 100 * 1024;
 
 function downloadable(relativePath, content) {
   return [{ path: relativePath, content: String(content) }];
