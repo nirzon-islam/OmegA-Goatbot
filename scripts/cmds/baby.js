@@ -4,10 +4,7 @@ const axios = require("axios");
 const BASE_API = "https://baby-chat-api-hog5.onrender.com";
 
 const TRIGGERS = [
-  "baby", "bbz", "bby", "bot",
-  "mikasa", "hinata", "xadika",
-  "jan", "babu", "alya", "omega",
-  "kakino", "botli", "বেবি", "বট", "বাবু", "জান"
+  "bbz", "bby", "mikasa", "hinata", "xadika", "alya", "kakino", "botli", "বেবি", "বট", "বাবু", "জান"
 ];
 
 const LAST = new Map();
@@ -377,7 +374,7 @@ module.exports = {
   autoReplyFallback,
   config: {
     name: "baby",
-    aliases: ["bby", "bbz", "omega"],
+    aliases: ["bby", "bbz"],
     version: "5.3.4",
     author: "NirZon",
     countDown: 2,
@@ -620,7 +617,7 @@ module.exports = {
       if (!body) return;
 
       const lower = body.toLowerCase();
-      const aliases = ["baby", "bby", "bbz", "omi"];
+      const aliases = ["bby", "bbz", "omi"];
 
       const prefix = String(
         global.GoatBot?.config?.Prefix ||
