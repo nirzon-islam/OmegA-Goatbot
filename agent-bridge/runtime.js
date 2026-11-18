@@ -11,7 +11,9 @@ function getDefaultAccountStatus() {
   const rawState = raw === "good" ? "online" : raw === "checkpoint" ? "checkpoint" :
     raw === "can't login" || raw === "logged_out" ? "logged_out" :
     raw === "error" ? "error" : "unknown";
-  const state = rawState === "unknown" && allowed.has(detail.state) ? detail.state : rawState;
+  // "online" is trusted only from the live GoatBot login state, never from cached recovery detail.
+  const state = rawState === "unknown" && ["logged_out", "checkpoint", "error"].includes(detail.state)
+    ? detail.state : rawState;
   const defaultMessages = {
     online: "Facebook session active",
     logged_out: "Facebook session is logged out or disconnected",
@@ -21,7 +23,12 @@ function getDefaultAccountStatus() {
   };
   return {
     state,
-    accountId: global.GoatBot?.botID || global.botID || "",
+    accountId: (() => {
+      const activeId = String(global.GoatBot?.botID || global.botID || "");
+      if (/^\\d{5,30}$/.test(activeId)) return activeId;
+      const recoveryId = String(detail.accountId || "");
+      return state === "checkpoint" && /^\\d{5,30}$/.test(recoveryId) ? recoveryId : "";
+    })(),
     message: detail.state === state && typeof detail.message === "string" && detail.message.trim()
       ? detail.message.slice(0, 500) : defaultMessages[state]
   };
