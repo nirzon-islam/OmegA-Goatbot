@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - 'feature/**'
+      - 'agent/**'
       - 'fix/facebook-session-monitor'
   pull_request:
     branches:
