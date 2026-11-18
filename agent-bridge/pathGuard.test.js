@@ -30,3 +30,18 @@ test("rejects absolute and malformed paths", () => {
   assert.throws(() => normalizeRelative(""));
   assert.throws(() => normalizeRelative("languages\\\\bn.lang"));
 });
+
+test("default workspace is stable when the process starts outside the repository", () => {
+  const { execFileSync } = require("child_process");
+  const path = require("path");
+  const modulePath = path.join(__dirname, "pathGuard.js");
+  const script = "const guard = require(" + JSON.stringify(modulePath) + "); " +
+    "const result = guard.normalizeRelative('scripts/cmds/example.js'); " +
+    "process.stdout.write(result.absolute);";
+  const absolute = execFileSync(process.execPath, ["-e", script], {
+    cwd: path.parse(__dirname).root,
+    env: { ...process.env, AGENT_WORKSPACE_ROOT: "" },
+    encoding: "utf8"
+  });
+  assert.ok(absolute.startsWith(path.resolve(__dirname, "..") + path.sep));
+});

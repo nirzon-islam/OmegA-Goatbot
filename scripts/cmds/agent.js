@@ -4,7 +4,7 @@ module.exports = {
   config: {
     name: "agent",
     aliases: ["aiagent"],
-    version: "1.0.5",
+    version: "1.0.6",
     author: "NirZon",
     role: 2,
     shortDescription: "Submit a request to the secure Agent Backend",
@@ -15,9 +15,9 @@ module.exports = {
 
   onStart: async function ({ message, args, event }) {
     const senderId = String(event?.senderID || message?.senderID || "");
-    const allowedIds = (process.env.AGENT_ALLOWED_SENDER_IDS || "")
+    const allowedIds = (process.env.AGENT_ALLOWED_SENDER_IDS || process.env.BRIDGE_ALLOWED_SENDER_IDS || "")
       .split(",").map(value => value.trim()).filter(Boolean);
-    const ownerIds = (process.env.AGENT_OWNER_SENDER_IDS || "")
+    const ownerIds = (process.env.AGENT_OWNER_SENDER_IDS || process.env.BRIDGE_OWNER_SENDER_IDS || "")
       .split(",").map(value => value.trim()).filter(Boolean);
 
     if (!senderId || (!allowedIds.includes(senderId) && !ownerIds.includes(senderId))) {
@@ -92,8 +92,10 @@ module.exports = {
         "Owner Messenger থেকে !agent pending দিয়ে approval দিতে পারবেন।"
       );
     } catch (error) {
-      console.error("[AGENT COMMAND]", error.message);
-      return message.reply("❌ Agent request/approval সম্পন্ন হয়নি। Backend/Bridge configuration পরীক্ষা করুন।");
+      console.error("[AGENT COMMAND]", error.status || "NO_STATUS", error.message);
+      const status = error.status ? " (HTTP " + error.status + ")" : "";
+      const reason = String(error.message || "Unknown error").slice(0, 220);
+      return message.reply("❌ Agent request/approval সম্পন্ন হয়নি।" + status + "\nকারণ: " + reason);
     }
   }
 };

@@ -74,3 +74,30 @@ test("recovery worker can switch to a different target Bot ID without current-ID
     if (previous === undefined) delete global.GoatBot; else global.GoatBot = previous;
   }
 });
+
+test("worker reports Facebook checkpoints as checkpoint, not generic error", async () => {
+  const calls = [];
+  const client = {
+    async getQueue() { return { success: true, tasks: [] }; },
+    async claim() { throw new Error("unused"); },
+    async reportResult() { return { success: true }; },
+    async claimRecovery() {
+      return { success: true, recovery: {
+        requestId: "b".repeat(48),
+        botId: "222222222222",
+        cookie: '[{"key":"c_user","value":"222222222222","domain":".facebook.com"},{"key":"xs","value":"secret","domain":".facebook.com"}]'
+      } };
+    },
+    async reportRecoveryProgress(payload) { calls.push(["progress", payload]); },
+    async reportRecoveryResult(payload) { calls.push(["result", payload]); }
+  };
+  const worker = createWorker({
+    client,
+    recoverSession: () => async () => { throw new Error("Facebook checkpoint requires manual completion"); }
+  });
+  const result = await worker.pollRecovery();
+  assert.equal(result.success, false);
+  assert.equal(result.state, "checkpoint");
+  assert.equal(calls.filter(item => item[0] === "progress").at(-1)[1].state, "checkpoint");
+  assert.equal(calls.find(item => item[0] === "result")[1].state, "checkpoint");
+});

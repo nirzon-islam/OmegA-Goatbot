@@ -136,6 +136,17 @@ async function bootstrapFacebookLogin({ botId, cookie, progress = async () => {}
     await progress("online", "Facebook account is online and the GoatBot listener is active");
     return { state: "online", message: "Facebook login completed" };
   } catch (error) {
+    const rawMessage = String(error?.message || "Facebook login failed");
+    const checkpoint = /checkpoint|two.factor|two-factor|approvals_code|challenge_required|security.?check|login_blocked/i.test(rawMessage);
+    const safeMessage = rawMessage.replace(/cookie|appstate|xs|c_user/ig, "[redacted]").slice(0, 220);
+    if (checkpoint) {
+      global.statusAccountBot = "checkpoint";
+      global.facebookSessionStatus = {
+        state: "checkpoint",
+        message: "Facebook security checkpoint detected. Complete verification manually. " + safeMessage,
+        changedAt: Date.now()
+      };
+    }
     try { candidateApi?.stopListening?.(() => {}); } catch {}
     try { candidateApi?.stopSessionGuard?.(); } catch {}
 
@@ -158,9 +169,7 @@ async function bootstrapFacebookLogin({ botId, cookie, progress = async () => {}
       }
     }
 
-    const message = String(error?.message || "Facebook login failed")
-      .replace(/cookie|appstate|xs|c_user/ig, "[redacted]").slice(0, 220);
-    throw new Error(message);
+    throw new Error(safeMessage);
   } finally {
     running = false;
   }

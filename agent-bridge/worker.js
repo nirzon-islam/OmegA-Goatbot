@@ -88,8 +88,11 @@ function createWorker({ client, execute = executeApprovedAction, recoverSession 
     } catch (error) {
       if (handoff && handoff.requestId && botId) {
         const message = String(error && error.message || "Recovery failed").replace(/cookie|appstate|xs|c_user/ig, "[redacted]").slice(0, 240);
-        await client.reportRecoveryProgress({ requestId: handoff.requestId, botId, state: "error", message }).catch(() => {});
-        await client.reportRecoveryResult({ botId, state: "error", message }).catch(() => {});
+        const state = /checkpoint|two.factor|two-factor|approvals_code|challenge_required|security.?check|login_blocked/i.test(message)
+          ? "checkpoint" : "error";
+        await client.reportRecoveryProgress({ requestId: handoff.requestId, botId, state, message }).catch(() => {});
+        await client.reportRecoveryResult({ botId, state, message }).catch(() => {});
+        return { success: false, state, error: "Recovery failed; see the sanitized recovery timeline" };
       }
       return { success: false, error: "Recovery failed; see the sanitized recovery timeline" };
     } finally { handoff = null; recoveryRunning = false; }
