@@ -171,6 +171,19 @@ function setReply(api, messageID, data) {
   });
 }
 
+function sendAutoReply(api, event, answer) {
+  if (!answer) return;
+
+  api.sendMessage(answer, event.threadID, (err, info) => {
+    if (err || !info?.messageID) return;
+
+    setReply(api, info.messageID, {
+      mode: "autoreply_response",
+      threadID: String(event.threadID)
+    });
+  });
+}
+
 function sendUsage(api, event, message = "") {
   const usage =
     (message ? message + "\n\n" : "") +
@@ -229,17 +242,16 @@ async function getBabyReply(api, event, query) {
 }
 
 module.exports = {
-  config: { name: "autoreply", version: "3.3.3", author: "NirZon", countDown: 5, role: 0, shortDescription: "Automatic keyword replies", category: "utility" },
-config: {
-  name: "autoreply",
-  version: "3.3.4",
-  author: "NirZon",
-  countDown: 1,
-  role: 0,
-  description: "Group AutoReply with Baby API fallback",
-  category: "system",
-  guide: "Reply to the menu message to manage AutoReply."
-},
+  config: {
+    name: "autoreply",
+    version: "3.3.3",
+    author: "NirZon",
+    countDown: 1,
+    role: 0,
+    description: "Keyword AutoReply with reply-only Baby API fallback",
+    category: "system",
+    guide: "Reply to the menu message to manage AutoReply."
+  },
 
 onStart: async function ({ api, event, args }) {
   if (!isBotAdmin(event.senderID)) {
@@ -273,7 +285,7 @@ onReply: async function ({ api, event, Reply }) {
     const trigger = normalize(input);
     if (Object.prototype.hasOwnProperty.call(data.replies, trigger)) {
       const answer = chooseReply(data.replies[trigger]);
-      if (answer) return api.sendMessage(answer, threadID);
+      if (answer) return sendAutoReply(api, event, answer);
     }
 
     const babyCommand = require("./baby");
@@ -412,24 +424,13 @@ onChat: async function ({ api, event }) {
 
   const trigger = normalize(event.body);
 
-  if (!Object.prototype.hasOwnProperty.call(data.replies, trigger)) {
-    const babyCommand = require("./baby");
-    if (typeof babyCommand.autoReplyFallback === "function") {
-      return babyCommand.autoReplyFallback({ api, event, text: event.body });
-    }
-    return;
-  }
+  // Normal group messages without an exact AutoReply trigger are ignored.
+  // Baby API is only used in onReply, after someone replies to an AutoReply message.
+  if (!Object.prototype.hasOwnProperty.call(data.replies, trigger)) return;
 
   const answer = chooseReply(data.replies[trigger]);
   if (!answer) return;
 
-  api.sendMessage(answer, event.threadID, (err, info) => {
-    if (err || !info?.messageID) return;
-
-    setReply(api, info.messageID, {
-      mode: "autoreply_response",
-      threadID: String(event.threadID)
-    });
-  });
+  sendAutoReply(api, event, answer);
 }
 };
