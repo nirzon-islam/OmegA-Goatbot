@@ -25,9 +25,9 @@ function getDefaultAccountStatus() {
     state,
     accountId: (() => {
       const activeId = String(global.GoatBot?.botID || global.botID || "");
-      if (/^\\d{5,30}$/.test(activeId)) return activeId;
+      if (/^\d{5,30}$/.test(activeId)) return activeId;
       const recoveryId = String(detail.accountId || "");
-      return state === "checkpoint" && /^\\d{5,30}$/.test(recoveryId) ? recoveryId : "";
+      return state === "checkpoint" && /^\d{5,30}$/.test(recoveryId) ? recoveryId : "";
     })(),
     message: detail.state === state && typeof detail.message === "string" && detail.message.trim()
       ? detail.message.slice(0, 500) : defaultMessages[state]
