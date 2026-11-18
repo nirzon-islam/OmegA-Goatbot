@@ -11,8 +11,8 @@ const DOWNLOAD_API = "https://uzairrajputapis.qzz.io/api/downloader/youtube";
 module.exports = {
   config: {
     name: "youtube",
-    aliases: ["yt", "yts", "video"],
-    version: "1.0.3",
+    aliases: ["yt", "yts"],
+    version: "1.0.4",
     author: "NirZon",
     role: 0,
     category: "media",
