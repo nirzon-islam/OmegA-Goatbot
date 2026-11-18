@@ -42,7 +42,7 @@ test("Bridge keeps normal online status authoritative over stale recovery detail
     global.facebookSessionStatus = { state: "checkpoint", message: "Old checkpoint" };
     const status = getDefaultAccountStatus();
     assert.equal(status.state, "online");
-    assert.equal(status.message, "Old checkpoint");
+    assert.equal(status.message, "Facebook session active");
   } finally {
     if (previousStatus === undefined) delete global.statusAccountBot;
     else global.statusAccountBot = previousStatus;
