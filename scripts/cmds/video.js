@@ -112,9 +112,9 @@ async function sendWithRetry(message, msg, retries = 2) {
 
 module.exports = {
 	config: {
-		name: "videodirect",
-		aliases: ["ytvideo"],
-		version: "2.2.0",
+		name: "video",
+		aliases: ["videos", "ytvideo"],
+		version: "2.2.1",
 		author: "EryXenX",
 		countDown: 5,
 		role: 0,
