@@ -3,7 +3,7 @@ const { getTime } = global.utils;
 module.exports = {
   config: {
     name: "antileave",
-    version: "2.5.1",
+    version: "2.5.2",
     author: "EryXenX",
     category: "events"
   },
@@ -15,7 +15,10 @@ module.exports = {
     const leftID = logMessageData.leftParticipantFbId;
 
     if (leftID === author) {
-      const userName = await usersData.getName(leftID);
+      const storedName = await usersData.getName(leftID);
+      const userName = typeof storedName === "string" && storedName.trim()
+        ? storedName
+        : "Unknown User";
 
       const boldMap = {
         A: "𝗔", B: "𝗕", C: "𝗖", D: "𝗗", E: "𝗘", F: "𝗙", G: "𝗚", H: "𝗛", I: "𝗜", J: "𝗝",
@@ -38,7 +41,9 @@ Without permission🫩
       try {
         await api.addUserToGroup(leftID, threadID);
         await message.send(form);
-      } catch (err) {}
+      } catch (err) {
+        console.error("[antileave] Failed to re-add member or send message:", err);
+      }
     }
   }
 };
