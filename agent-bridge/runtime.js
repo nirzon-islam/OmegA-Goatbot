@@ -3,7 +3,7 @@
 const { createBridgeClient } = require("./client");
 const { createWorker } = require("./worker");
 
-function startBridgeWorker({ log = console, intervalMs = 15000, getAccountStatus = () => {
+function startBridgeWorker({ log = console, intervalMs = 3000, getAccountStatus = () => {
   const raw = global.statusAccountBot;
   const state = raw === "good" ? "online" : raw === "checkpoint" ? "checkpoint" :
     raw === "can't login" || raw === "logged_out" ? "logged_out" : "unknown";
