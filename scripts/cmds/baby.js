@@ -375,7 +375,7 @@ module.exports = {
   config: {
     name: "baby",
     aliases: ["bby", "bbz"],
-    version: "5.3.4",
+    version: "5.3.5",
     author: "NirZon",
     countDown: 2,
     role: 0,
@@ -619,6 +619,17 @@ module.exports = {
       const lower = body.toLowerCase();
       const aliases = ["bby", "bbz", "omi"];
 
+      // RESPOND WHEN THE BOT IS MENTIONED BY FACEBOOK USER ID
+      const botID = String(
+        typeof api.getCurrentUserID === "function"
+          ? api.getCurrentUserID()
+          : global.GoatBot?.config?.BOT_ID ||
+            global.GoatBot?.config?.botID ||
+            ""
+      );
+      const mentions = event.mentions || {};
+      const mentionedBot = botID && Object.prototype.hasOwnProperty.call(mentions, botID);
+
       const prefix = String(
         global.GoatBot?.config?.Prefix ||
         global.GoatBot?.config?.prefix ||
@@ -667,8 +678,24 @@ module.exports = {
         }
       }
 
-      if (!trigger) return;
+      if (!trigger && !mentionedBot) return;
       if (!claimEvent(event)) return;
+
+      // A direct bot mention works even without a text trigger.
+      if (mentionedBot && !trigger) {
+        const mentionText = body.replace(/@[\\w.]+/g, "").trim();
+        if (!mentionText) {
+          const reply = await getSpecialReply(event.senderID);
+          await waitForBaby();
+          return sendThreeLines(api, event, reply);
+        }
+
+        const params = await getChatParams(api, event, mentionText);
+        const data = await apiGet(params);
+        const reply = data.reply || "Ektu somossa hocche, abar bolo!";
+        await waitForBaby();
+        return sendThreeLines(api, event, reply);
+      }
 
       const escaped = trigger.replace(
         /[.*+?^${}()|[\]\\]/g,
