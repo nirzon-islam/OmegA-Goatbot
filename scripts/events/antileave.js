@@ -3,7 +3,7 @@ const { getTime } = global.utils;
 module.exports = {
   config: {
     name: "antileave",
-    version: "2.5.3",
+    version: "2.5.4",
     author: "EryXenX",
     category: "events"
   },
@@ -57,7 +57,8 @@ module.exports = {
         body: `😹 ${boldName} haha tried to leave...  
 Without permission🫩
 🚫 Not allowed here!
-🔄 Added back 😇`
+🔄 Added back 😇`,
+        mentions: [{ tag: boldName, id: leftID }]
       };
 
       try {
