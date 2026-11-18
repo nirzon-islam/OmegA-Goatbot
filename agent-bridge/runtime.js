@@ -22,7 +22,7 @@ function getDefaultAccountStatus() {
   return {
     state,
     accountId: global.GoatBot?.botID || global.botID || "",
-    message: typeof detail.message === "string" && detail.message.trim()
+    message: detail.state === state && typeof detail.message === "string" && detail.message.trim()
       ? detail.message.slice(0, 500) : defaultMessages[state]
   };
 }
