@@ -1561,24 +1561,24 @@ module.exports = {
     }
 
     if (sub === "sync") {
-      api.sendMessage("🔄 OmegA Store — Two-way File Sync\\n\\nComparing local bot files with Store versions...\\n⏳ Newer Store files will be downloaded only during this manual sync.", threadID);
+      api.sendMessage("🔄 OmegA Store — Two-way File Sync\n\nComparing local bot files with Store versions...\n⏳ Newer Store files will be downloaded only during this manual sync.", threadID);
       try {
         const stats = await runAutoSync({ pullFromStore: true }) || { uploaded: 0, updated: 0, downloaded: 0, skipped: 0, failed: 0 };
         const msg =
-          `${stats.failed ? "⚠️" : "✅"} OmegA Store — Sync ${stats.stopped || stats.failed ? "Finished with errors" : "Complete"}\\n\\n` +
-          `✦ Uploaded to Store: ${stats.uploaded || 0}\\n` +
-          `✦ Store entries updated: ${stats.updated || 0}\\n` +
-          `✦ Downloaded to bot: ${stats.downloaded || 0}\\n` +
-          `✦ Skipped: ${stats.skipped || 0}\\n` +
-          `✦ Failed: ${stats.failed || 0}\\n\\n` +
+          `${stats.failed ? "⚠️" : "✅"} OmegA Store — Sync ${stats.stopped || stats.failed ? "Finished with errors" : "Complete"}\n\n` +
+          `✦ Uploaded to Store: ${stats.uploaded || 0}\n` +
+          `✦ Store entries updated: ${stats.updated || 0}\n` +
+          `✦ Downloaded to bot: ${stats.downloaded || 0}\n` +
+          `✦ Skipped: ${stats.skipped || 0}\n` +
+          `✦ Failed: ${stats.failed || 0}\n\n` +
           (stats.stopped
-            ? `⚠️ Sync paused after repeated API errors.${stats.lastError ? `\\nReason: ${stats.lastError}` : ""}`
+            ? `⚠️ Sync paused after repeated API errors.${stats.lastError ? `\nReason: ${stats.lastError}` : ""}`
             : stats.failed
-              ? `⚠️ Some files could not be synchronized.${stats.lastError ? `\\nReason: ${stats.lastError}` : ""}`
+              ? `⚠️ Some files could not be synchronized.${stats.lastError ? `\nReason: ${stats.lastError}` : ""}`
               : `All detected files have been compared with Store versions.`);
         api.sendMessage(msg, threadID);
       } catch (err) {
-        api.sendMessage(`❌ OmegA Store — Sync Failed\\n\\nReason: ${err.message}\\n\\nPlease try again later.`, threadID);
+        api.sendMessage(`❌ OmegA Store — Sync Failed\n\nReason: ${err.message}\n\nPlease try again later.`, threadID);
       }
       return;
     }
