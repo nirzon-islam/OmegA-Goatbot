@@ -163,7 +163,8 @@ async function bootstrapFacebookLogin({ botId, cookie, progress = async () => {}
           global.GoatBot.botID = null;
         }
         global.botID = null;
-        global.statusAccountBot = "unknown";
+        // Preserve a detected Facebook checkpoint so the Bridge can report it after rollback.
+        global.statusAccountBot = checkpoint ? "checkpoint" : "unknown";
       } catch {
         throw new Error("Facebook login failed and the previous account file could not be restored; stop the bot and restore the saved account file before retrying");
       }
