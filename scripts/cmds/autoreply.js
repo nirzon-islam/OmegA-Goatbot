@@ -232,7 +232,7 @@ module.exports = {
   config: { name: "autoreply", version: "1.0.1", author: "NirZon", countDown: 5, role: 0, shortDescription: "Automatic keyword replies", category: "utility" },
 config: {
   name: "autoreply",
-  version: "3.3.3",
+  version: "3.3.4",
   author: "NirZon",
   countDown: 1,
   role: 0,
@@ -276,11 +276,10 @@ onReply: async function ({ api, event, Reply }) {
       if (answer) return api.sendMessage(answer, threadID);
     }
 
-    const babyAnswer = await getBabyReply(api, event, input);
-    if (babyAnswer) {
-      return api.sendMessage(babyAnswer, threadID);
+    const babyCommand = require("./baby");
+    if (typeof babyCommand.autoReplyFallback === "function") {
+      return babyCommand.autoReplyFallback({ api, event, text: input });
     }
-
     return;
   }
 
@@ -413,7 +412,13 @@ onChat: async function ({ api, event }) {
 
   const trigger = normalize(event.body);
 
-  if (!Object.prototype.hasOwnProperty.call(data.replies, trigger)) return;
+  if (!Object.prototype.hasOwnProperty.call(data.replies, trigger)) {
+    const babyCommand = require("./baby");
+    if (typeof babyCommand.autoReplyFallback === "function") {
+      return babyCommand.autoReplyFallback({ api, event, text: event.body });
+    }
+    return;
+  }
 
   const answer = chooseReply(data.replies[trigger]);
   if (!answer) return;
