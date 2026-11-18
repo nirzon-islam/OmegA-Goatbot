@@ -45,7 +45,7 @@ const DEFAULT_REPLIES = {
   "good night": ["Sweet Dream babu… তবে আগে বস কে GN বলে নিও 😏💤"],
   "tor bal": ["~ এখনো বাল উঠে নাই নাকি তোমার?? 🤖"],
   "nirzon": ["উনি এখন কাজে বিজি আছে কি বলবেন আমাকে বলতে পারেন..!😘"],
-  "tumi ke": ["আমি RiyA ভাবির কিউট বট 🥰 সবাই তাকে ভাবি বলবা 😎 নির্জন বস থ্যাংক ইউ আমাকে বানানোর জন্য 🥺🫰"],
+  "tmi ke": ["আমি RiyA ভাবির কিউট বট 🥰 সবাই তাকে ভাবি বলবা 😎 নির্জন বস থ্যাংক ইউ আমাকে বানানোর জন্য 🥺🫰"],
   "nirzon kar": ["NirZon sudhu matro RiyA'r 😏🔪😘"],
   "riya ke": ["My boss NirZon er BoU se👀🫶"],
   "riya": ["Vabi re dakish keno 😤🔪\nVabi Cartoon dekhte besto 😎"],
@@ -232,7 +232,7 @@ module.exports = {
   config: { name: "autoreply", version: "1.0.1", author: "NirZon", countDown: 5, role: 0, shortDescription: "Automatic keyword replies", category: "utility" },
 config: {
   name: "autoreply",
-  version: "3.3.2",
+  version: "3.3.3",
   author: "NirZon",
   countDown: 1,
   role: 0,
