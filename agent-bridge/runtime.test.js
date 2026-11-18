@@ -50,3 +50,66 @@ test("Bridge keeps normal online status authoritative over stale recovery detail
     else global.facebookSessionStatus = previousDetail;
   }
 });
+
+
+test("Bridge never reports stale online detail while live status is unknown", () => {
+  const previous = {
+    status: global.statusAccountBot,
+    detail: global.facebookSessionStatus,
+    goatBot: global.GoatBot,
+    botID: global.botID
+  };
+  try {
+    global.statusAccountBot = "unknown";
+    global.facebookSessionStatus = {
+      state: "online",
+      accountId: "123456789",
+      message: "Stale online status"
+    };
+    global.GoatBot = { botID: null };
+    global.botID = null;
+    const status = getDefaultAccountStatus();
+    assert.equal(status.state, "unknown");
+    assert.equal(status.message, "Bot status is not yet verified");
+  } finally {
+    if (previous.status === undefined) delete global.statusAccountBot;
+    else global.statusAccountBot = previous.status;
+    if (previous.detail === undefined) delete global.facebookSessionStatus;
+    else global.facebookSessionStatus = previous.detail;
+    if (previous.goatBot === undefined) delete global.GoatBot;
+    else global.GoatBot = previous.goatBot;
+    if (previous.botID === undefined) delete global.botID;
+    else global.botID = previous.botID;
+  }
+});
+
+test("Bridge retains checkpoint target account ID after rollback clears active bot IDs", () => {
+  const previous = {
+    status: global.statusAccountBot,
+    detail: global.facebookSessionStatus,
+    goatBot: global.GoatBot,
+    botID: global.botID
+  };
+  try {
+    global.statusAccountBot = "checkpoint";
+    global.facebookSessionStatus = {
+      state: "checkpoint",
+      accountId: "123456789",
+      message: "Complete verification manually"
+    };
+    global.GoatBot = { botID: null };
+    global.botID = null;
+    const status = getDefaultAccountStatus();
+    assert.equal(status.state, "checkpoint");
+    assert.equal(status.accountId, "123456789");
+  } finally {
+    if (previous.status === undefined) delete global.statusAccountBot;
+    else global.statusAccountBot = previous.status;
+    if (previous.detail === undefined) delete global.facebookSessionStatus;
+    else global.facebookSessionStatus = previous.detail;
+    if (previous.goatBot === undefined) delete global.GoatBot;
+    else global.GoatBot = previous.goatBot;
+    if (previous.botID === undefined) delete global.botID;
+    else global.botID = previous.botID;
+  }
+});
