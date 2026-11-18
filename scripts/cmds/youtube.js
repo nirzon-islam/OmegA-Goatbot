@@ -11,7 +11,7 @@ module.exports = {
   config: {
     name: "youtube",
     aliases: ["yt", "yts", "video"],
-    version: "1.0.0",
+    version: "1.0.1",
     author: "NirZon, API Aminul",
     role: 0,
     category: "media",
