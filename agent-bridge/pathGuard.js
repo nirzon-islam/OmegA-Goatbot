@@ -3,7 +3,11 @@
 const fs = require("fs");
 const path = require("path");
 
-const ROOT = path.resolve(process.env.AGENT_WORKSPACE_ROOT || process.cwd());
+// Resolve the default workspace from this module's repository location, not
+// process.cwd(): Railway may start the worker with "/" or another service cwd.
+const ROOT = path.resolve(
+  process.env.AGENT_WORKSPACE_ROOT || path.resolve(__dirname, "..")
+);
 const DENIED_SEGMENTS = new Set([
   ".", "..", ".git", "node_modules", ".env", ".env.local", ".env.production",
   "account.txt", "account.txt.bak", "Fca_Database", "cache", "secrets",
@@ -16,7 +20,7 @@ const ALLOWED_EXTENSIONS = new Set([
 ]);
 
 function isWithinRoot(candidate) {
-  return candidate === ROOT || candidate.startsWith(ROOT + path.sep);
+  return candidate === ROOT || candidate.startsWith(ROOT.endsWith(path.sep) ? ROOT : ROOT + path.sep);
 }
 
 function isDeniedSegment(segment) {
@@ -33,7 +37,7 @@ function rejectSymlinkEscape(absolute) {
   }
   const realRoot = fs.realpathSync(ROOT);
   const realExisting = fs.realpathSync(cursor);
-  if (realExisting !== realRoot && !realExisting.startsWith(realRoot + path.sep)) {
+  if (realExisting !== realRoot && !realExisting.startsWith(realRoot.endsWith(path.sep) ? realRoot : realRoot + path.sep)) {
     throw new Error("Path resolves outside workspace root");
   }
   let current = ROOT;
