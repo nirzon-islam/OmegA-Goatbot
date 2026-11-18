@@ -537,7 +537,7 @@ async function runAutoSync(options = {}) {
         try {
           const remote = await fetchStoreFile(match.id);
           if (!remote?.rawCode) throw new Error("Store file source (rawCode) was not returned.");
-          if (remote.framework !== "goat" || (remote.kind && remote.kind !== kind))
+          if ((remote.framework && remote.framework !== "goat") || detectFramework(remote.rawCode) !== "goat" || (remote.kind && remote.kind !== kind))
             throw new Error("Store file type does not match this local folder.");
           new Function(remote.rawCode);
           const remoteMeta = extractConfigMetadata(remote.rawCode);
@@ -566,10 +566,6 @@ async function runAutoSync(options = {}) {
       }
 
       const hash = hashContent(content);
-      if (cache[cacheKey] === hash && match && cmpVer(localMeta.version || "0", match.version || "0") > 0) {
-        skipped++;
-        continue;
-      }
 
       try {
         const stampedContent = await stampUploadCode(content);
