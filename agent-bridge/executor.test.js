@@ -71,3 +71,15 @@ test("unsupported destructive and shell operations are rejected", () => {
   assert.throws(() => executeApprovedAction({ type: "install", path: "package.json" }), /not supported/);
   assert.throws(() => executeApprovedAction({ type: "shell", command: "rm -rf ." }), /requires type and path/);
 });
+
+test("directory inspection can cover a larger command/event folder", () => {
+  const dir = path.join(root, "scripts", "events");
+  fs.mkdirSync(dir, { recursive: true });
+  for (let index = 0; index < 85; index++) {
+    fs.writeFileSync(path.join(dir, "event-" + String(index).padStart(3, "0") + ".js"), "module.exports = " + index + ";");
+  }
+  const listed = executeApprovedAction({ type: "list", path: "scripts/events" });
+  assert.equal(listed.count, 80);
+  const read = executeApprovedAction({ type: "readMany", path: "scripts/events" });
+  assert.equal(read.count, 80);
+});
