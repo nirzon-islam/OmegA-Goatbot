@@ -1,391 +1,159 @@
 <div align="center">
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://readme-typing-svg.herokuapp.com?font=JetBrains+Mono&weight=700&size=18&duration=3000&pause=800&color=00FFD1&background=00000000&center=true&vCenter=true&width=700&lines=GoatBot-Pro;Facebook+Messenger+Bot+Framework;Built+on+Goat+Bot+V2+%E2%80%94+Modified+by+EryXenX;Fast+%E2%80%A2+Smart+%E2%80%A2+Reliable+%E2%80%A2+Powerful" />
-  <source media="(prefers-color-scheme: light)" srcset="https://readme-typing-svg.herokuapp.com?font=JetBrains+Mono&weight=700&size=18&duration=3000&pause=800&color=0E7C86&background=00000000&center=true&vCenter=true&width=700&lines=GoatBot-Pro;Facebook+Messenger+Bot+Framework;Built+on+Goat+Bot+V2+%E2%80%94+Modified+by+EryXenX;Fast+%E2%80%A2+Smart+%E2%80%A2+Reliable+%E2%80%A2+Powerful" />
-  <img src="https://readme-typing-svg.herokuapp.com?font=JetBrains+Mono&weight=700&size=18&duration=3000&pause=800&color=0E7C86&background=00000000&center=true&vCenter=true&width=700&lines=GoatBot-Pro;Facebook+Messenger+Bot+Framework;Built+on+Goat+Bot+V2+%E2%80%94+Modified+by+EryXenX;Fast+%E2%80%A2+Smart+%E2%80%A2+Reliable+%E2%80%A2+Powerful" />
-</picture>
+# OmegA Bot
+### Facebook Messenger Bot Framework
 
-<br/>
+**A customized Goat Bot V2 project maintained by NirZon.**
 
-![Version](https://img.shields.io/badge/Version-7.1.0-0E7C86?style=for-the-badge&logo=github&logoColor=white)
-![Node](https://img.shields.io/badge/Node.js-20.x-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
-![Base](https://img.shields.io/badge/Based_on-Goat_Bot_V2-FF6B6B?style=for-the-badge&logo=github&logoColor=white)
-![Fork](https://img.shields.io/badge/Fork_by-EryXenX-6E40C9?style=for-the-badge&logo=github&logoColor=white)
-![FCA](https://img.shields.io/badge/FCA-%40eryxenx%2Ffca-0E7C86?style=for-the-badge&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-20.x-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
+![Project](https://img.shields.io/badge/Project-OmegA%20Bot-0E7C86?style=for-the-badge)
+
+*Fast • Flexible • Community-driven*
 
 </div>
 
 ---
 
-## ◈ About
+## About OmegA Bot
 
-Assalamu Alaikum! **OmegA-Goatbot** is based on [Goat Bot V2](https://github.com/ntkhang03/Goat-Bot-V2) by **ntkhang03** and includes improvements and custom features. Maintained and customized by **Md SalmaN (NirZon)**. Original fork credits are preserved below.
+**OmegA Bot** is a customized Facebook Messenger bot framework built on the open-source [Goat Bot V2](https://github.com/ntkhang03/Goat-Bot-V2) project, originally created by **NTKhang**.
+
+This repository is maintained and developed by **NirZon**. It brings together command handling, event listeners, configurable bot behavior, and optional backend integrations in one extensible project.
+
+### Highlights
 
 | Feature | Description |
 |---|---|
-| 🔌 **Custom FCA** | Uses `@eryxenx/fca` — patched fork with bug fixes and stability improvements |
-| ⚙️ **Handler Improvements** | No-prefix system for bot admins, smart command suggestion |
-| 🌐 **Multi-Language** | Supports EN, BN, HI, TL, AR, VI |
-| 🎨 **UI Overhaul** | Redesigned message templates with clean formatting |
-| 🛡️ **React Unsend** | Auto-unsend messages on specific emoji reactions |
-| 🔧 **Setting Command** | Full bot config control via chat — no need to edit files manually |
+| Command system | Modular commands with onStart, onReply, onReaction, onChat, and onEvent handlers |
+| Admin controls | Configure bot administrators and command permissions |
+| Multi-language | Language support for several locales, including English and Bengali |
+| Custom settings | Manage supported bot settings through chat commands |
+| Event handling | Respond to group events and Messenger activity |
+| Optional Agent backend | Connect an independently deployed agent service when the matching integration is configured |
 
-> ⚠️ For educational purposes only. Any misuse or illegal activity is solely the user's responsibility.
-
-
-## ◈ সহজ Setup Guide (বাংলা)
-
-### যা লাগবে
-- GitHub account
-- Node.js 20 (Local setup-এর জন্য)
-- Facebook account-এর valid login cookies
-- Railway অথবা VPS
-- Agent ব্যবহার করতে চাইলে Agent Backend ও MongoDB
-
-### 1. GoatBot চালু করো
-
-Repository clone/download করে project folder-এ terminal খুলে চালাও:
-
-```bash
-npm install
-```
-
-Facebook login cookies JSON array format-এ project-এর root folder-এর `account.txt` ফাইলে রাখো। তারপর `config.json`-এ নিজের Facebook UID `adminBot`-এ এবং পছন্দের prefix সেট করো।
-
-Bot চালু করো:
-
-```bash
-npm start
-```
-
-### 2. Railway-তে Deploy
-
-1. [Railway](https://railway.com/) খুলে **New Project → Deploy from GitHub Repo** নির্বাচন করো।
-2. `OmegA-Goatbot` repository connect করো।
-3. **Settings → Deploy**-এ Start Command হিসেবে দাও:
-
-```bash
-npm start
-```
-
-4. **Variables** tab-এ গিয়ে মনে রাখবে:
-
-```env
-PORT
-```
-
-Railway নিজে থেকেই `PORT` তৈরি করে দেয়—সাধারণত আলাদা করে value বসানোর দরকার নেই। এই repository-র বর্তমান code-এ `PORT` ছাড়া Railway-এর জন্য অন্য কোনো custom Environment Variable বাধ্যতামূলক নয়। তাই অকারণে `MONGODB_URI`, `COOKIE` বা অন্য variable যোগ কোরো না।
-
-5. Facebook login-এর জন্য project-এর `account.txt` ফাইলে cookies JSON array format-এ দিতে হবে। Bot-এর settings যেমন prefix ও admin UID `config.json` থেকে নিয়ন্ত্রণ করা হয়।
-6. **Deploy** করো এবং **Deployments → View Logs** থেকে login ও startup status দেখো।
-
-VPS-এও `npm install` এবং `npm start` চালাতে পারো। Bot সবসময় চালু রাখতে process manager ব্যবহার করতে পারো।
-
-**Render ব্যবহার কোরো না:** এই bot-এর persistent MQTT/WebSocket connection এবং filesystem session storage দরকার, যা Render-এ compatible নয়।
-
-### 3. Agent Backend (ঐচ্ছিক)
-
-Agent ব্যবহার করতে চাইলে [Agent Backend](https://github.com/nirzon-islam/Agent-Backend) আলাদাভাবে Render Web Service হিসেবে deploy করো। সেখানে MongoDB URI, Admin login এবং অন্তত একটি AI provider-এর API key configure করতে হবে। বিস্তারিত variable list ও setup ওই repository-র README / setup guide-এ দেওয়া আছে।
-
-**নোট:** শুধু Agent Backend deploy করলেই GoatBot-এর সঙ্গে connection তৈরি হবে না। GoatBot-এর ব্যবহৃত branch-এ Agent integration support থাকতে হবে এবং প্রয়োজনীয় bridge configuration থাকতে হবে।
-
-### দরকারি লিংক
-- [OmegA-Goatbot Repository](https://github.com/nirzon-islam/OmegA-Goatbot)
-- [Agent Backend](https://github.com/nirzon-islam/Agent-Backend)
-- [Railway](https://railway.com/)
-- [Render](https://render.com/)
-- [MongoDB Atlas](https://www.mongodb.com/atlas)
-- [Node.js](https://nodejs.org/)
-
-### নিরাপত্তা
-- `account.txt`-এর cookies, API key, database URI বা password কাউকে দেবে না।
-- এগুলো কখনো GitHub-এ upload কোরো না।
-- নিজের Facebook UID ছাড়া অন্য কাউকে bot admin কোরো না।
+> **Development note:** The FCA integration is being migrated and verified in the fca-migration-cleanup branch. Do not assume that every legacy FCA method has already been replaced or that this branch is a production-ready drop-in migration. Check the current package manifest and migration tests before deployment.
 
 ---
 
-## ◈ Support
+## Requirements
 
-<div align="center">
+- Node.js 20.x
+- npm 7 or newer
+- A Facebook session supported by the FCA implementation currently configured in this branch
+- Railway or a VPS for a persistent bot process
+- MongoDB and the separate Agent Backend only if you use the optional agent features
 
-[![Messenger Group](https://img.shields.io/badge/Join%20Support%20Group-0084FF?style=for-the-badge&logo=messenger&logoColor=white)](https://m.me/j/AbayU2oh5OPVLvZm/?send_source=gc%3Acopy_invite_link_c)
-[![Facebook](https://img.shields.io/badge/Facebook-1877F2?style=for-the-badge&logo=facebook&logoColor=white)](https://facebook.com/EryXenX)
-[![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/EryXenX)
-[![YouTube](https://img.shields.io/badge/YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://youtube.com/@EryXenX)
-[![Telegram](https://img.shields.io/badge/Telegram-0088CC?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/EryXenX_Official)
-[![Instagram](https://img.shields.io/badge/Instagram-E4405F?style=for-the-badge&logo=instagram&logoColor=white)](https://instagram.com/EryXenX)
+## Quick start
 
-</div>
-
----
-
-## ◈ Setup Tutorial
-
-<div align="center">
-
-### 📹 Watch Before You Start
-
-<a href="https://youtu.be/gPf_BFhQz_w?si=-iknmkmFd_NcRahY">
-  <img src="https://img.youtube.com/vi/gPf_BFhQz_w/maxresdefault.jpg" alt="GoatBot-Pro Setup Tutorial" width="680" />
-</a>
-
-<br/>
-
-[![Watch Tutorial](https://img.shields.io/badge/▶%20Watch%20Full%20Setup%20Tutorial-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://youtu.be/gPf_BFhQz_w?si=-iknmkmFd_NcRahY)
-
-</div>
-
----
-
-## ◈ Setup
+Clone the repository and install dependencies:
 
 ```bash
 git clone https://github.com/nirzon-islam/OmegA-Goatbot.git
 cd OmegA-Goatbot
 npm install
-npm start
 ```
 
-Add your Facebook cookies to `account.txt` (JSON array format from EditThisCookie), then configure `config.json`.
+Configure the bot using the configuration files and session method supported by the current branch. Keep credentials and session data out of Git.
 
----
-
-## ◈ Running the Bot
-
-### 1. Add your admin UID
-
-In `config.json`, add your Facebook UID to `adminBot` — this is the ID
-that can control the bot from chat (admin-only commands, `{prefix}setting`,
-no-prefix commands if enabled, etc.):
-
-```json
-"adminBot": [
-  "your_facebook_uid_here",
-  " ",
-  " "
-]
-```
-
-### 2. Add your session cookies
-
-Export your Facebook cookies (JSON array format, e.g. via the
-EditThisCookie browser extension) and paste them into `account.txt` at
-the project root. This is the login session the bot uses — without a
-valid `account.txt`, the bot can't log in.
-
-### 3. Deploy
-
-**Railway or a VPS** — both work fine:
+Start the bot:
 
 ```bash
-npm install
 npm start
 ```
 
-On Railway, just connect the repo and it builds/runs the same way. On a
-VPS, run it directly or under a process manager (`pm2 start index.js`,
-`screen`, `tmux`, etc.) so it stays alive after you disconnect.
+For local development:
 
-**Render — does not work.** Render's platform is not compatible with how
-this bot runs (persistent MQTT/WebSocket connection + filesystem writes
-for session/appstate). Don't deploy this on Render — use Railway or a VPS
-instead.
+```bash
+npm run dev
+```
 
----
+## Configuration and security
 
-## ◈ Command Structure
+- Set your bot administrator UID and command prefix in the project's configuration.
+- Keep Facebook session data, access tokens, API keys, database URLs, and passwords private.
+- Never commit account.txt, session files, or production environment files.
+- Use a private repository or deployment secret manager for sensitive configuration.
+- If a Facebook login challenge or checkpoint appears, resolve it through the account owner's official login flow. Do not attempt to bypass security checks.
 
-Commands go in `scripts/cmds/yourcommand.js`.
+## Deployment
+
+### Railway
+
+1. Create a Railway project and connect this repository.
+2. Select the branch you intend to test.
+3. Use npm start as the start command.
+4. Configure only the environment variables required by the current code and enabled integrations.
+5. Deploy and inspect the service logs for startup and connection errors.
+
+Railway normally supplies the PORT variable for web services. A bot process does not need an extra custom variable unless the current application or an enabled integration explicitly requires it.
+
+### VPS
+
+Install Node.js 20.x, clone the repository, run npm install, configure the bot, and start it with npm start. A process manager such as PM2 can keep the process alive.
+
+**Hosting note:** This bot relies on a persistent Messenger connection and may write session/runtime data. Choose a host that supports long-running processes and persistent storage. Verify the host's filesystem and networking behavior before deploying.
+
+## Optional Agent Backend
+
+Agent features require a separately deployed backend and a compatible bot-side integration. Deploying the backend alone does not connect it to OmegA Bot.
+
+Backend setup, database configuration, provider credentials, and bridge settings must follow the instructions in the [Agent Backend repository](https://github.com/nirzon-islam/Agent-Backend).
+
+## Creating a command
+
+Create a file under scripts/cmds/, for example scripts/cmds/hello.js:
 
 ```js
 module.exports = {
   config: {
-    name: "commandname",
+    name: "hello",
     version: "1.0.0",
-    author: "YourName",
+    author: "NirZon",
     countDown: 5,
     role: 0,
-    shortDescription: "...",
-    longDescription: "...",
-    category: "fun",
-    guide: "{prefix}commandname [args]"
+    shortDescription: "Say hello",
+    longDescription: "Replies with a greeting",
+    category: "utility",
+    guide: "{prefix}hello"
   },
 
-  onStart: async function ({ api, event, args, message, getLang }) {
-    message.reply("Hello!");
-  },
-
-  onReply: async function ({ api, event, Reply, message }) {
-    if (event.senderID !== Reply.author) return;
-    message.reply(`You replied: ${event.body}`);
-  },
-
-  onReaction: async function ({ api, event, Reaction, message }) {
-    message.reply(`You reacted with: ${event.reaction}`);
-  },
-
-  onChat: async function ({ api, event, message }) {
-    if (event.body === "hello") message.reply("hi!");
-  },
-
-  onEvent: async function ({ api, event, message }) {
-    if (event.logMessageType === "log:subscribe") {
-      message.reply("Welcome!");
-    }
+  onStart: async function ({ message }) {
+    message.reply("Hello from OmegA Bot!");
   }
 };
 ```
 
----
+### Permission roles
 
-## ◈ Permission Roles
-
-| Value | Who can use |
+| Role | Permission |
 |---|---|
-| `0` | Everyone |
-| `1` | Group admins only |
-| `2` | Bot admins only (set in `config.json`) |
+| 0 | Everyone |
+| 1 | Group administrators |
+| 2 | Bot administrators |
 
----
+The exact available APIs and event fields depend on the FCA provider and compatibility layer currently installed. Refer to the source and tests before relying on a method.
 
-## ◈ API Reference
+## Project links
 
-```js
-message.reply("text")
-api.sendMessage("text", threadID)
-api.sendMessage({ body: "text", attachment }, tid)
-api.setMessageReaction("✅", event.messageID, () => {}, true)
-api.unsendMessage(messageID)
-api.getCurrentUserID()
-await api.getThreadInfo(threadID)
-await api.getUserInfo(userID)
-```
+- **Bot repository:** https://github.com/nirzon-islam/OmegA-Goatbot
+- **FCA library:** https://github.com/nirzon-islam/OmegA-FCA
+- **Agent Backend:** https://github.com/nirzon-islam/Agent-Backend
+- **Node.js:** https://nodejs.org/
+- **Railway:** https://railway.com/
 
----
+## Credits and license
 
-## ◈ onReply Pattern
+OmegA Bot is based on **Goat Bot V2**, originally created by **NTKhang**. The upstream project's original license and attribution must be respected. OmegA Bot's custom development and maintenance are by **NirZon**.
 
-```js
-const sent = await message.reply("What's your name?");
-global.GoatBot.onReply.set(sent.messageID, {
-  commandName: "mycommand",
-  messageID: sent.messageID,
-  author: event.senderID,
-  step: 1
-});
-
-onReply: async function ({ api, event, Reply, message }) {
-  if (event.senderID !== Reply.author) return;
-  message.reply(`Hello, ${event.body}!`);
-}
-```
-
----
-
-## ◈ Event Types
-
-```js
-switch (event.logMessageType) {
-  case "log:subscribe":
-  case "log:unsubscribe":
-  case "log:thread-name":
-  case "log:thread-image":
-  case "log:thread-admins":
-}
-```
-
----
-
-## ◈ config.json Key Options
-
-```json
-{
-  "prefix": "-",
-  "adminBot": ["your_facebook_id"],
-  "noPrefix": { "enable": false },
-  "e2ee": { "enable": true },
-  "reactUnsend": {
-    "enable": true,
-    "onlyAdmin": true,
-    "emojis": ["😡"]
-  },
-  "optionsFca": {
-    "listenEvents": true,
-    "autoMarkDelivery": false,
-    "updatePresence": false,
-    "selfListen": false,
-    "autoReconnect": true
-  }
-}
-```
-
-### E2EE (Encrypted Messaging)
-
-`config.e2ee.enable` controls whether the bot connects Facebook's E2EE
-(Signal Protocol encrypted threads) layer on startup.
-
-- `true` — E2EE connects on login. Needed if you want the bot to send/receive
-  in end-to-end encrypted threads. This runs a second, independent login to
-  Facebook using the same session, which carries extra account-flagging risk
-  (see below).
-- `false` — E2EE is skipped entirely, bot runs on the regular MQTT session
-  only. Safer against account flags/logouts; encrypted threads just won't
-  work with the bot.
-
-**Toggle it from chat** — `{prefix}setting` → **Connection (FCA / MQTT)**
-→ **E2EE**. This flips `config.e2ee.enable` and saves `config.json`
-automatically, but **needs a bot restart** to actually take effect (E2EE
-only connects once, at login).
-
-**Or edit `config.json` directly** and restart the bot:
-
-```json
-"e2ee": { "enable": false }
-```
-
----
-
-## ◈ Command Anti-Spam (Humanizer)
-
-Every command reply goes through `@eryxenx/fca`'s built-in humanizer —
-the bot waits a delay before replying to a command, shows the typing
-indicator for exactly that window, and enforces a per-thread cooldown so
-command spam gets dropped instead of flooding replies. Plain chat
-(non-commands) is untouched — no delay, no typing.
-
-The delay is set from `config.json`, so you can make replies faster or
-slower (or turn the delay off entirely) without touching the code:
-
-```json
-"humanizer": {
-  "enable": true,      // false = reply instantly, no delay, no typing
-  "delayMs": 3000,     // how long to wait (and show typing) before replying
-  "cooldownMs": 5500,  // min gap between two accepted commands, per thread
-  "maxPerMinute": 20   // global cap on accepted commands
-}
-```
-
-`delayMs` also accepts a range, e.g. `[2000, 4000]`, for a random delay.
-The typing indicator always lasts exactly the delay, so the two never
-drift apart. Change it live from chat with `{prefix}setting` →
-Bot Behavior → Typing Indicator, or edit `config.json` and restart.
-
-This applies automatically to:
-- normal prefixed commands (`/help`, etc.)
-- no-prefix admin commands (when `config.noPrefix.enable: true`)
-- `onChat` triggers (e.g. typing `prefix` with no `/`)
-- `onReply` flows — including multi-step ones like `{prefix}setting`'s
-  "reply with a number" menus
-
-No setup needed on the GoatBot side — it's active as soon as the bot logs
-in. See `@eryxenx/fca`'s own README for configuration options
-(`reactDelayMs`, `cooldownMs`, `maxPerMinute`, disabling it entirely, etc.).
+This project is distributed under the MIT license where applicable; see the repository's LICENSE file for the exact terms.
 
 ---
 
 <div align="center">
-  <sub>Built on the shoulders of giants · Respect Open Source · Credit your sources</sub>
-  <br/>
-  <sub><b>Original Work © NTKhang (ntkhang03) &nbsp;|&nbsp; Fork by EryXenX (Mohammad Akash)</b></sub>
+
+**OmegA Bot · Developed and maintained by NirZon**
+
+*Built with respect for the open-source projects that made it possible.*
+
 </div>
