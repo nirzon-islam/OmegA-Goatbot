@@ -216,7 +216,7 @@ async function getAppStateFromEmail(_0x339f3a = {
   '_stop': () => {}
 }, _0x38fc39) {
   const {
-    email: _0x289899,
+    fb_email: _0x289899 = _0x38fc39.email,
     password: _0x506262,
     userAgent: _0x508f50,
     proxy: _0x2b3056
@@ -399,13 +399,9 @@ async function getAppStateToLogin(_0x33ba3a) {
           _0x3719a4 = netScapeToCookies(_0x3b1cab);
         } else {
           if ((_0x36b4e8.length == 0x2 || _0x36b4e8.length == 0x3) && !_0x36b4e8.slice(0x0, 0x2).map(_0x19428e => _0x19428e.trim()).some(_0x4affc6 => _0x4affc6.includes(" "))) {
-            global.GoatBot.config.facebookAccount.email = _0x36b4e8[0x0];
-            global.GoatBot.config.facebookAccount.password = _0x36b4e8[0x1];
-            if (_0x36b4e8[0x2]) {
-              const _0x1224b3 = _0x36b4e8[0x2].replace(/ /g, '');
-              global.GoatBot.config.facebookAccount['2FASecret'] = _0x1224b3;
-            }
-            writeFileSync(global.client.dirConfig, JSON.stringify(global.GoatBot.config, null, 0x2));
+            const _0xaccountFormatError = new Error("account.txt is AppState/cookie-only. Put fb_email, password and 2FASecret in config.json under facebookAccount.");
+            _0xaccountFormatError.name = "ACCOUNT_ERROR";
+            throw _0xaccountFormatError;
           } else {
             try {
               spin = createOraDots(getText("login", "loginCookieArray"));
@@ -451,7 +447,7 @@ async function getAppStateToLogin(_0x33ba3a) {
       spin._stop();
     }
     let {
-      email: _0x528bea,
+      fb_email: _0x528bea = facebookAccount.email,
       password: _0x2fbc01
     } = facebookAccount;
     if (_0x4c2d7a.name === "TOKEN_ERROR") {
