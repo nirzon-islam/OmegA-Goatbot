@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - fix/facebook-session-monitor
+      - fca-migration-cleanup
     paths:
       - "bot/login/**"
       - "package.json"
