@@ -1,7 +1,7 @@
 {
   "name": "goatbot-pro",
   "version": "7.1.5",
-  "description": "Enhanced Facebook Messenger bot framework, forked and modified by EryXenX from Goat Bot V2 (originally by NTKhang).",
+  "description": "OmegA Bot, a customized Facebook Messenger bot framework based on Goat Bot V2 by NTKhang, developed and maintained by NirZon.",
   "main": "index.js",
   "engines": {
     "node": "20.x",
@@ -54,15 +54,15 @@
     "prod": "NODE_ENV=production node index.js",
     "test:secure-session": "node --test bot/login/secureSession.test.js"
   },
-  "author": "NTKhang",
+  "author": "NirZon",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ntkhang03/Goat-Bot-V2.git"
+    "url": "git+https://github.com/nirzon-islam/OmegA-Goatbot.git"
   },
   "keywords": [],
   "bugs": {
-    "url": "https://github.com/ntkhang03/Goat-Bot-V2/issues"
+    "url": "https://github.com/nirzon-islam/OmegA-Goatbot/issues"
   },
-  "homepage": "https://github.com/ntkhang03/Goat-Bot-V2#readme"
+  "homepage": "https://github.com/nirzon-islam/OmegA-Goatbot#readme"
 }
