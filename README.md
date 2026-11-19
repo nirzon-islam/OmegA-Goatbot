@@ -102,11 +102,81 @@ Install Node.js 20.x, clone the repository, run `npm install`, configure the bot
 
 ---
 
-## 🤖 Optional Agent Backend
+<div align="center">
 
-Agent features require a separately deployed backend and a compatible bot-side integration. Deploying the backend alone does not connect it to OmegA Bot.
+<img src="https://readme-typing-svg.herokuapp.com?font=Orbitron&weight=700&size=25&pause=1000&color=A78BFA&center=true&vCenter=true&width=650&lines=OMEGA+AGENT+SYSTEM;Your+Bot.+Your+Control.;AI-Powered+Management+Layer" alt="OmegA Agent animated heading" />
 
-Backend setup, database configuration, provider credentials, and bridge settings are maintained separately and are not linked from this public project page.
+<img src="https://capsule-render.vercel.app/api?type=rect&height=4&color=0:00E5FF,50:8B5CF6,100:00E5FF" width="85%" alt="Agent section divider" />
+
+### 🧠 OmegA Agent Backend
+**A separate control center for AI-assisted bot management**
+
+[![Agent Backend](https://img.shields.io/badge/Agent%20Backend-Visit%20Repository-8B5CF6?style=for-the-badge&logo=github&logoColor=white)](https://github.com/nirzon-islam/Agent-Backend)
+[![Runtime](https://img.shields.io/badge/Runtime-Node.js%2020-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+
+</div>
+
+OmegA Agent Backend is the separately hosted management and AI layer for OmegA Bot. It provides an owner-authenticated dashboard, AI provider configuration, task planning, approval-controlled operations, activity history, and supported recovery workflows.
+
+**The backend is required for the optional AI Agent and remote management features.** The core Messenger bot can run independently, but Agent features will not work without the backend, database, provider configuration, and a compatible bot-side bridge.
+
+#### What the Agent system provides
+
+| Module | Purpose |
+|---|---|
+| Owner Dashboard | Protected owner access to agent settings and workflows |
+| AI Providers | Main, Fallback and Backup provider slots |
+| AI Task Assistant | Code analysis, task planning and supported project actions |
+| Approval Center | Review and approve controlled actions before execution |
+| Activity History | Track tasks and agent activity |
+| Backup & Rollback | Recovery support for supported file changes |
+| Account Recovery | Protected Facebook session reconnection workflow with account-ID validation and verification |
+| Bot Bridge | Signed communication between the backend and a compatible OmegA Bot runtime |
+
+#### System architecture
+
+```text
+Owner / Messenger
+       │
+       ▼
+OmegA Agent Backend (Render)
+       │
+       ├── MongoDB
+       ├── AI Providers
+       └── Owner Dashboard
+                │
+         Signed Bridge
+          (opt-in setup)
+                │
+                ▼
+       OmegA Bot Runtime (Railway)
+```
+
+#### Deployment overview
+
+1. Open the [OmegA Agent Backend repository](https://github.com/nirzon-islam/Agent-Backend).
+2. Follow its [deployment guide](https://github.com/nirzon-islam/Agent-Backend/blob/main/DEPLOYMENT.md) and `.env.example`.
+3. Deploy it as a Render **Web Service** with `npm install` (or `npm ci` when a lockfile is present) and `npm start`.
+4. Configure MongoDB, owner login credentials and the AI settings encryption key in the host environment settings.
+5. Verify `/api/health`, sign in to the owner dashboard and configure Main, Fallback and Backup AI providers.
+6. Connect the backend to the exact OmegA Bot revision only after matching bridge configuration and completing end-to-end tests.
+
+#### Important setup & security notes
+
+- MongoDB must support replica-set transactions; MongoDB Atlas is recommended by the backend project.
+- Keep the bridge disabled until both deployed revisions have passed integration tests. The backend defaults to `BRIDGE_ENABLED=false`.
+- When enabling the bridge, use a strong random secret of at least 32 characters and configure the matching secret on both sides using the variable names supported by the checked-out revision.
+- Keep Facebook cookies/AppState, API keys, database URLs, owner passwords and encryption keys out of Git, chat messages and logs.
+- Facebook checkpoints and security challenges must be resolved by the account owner through the official flow. The Agent does not bypass them.
+- A healthy backend endpoint confirms service/database health; it does not by itself prove Messenger, AI provider or bridge integration is working.
+
+> **Compatibility notice:** The Agent Backend and OmegA Bot are separate deployments. Deploying one does not automatically connect the other. Confirm that their bridge protocol and configuration match before enabling remote actions. Account reconnection and other live Facebook workflows must be tested with an authorized account in a controlled environment.
+
+<div align="center">
+
+*Independent service • Owner-controlled actions • Approval-first automation*
+
+</div>
 
 ---
 
