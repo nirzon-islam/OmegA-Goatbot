@@ -106,7 +106,7 @@ Install Node.js 20.x, clone the repository, run `npm install`, configure the bot
 
 Agent features require a separately deployed backend and a compatible bot-side integration. Deploying the backend alone does not connect it to OmegA Bot.
 
-Backend setup, database configuration, provider credentials, and bridge settings are documented in the [Agent Backend repository](https://github.com/nirzon-islam/Agent-Backend).
+Backend setup, database configuration, provider credentials, and bridge settings are maintained separately and are not linked from this public project page.
 
 ---
 
@@ -146,10 +146,12 @@ The exact available APIs and event fields depend on the connection provider and 
 
 ---
 
-## 🔗 Project Links
+## 🔗 Project & Contact
 
 - **OmegA Bot:** https://github.com/nirzon-islam/OmegA-Goatbot
-- **Agent Backend:** https://github.com/nirzon-islam/Agent-Backend
+- **Email:** [salmanxhowdhury@gmail.com](mailto:salmanxhowdhury@gmail.com)
+- **Facebook:** https://www.facebook.com/61561645647195
+- **Telegram:** https://t.me/dark_shades1
 - **Original Goat Bot V2:** https://github.com/ntkhang03/Goat-Bot-V2
 - **Node.js:** https://nodejs.org/
 - **Railway:** https://railway.com/
