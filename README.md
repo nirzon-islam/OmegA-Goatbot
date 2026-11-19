@@ -180,6 +180,195 @@ OmegA Agent Backend (Render)
 
 ---
 
+## 🔷 OmegA-FCA · Connection Architecture
+
+<div align="center">
+
+<img src="https://readme-typing-svg.herokuapp.com?font=Orbitron&weight=800&size=25&pause=900&color=00E5FF&center=true&vCenter=true&width=720&lines=OMEGA-FCA;Independent+Messenger+Connection+Layer;One+Bot.+One+Connection+Core." alt="OmegA-FCA animated heading" />
+
+<img src="https://capsule-render.vercel.app/api?type=rect&height=5&color=0:00E5FF,50:8B5CF6,100:00E5FF" width="88%" alt="OmegA-FCA divider" />
+
+**A dedicated connection layer between Facebook Messenger, OmegA Bot and the OmegA Agent Backend.**
+
+![FCA](https://img.shields.io/badge/Layer-OmegA--FCA-0891B2?style=for-the-badge)
+![Runtime](https://img.shields.io/badge/Runtime-Node.js%2020-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
+![Design](https://img.shields.io/badge/Design-Modular%20%26%20Event--Driven-7C3AED?style=for-the-badge)
+
+</div>
+
+OmegA-FCA is designed as a **local Node.js package inside the OmegA-Goatbot repository**. It owns the Facebook session and Messenger connection lifecycle. GoatBot consumes its client API and keeps responsibility for commands and events. The Agent Backend remains a separate management service for approvals, agent tasks, health and dashboard updates.
+
+### 🗺️ High-level system map
+
+```mermaid
+flowchart TB
+    FB["Facebook / Messenger"]
+    subgraph BOT["OMEGA-GOATBOT · Node.js Runtime"]
+      subgraph FCA["OmegA-FCA · Local Package"]
+        LOGIN["Login Engine"]
+        SESSION["AppState Manager"]
+        API["Messenger API Client"]
+        MQTT["MQTT Listener"]
+        RECONNECT["Reconnect Controller"]
+        LOGIN --> SESSION
+        SESSION --> API
+        API <--> MQTT
+        MQTT <--> RECONNECT
+      end
+      EVENTS["GoatBot Event Pipeline"]
+      CMDS["Commands & Event Handlers"]
+      AGENTBRIDGE["Bot ↔ Backend Bridge"]
+      EVENTS --> CMDS
+      CMDS <--> AGENTBRIDGE
+      API --> EVENTS
+    end
+    subgraph BACKEND["OMEGA AGENT BACKEND · Separate Service"]
+      REST["Authenticated REST API"]
+      SOCKET["Secure WebSocket Events"]
+      TASK["Agent Tasks & Approval Center"]
+      DASH["Owner Dashboard"]
+      REST <--> TASK
+      SOCKET <--> DASH
+      TASK <--> SOCKET
+    end
+    FB <--> LOGIN
+    FB <--> MQTT
+    AGENTBRIDGE <--> REST
+    AGENTBRIDGE <--> SOCKET
+```
+
+### 🧩 Who does what?
+
+| Component | Owns | Does not own |
+|---|---|---|
+| **OmegA-FCA** | Login/session lifecycle, AppState validation, Messenger API facade, MQTT events and reconnect lifecycle | Bot commands, AI planning or dashboard UI |
+| **GoatBot Runtime** | Command loader, event handlers, message workflows and bot-side task execution | Facebook protocol internals |
+| **Agent Backend** | Authenticated bot bridge, agent tasks, approvals, health records and activity history | Facebook passwords, cookies or raw AppState |
+| **Owner Dashboard** | Bot status, pending approvals, task progress and management controls | Direct access to the bot's local session |
+
+### 🔄 Connection lifecycle
+
+```mermaid
+sequenceDiagram
+    participant B as GoatBot
+    participant F as OmegA-FCA
+    participant FB as Facebook
+    participant A as Agent Backend
+    participant D as Dashboard
+
+    B->>F: Initialize client
+    F->>FB: Login / restore session
+    FB-->>F: Authenticated session
+    F->>FB: Establish Messenger MQTT
+    FB-->>F: Message events
+    F-->>B: Normalized FCA events
+    B->>A: Authenticated status / task update
+    A-->>B: Approved task / control response
+    B->>F: Execute supported Messenger action
+    F->>FB: Send message / API operation
+    A-->>D: Live bot and task status
+```
+
+1. **Initialize** — GoatBot loads its configuration and creates the OmegA-FCA client.
+2. **Authenticate** — FCA restores a valid AppState or runs the configured credential-login flow.
+3. **Connect** — FCA establishes the Messenger transport and starts its MQTT event listener.
+4. **Dispatch** — Incoming events are normalized and forwarded to GoatBot's existing event pipeline.
+5. **Coordinate** — GoatBot reports sanitized health and task updates to the backend.
+6. **Approve & execute** — Approved backend tasks are validated by the bot before execution through the normal bot workflow.
+7. **Recover** — FCA manages supported reconnect attempts and reports connection-state changes.
+
+### 🔐 Session boundary · Keep credentials where they belong
+
+<div align="center">
+
+<img src="https://img.shields.io/badge/config.json-Facebook%20Credentials-2563EB?style=flat-square" />
+<img src="https://img.shields.io/badge/account.txt-AppState%20Only-059669?style=flat-square" />
+<img src="https://img.shields.io/badge/Backend-No%20Facebook%20Cookies-7C3AED?style=flat-square" />
+
+</div>
+
+**Credential login — `config.json`**
+
+The Facebook credential object belongs under `facebookAccount`. The login identifier is `fb_email` (not `fb_username`).
+
+```json
+{
+  "facebookAccount": {
+    "fb_email": "your-facebook-email",
+    "password": "your-facebook-password",
+    "twoFactorSecret": ""
+  }
+}
+```
+
+**Session restore — `account.txt`**
+
+- `account.txt` is reserved for the JSON AppState cookie array only.
+- It is never a username/password source.
+- Existing AppState validation, atomic persistence and recovery behavior must be preserved.
+- Raw cookies, passwords and 2FA secrets must never be sent to the Agent Backend, Dashboard, logs or Git history.
+
+### 🔌 Bot ↔ Backend communication
+
+The planned bridge uses two complementary channels:
+
+| Channel | Intended use |
+|---|---|
+| **Authenticated REST API** | Bot registration/identity reference, health snapshots, task requests, approvals and task results |
+| **Authenticated WebSocket** | Live connection state, task progress, approval notifications and backend events |
+
+**Data flow**
+
+- **GoatBot → Backend:** sanitized bot status, connection health, task progress and operational logs.
+- **Backend → GoatBot:** approved agent tasks, cancellation/update signals and supported control instructions.
+- **Dashboard ↔ Backend:** owner authentication, approval decisions and live status display.
+
+The bridge must authenticate both sides, authorize every operation, validate task payloads and keep an auditable task history. Facebook credentials and AppState remain local to the bot runtime.
+
+### 🧱 Package layout
+
+```text
+packages/
+└── omega-fca/
+    ├── index.js
+    ├── lib/
+    │   ├── credentials.js
+    │   ├── appstate.js
+    │   ├── login-engine.js
+    │   ├── facebook-http-transport.js
+    │   ├── client.js
+    │   └── mqtt-listener.js
+    ├── test/
+    └── README.md
+```
+
+The package is intended to expose a stable client facade to GoatBot while keeping login, session, transport and event lifecycle concerns separated into focused modules.
+
+### 🚦 Implementation status
+
+| Area | Status |
+|---|---|
+| Package foundation & client facade | 🟡 In development |
+| Credential parsing & AppState validation | 🟡 In development |
+| Facebook HTTP login transport | 🧪 Experimental; live login not verified |
+| Full Messenger protocol adapter | ⏳ Pending |
+| Production MQTT handshake & event decoding | ⏳ Pending |
+| GoatBot runtime integration | ⏳ Pending |
+| Agent Backend bridge integration | ⏳ Pending |
+| End-to-end compatibility tests | ⏳ Pending |
+
+> **Important:** This is the target architecture and integration contract, not a claim that all components are already production-ready. The current FCA work includes a client foundation, login-engine components and a reconnectable MQTT lifecycle abstraction. Live Facebook authentication, the complete Messenger protocol adapter, production MQTT behavior, GoatBot wiring and backend end-to-end tests must be completed before production use.
+
+<div align="center">
+
+<img src="https://capsule-render.vercel.app/api?type=rect&height=4&color=0:00E5FF,50:8B5CF6,100:00E5FF" width="88%" alt="OmegA-FCA footer divider" />
+
+*Private session. Modular connection. Owner-controlled automation.*
+
+</div>
+
+---
+
 ## 🧩 Create Your First Command
 
 Create a file under `scripts/cmds/`, for example `scripts/cmds/hello.js`:
