@@ -2,7 +2,9 @@
 
 const path = require("path");
 const fs = require("fs");
-const login = require("@eryxenx/fca");
+// Use the same OmegA-FCA provider as the main GoatBot login flow.
+// This avoids loading an unavailable legacy package during bridge bootstrap.
+const login = require("../bot/login/omegaFca");
 const secureSession = require("../bot/login/secureSession");
 const { buildHumanizeOptions } = require("../bot/login/humanizerOptions");
 
