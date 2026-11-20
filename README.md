@@ -186,13 +186,12 @@ OmegA-Goatbot consumes OmegA-FCA as a normal npm dependency. The GitHub source r
 
 ```text
 GoatBot startup
-  └─ bot/login/login.js
-      └─ bot/login/omegaFca.js
-          └─ @nirzon-islam/omega-fca
-              ├─ AppState validation/session bootstrap
-              ├─ experimental Messenger MQTT transport
-              ├─ FCA-style listenMqtt callback facade
-              └─ supported thread/message methods
+  └─ GoatBot login flow
+      └─ OmegA-FCA npm package
+          ├─ AppState validation/session bootstrap
+          ├─ experimental Messenger MQTT transport
+          ├─ FCA-style listenMqtt callback facade
+          └─ supported thread/message methods
 ```
 
 ### Current login method: AppState only
@@ -228,15 +227,15 @@ For Railway:
 - Connect the `fca-migration-cleanup` branch for this test.
 - Build/install command: `npm install` (or let Railway use the repository's normal Node install).
 - Start command: `npm start`.
-- No `NODE_AUTH_TOKEN` is required while the published GitHub Packages package remains public.
+- GitHub Actions uses its built-in `GITHUB_TOKEN` for package installation in CI. Anonymous installation from Railway has not yet been independently verified; do not assume a successful CI install proves Railway can install without credentials. Keep the deployment free of extra tokens unless the package registry explicitly requires them.
 - Supply `account.txt` through a secure deployment mechanism or a persistent private volume. Do not put AppState in Git, README, logs, or public environment output.
 - Use a persistent Node.js service. Verify the runtime has outbound WebSocket access and persistent storage if session files are expected.
 
 ### Compatibility and test status
 
 Implemented in the current integration:
-- GoatBot imports the published package through `bot/login/omegaFca.js`.
-- The adapter accepts the AppState supplied by `login.js` and returns the callback-style login result expected by GoatBot.
+- GoatBot imports the published package through its FCA compatibility adapter.
+- The compatibility adapter accepts the AppState supplied by the normal login flow and returns the callback-style login result expected by GoatBot.
 - The client facade exposes `listenMqtt`, `stopListening`, `getCurrentUserID`, and supported API methods.
 - GoatBot consumes the package's explicit `ready` event before marking the Facebook session online.
 - The runtime recovery path validates the replacement AppState account ID and waits for the candidate listener before swapping sessions.
