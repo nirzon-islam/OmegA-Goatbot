@@ -30,11 +30,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-      - name: Install dependencies from GitHub Packages
+      - name: Install public dependencies and vendored FCA runtime
         run: npm install --ignore-scripts --no-audit --no-fund
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: npm run test:secure-session
       - run: node --check bot/login/login.js
       - run: node --check bot/login/omegaFca.js
