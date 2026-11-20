@@ -8,7 +8,6 @@
     "npm": ">=7.0.0"
   },
   "dependencies": {
-    "@omega/fca": "git+https://github.com/octopusworldpro-web/OmegA-FCA-2.git#public-package",
     "axios": "^1.4.0",
     "bcrypt": "^5.0.1",
     "body-parser": "^1.20.1",
@@ -46,7 +45,8 @@
     "socket.io": "^4.5.1",
     "sqlite3": "^5.0.5",
     "totp-generator": "^0.0.13",
-    "yt-search": "^2.13.1"
+    "yt-search": "^2.13.1",
+    "@octopusworldpro-web/omega-fca": "^0.1.2"
   },
   "scripts": {
     "start": "node index.js",
