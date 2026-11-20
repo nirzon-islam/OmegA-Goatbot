@@ -9,6 +9,7 @@ on:
       - "bot/login/**"
       - "package.json"
       - "package-lock.json"
+      - ".npmrc"
       - ".github/workflows/runtime-recovery-tests.yml"
   pull_request:
     branches:
@@ -17,6 +18,7 @@ on:
       - "bot/login/**"
       - "package.json"
       - "package-lock.json"
+      - ".npmrc"
 
 permissions:
   contents: read
@@ -30,8 +32,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Install public dependencies and vendored FCA runtime
+          registry-url: https://npm.pkg.github.com
+          scope: "@nirzon-islam"
+      - name: Install dependencies
         run: npm install --ignore-scripts --no-audit --no-fund
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: npm run test:secure-session
       - run: node --check bot/login/login.js
       - run: node --check bot/login/omegaFca.js
