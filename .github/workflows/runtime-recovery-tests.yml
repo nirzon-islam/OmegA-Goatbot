@@ -22,6 +22,7 @@ on:
 
 permissions:
   contents: read
+  packages: read
 
 jobs:
   secure-session:
@@ -33,6 +34,8 @@ jobs:
           node-version: 20
       - name: Install dependencies
         run: npm install --ignore-scripts --no-audit --no-fund
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: npm run test:secure-session
       - run: node --check bot/login/login.js
       - run: node --check bot/login/omegaFca.js
