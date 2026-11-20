@@ -46,7 +46,7 @@
     "sqlite3": "^5.0.5",
     "totp-generator": "^0.0.13",
     "yt-search": "^2.13.1",
-    "@nirzon-islam/omega-fca": "github:nirzon-islam/OmegA-FCA#main"
+    "@nirzon-islam/omega-fca": "github:nirzon-islam/OmegA-FCA#107088faa07fb725bf08254d7d8174b57c27707b"
   },
   "scripts": {
     "start": "node index.js",
