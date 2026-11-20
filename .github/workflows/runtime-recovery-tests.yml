@@ -18,6 +18,10 @@ on:
       - "package.json"
       - "package-lock.json"
 
+permissions:
+  contents: read
+  packages: read
+
 jobs:
   secure-session:
     runs-on: ubuntu-latest
@@ -27,7 +31,10 @@ jobs:
         with:
           node-version: 20
           cache: npm
-      - run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Install dependencies from GitHub Packages
+        run: npm install --ignore-scripts --no-audit --no-fund
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: npm run test:secure-session
       - run: node --check bot/login/login.js
       - run: node --check bot/login/omegaFca.js
