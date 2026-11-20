@@ -560,7 +560,7 @@ async function startBot(_0x3cad9e) {
   }
   log.info("LOGIN FACEBOOK", getText("login", "currentlyLogged"));
   const fcaVersion = (() => { try { return require("@omega/fca/package.json").version; } catch { return "unknown"; } })();
-  log.info("FCA", `@omega/fca v${fcaVersion} (compatibility transport: @eryxenx/fca)`);
+  log.info("FCA", `Native @omega/fca v${fcaVersion} (AppState + Messenger MQTT)`);
   try {
     var _0x41cca2 = path.join(process.cwd(), "account.txt");
     var _0x11ae53 = fs.readFileSync(_0x41cca2, 'utf8');
