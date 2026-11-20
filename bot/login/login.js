@@ -615,10 +615,8 @@ async function startBot(_0x3cad9e) {
         log.warn("SESSION GUARD", "Could not start: " + (sgErr.message || sgErr));
       }
 
-      // ✅ E2EE — auto-connected inside @eryxenx/fca (loginHelper.js) already;
-      // calling connectE2EE() again here would open a second, redundant
-      // connection on the same bridge and can race with the listener that
-      // @eryxenx/fca already wired into api.listenMqtt. Nothing to do here.
+      // E2EE is optional and is not implemented by the current native
+      // OmegA-FCA Messenger transport. Keep the capability probe non-fatal.
       if (_0x4d5048.e2ee && typeof _0x4d5048.e2ee.isConnected === "function") {
         log.info("E2EE", _0x4d5048.e2ee.isConnected() ? "Signal Protocol connected" : "Not connected yet (non-fatal)");
       }
