@@ -3,7 +3,7 @@
 The `fca-migration-cleanup` branch routes GoatBot's login entrypoint through
 `@omega/fca` using `bot/login/omegaFca.js`.
 
-## Current mode: compatibility bridge
+## Current mode: native AppState/MQTT integration (experimental)
 
 This is an integration milestone, not a claim that the native Facebook
 transport is production-ready:
@@ -34,7 +34,7 @@ npm start
 ```
 
 Check that startup logs report the installed `@omega/fca` version and the
-compatibility transport. Then verify with an owner-authorized AppState:
+native AppState/MQTT transport (experimental). Then verify with an owner-authorized AppState:
 
 1. Login returns the expected account ID.
 2. MQTT listener starts and receives a test message.
