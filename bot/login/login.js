@@ -869,6 +869,14 @@ async function startBot(_0x3cad9e) {
             }
           }
         }
+        // OmegA-FCA emits an explicit ready signal after native MQTT
+        // CONNACK and topic subscription. Consume it here instead of passing
+        // it into GoatBot's message/event handlers as an ordinary event.
+        if (_0xb100c2 && _0xb100c2.type === "ready") {
+          global.responseUptimeCurrent = responseUptimeSuccess;
+          global.statusAccountBot = "good";
+          return;
+        }
         global.responseUptimeCurrent = responseUptimeSuccess;
         global.statusAccountBot = "good";
         const _0x40b7b6 = global.GoatBot.config.logEvents;
