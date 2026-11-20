@@ -30,4 +30,6 @@ jobs:
       - run: npm install --ignore-scripts --no-audit --no-fund
       - run: npm run test:secure-session
       - run: node --check bot/login/login.js
+      - run: node --check bot/login/omegaFca.js
+      - run: node -e "const login = require('./bot/login/omegaFca'); if (typeof login !== 'function') process.exit(1)"
       - run: node --check agent-bridge/worker.js
