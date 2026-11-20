@@ -36,7 +36,7 @@ The project is developed and maintained by **NirZon**. It brings together modula
 | 💬 Event handling | Respond to group events and Messenger activity |
 | 🤖 Optional Agent | Connect a separately deployed agent service when the matching integration is configured |
 
-> **Development status:** The Facebook connection layer is undergoing private FCA integration work. Its implementation and compatibility are not exposed as a public package link. Some legacy FCA methods may still be under migration, so verify the current branch and tests before production use.
+> **Facebook connection status:** This branch is wired to the public npm package `@nirzon-islam/omega-fca`. Its AppState login and GoatBot callback adapter are implemented, but the native Facebook MQTT protocol is experimental and has not yet been verified against a live authorized account. Treat first deployment as a controlled test, not a production-ready release.
 
 ---
 
@@ -180,195 +180,89 @@ OmegA Agent Backend (Render)
 
 ---
 
-## 🔷 OmegA-FCA · Connection Architecture
+## 🔷 OmegA-FCA · Facebook connection
 
-<div align="center">
-
-<img src="https://readme-typing-svg.herokuapp.com?font=Orbitron&weight=800&size=25&pause=900&color=00E5FF&center=true&vCenter=true&width=720&lines=OMEGA-FCA;Independent+Messenger+Connection+Layer;One+Bot.+One+Connection+Core." alt="OmegA-FCA animated heading" />
-
-<img src="https://capsule-render.vercel.app/api?type=rect&height=5&color=0:00E5FF,50:8B5CF6,100:00E5FF" width="88%" alt="OmegA-FCA divider" />
-
-**A dedicated connection layer between Facebook Messenger, OmegA Bot and the OmegA Agent Backend.**
-
-![FCA](https://img.shields.io/badge/Layer-OmegA--FCA-0891B2?style=for-the-badge)
-![Runtime](https://img.shields.io/badge/Runtime-Node.js%2020-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
-![Design](https://img.shields.io/badge/Design-Modular%20%26%20Event--Driven-7C3AED?style=for-the-badge)
-
-</div>
-
-OmegA-FCA is designed as a **local Node.js package inside the OmegA-Goatbot repository**. It owns the Facebook session and Messenger connection lifecycle. GoatBot consumes its client API and keeps responsibility for commands and events. The Agent Backend remains a separate management service for approvals, agent tasks, health and dashboard updates.
-
-### 🗺️ High-level system map
-
-```mermaid
-flowchart TB
-    FB["Facebook / Messenger"]
-    subgraph BOT["OMEGA-GOATBOT · Node.js Runtime"]
-      subgraph FCA["OmegA-FCA · Local Package"]
-        LOGIN["Login Engine"]
-        SESSION["AppState Manager"]
-        API["Messenger API Client"]
-        MQTT["MQTT Listener"]
-        RECONNECT["Reconnect Controller"]
-        LOGIN --> SESSION
-        SESSION --> API
-        API <--> MQTT
-        MQTT <--> RECONNECT
-      end
-      EVENTS["GoatBot Event Pipeline"]
-      CMDS["Commands & Event Handlers"]
-      AGENTBRIDGE["Bot ↔ Backend Bridge"]
-      EVENTS --> CMDS
-      CMDS <--> AGENTBRIDGE
-      API --> EVENTS
-    end
-    subgraph BACKEND["OMEGA AGENT BACKEND · Separate Service"]
-      REST["Authenticated REST API"]
-      SOCKET["Secure WebSocket Events"]
-      TASK["Agent Tasks & Approval Center"]
-      DASH["Owner Dashboard"]
-      REST <--> TASK
-      SOCKET <--> DASH
-      TASK <--> SOCKET
-    end
-    FB <--> LOGIN
-    FB <--> MQTT
-    AGENTBRIDGE <--> REST
-    AGENTBRIDGE <--> SOCKET
-```
-
-### 🧩 Who does what?
-
-| Component | Owns | Does not own |
-|---|---|---|
-| **OmegA-FCA** | Login/session lifecycle, AppState validation, Messenger API facade, MQTT events and reconnect lifecycle | Bot commands, AI planning or dashboard UI |
-| **GoatBot Runtime** | Command loader, event handlers, message workflows and bot-side task execution | Facebook protocol internals |
-| **Agent Backend** | Authenticated bot bridge, agent tasks, approvals, health records and activity history | Facebook passwords, cookies or raw AppState |
-| **Owner Dashboard** | Bot status, pending approvals, task progress and management controls | Direct access to the bot's local session |
-
-### 🔄 Connection lifecycle
-
-```mermaid
-sequenceDiagram
-    participant B as GoatBot
-    participant F as OmegA-FCA
-    participant FB as Facebook
-    participant A as Agent Backend
-    participant D as Dashboard
-
-    B->>F: Initialize client
-    F->>FB: Login / restore session
-    FB-->>F: Authenticated session
-    F->>FB: Establish Messenger MQTT
-    FB-->>F: Message events
-    F-->>B: Normalized FCA events
-    B->>A: Authenticated status / task update
-    A-->>B: Approved task / control response
-    B->>F: Execute supported Messenger action
-    F->>FB: Send message / API operation
-    A-->>D: Live bot and task status
-```
-
-1. **Initialize** — GoatBot loads its configuration and creates the OmegA-FCA client.
-2. **Authenticate** — FCA restores a valid AppState or runs the configured credential-login flow.
-3. **Connect** — FCA establishes the Messenger transport and starts its MQTT event listener.
-4. **Dispatch** — Incoming events are normalized and forwarded to GoatBot's existing event pipeline.
-5. **Coordinate** — GoatBot reports sanitized health and task updates to the backend.
-6. **Approve & execute** — Approved backend tasks are validated by the bot before execution through the normal bot workflow.
-7. **Recover** — FCA manages supported reconnect attempts and reports connection-state changes.
-
-### 🔐 Session boundary · Keep credentials where they belong
-
-<div align="center">
-
-<img src="https://img.shields.io/badge/config.json-Facebook%20Credentials-2563EB?style=flat-square" />
-<img src="https://img.shields.io/badge/account.txt-AppState%20Only-059669?style=flat-square" />
-<img src="https://img.shields.io/badge/Backend-No%20Facebook%20Cookies-7C3AED?style=flat-square" />
-
-</div>
-
-**Credential login — `config.json`**
-
-The Facebook credential object belongs under `facebookAccount`. The login identifier is `fb_email` (not `fb_username`).
-
-```json
-{
-  "facebookAccount": {
-    "fb_email": "your-facebook-email",
-    "password": "your-facebook-password",
-    "twoFactorSecret": ""
-  }
-}
-```
-
-**Session restore — `account.txt`**
-
-- `account.txt` is reserved for the JSON AppState cookie array only.
-- It is never a username/password source.
-- Existing AppState validation, atomic persistence and recovery behavior must be preserved.
-- Raw cookies, passwords and 2FA secrets must never be sent to the Agent Backend, Dashboard, logs or Git history.
-
-### 🔌 Bot ↔ Backend communication
-
-The planned bridge uses two complementary channels:
-
-| Channel | Intended use |
-|---|---|
-| **Authenticated REST API** | Bot registration/identity reference, health snapshots, task requests, approvals and task results |
-| **Authenticated WebSocket** | Live connection state, task progress, approval notifications and backend events |
-
-**Data flow**
-
-- **GoatBot → Backend:** sanitized bot status, connection health, task progress and operational logs.
-- **Backend → GoatBot:** approved agent tasks, cancellation/update signals and supported control instructions.
-- **Dashboard ↔ Backend:** owner authentication, approval decisions and live status display.
-
-The bridge must authenticate both sides, authorize every operation, validate task payloads and keep an auditable task history. Facebook credentials and AppState remain local to the bot runtime.
-
-### 🧱 Package layout
+OmegA-Goatbot consumes OmegA-FCA as a normal npm dependency. The GitHub source repository is private; the published GitHub Packages package is public, so a normal install does not require a GitHub token.
 
 ```text
-packages/
-└── omega-fca/
-    ├── index.js
-    ├── lib/
-    │   ├── credentials.js
-    │   ├── appstate.js
-    │   ├── login-engine.js
-    │   ├── facebook-http-transport.js
-    │   ├── client.js
-    │   └── mqtt-listener.js
-    ├── test/
-    └── README.md
+GoatBot startup
+  └─ bot/login/login.js
+      └─ bot/login/omegaFca.js
+          └─ @nirzon-islam/omega-fca
+              ├─ AppState validation/session bootstrap
+              ├─ experimental Messenger MQTT transport
+              ├─ FCA-style listenMqtt callback facade
+              └─ supported thread/message methods
 ```
 
-The package is intended to expose a stable client facade to GoatBot while keeping login, session, transport and event lifecycle concerns separated into focused modules.
+### Current login method: AppState only
 
-### 🚦 Implementation status
+Email/password and username/password login are deliberately deferred. Do not add Facebook passwords or 2FA secrets to `config.json`.
 
-| Area | Status |
-|---|---|
-| Package foundation & client facade | 🟡 In development |
-| Credential parsing & AppState validation | 🟡 In development |
-| Facebook HTTP login transport | 🧪 Experimental; live login not verified |
-| Full Messenger protocol adapter | ⏳ Pending |
-| Production MQTT handshake & event decoding | ⏳ Pending |
-| GoatBot runtime integration | ⏳ Pending |
-| Agent Backend bridge integration | ⏳ Pending |
-| End-to-end compatibility tests | ⏳ Pending |
+1. Export an AppState/cookie array for an account you own or are authorized to operate.
+2. Put the JSON cookie array in the project-root `account.txt`.
+3. Keep the file private. It is already excluded by `.gitignore`.
+4. Ensure the cookie array belongs to the account you intend the bot to use and includes the required session cookies (including `c_user` and `xs`).
 
-> **Important:** This is the target architecture and integration contract, not a claim that all components are already production-ready. The current FCA work includes a client foundation, login-engine components and a reconnectable MQTT lifecycle abstraction. Live Facebook authentication, the complete Messenger protocol adapter, production MQTT behavior, GoatBot wiring and backend end-to-end tests must be completed before production use.
+Example shape only (use real values locally; never commit them):
 
-<div align="center">
+```json
+[
+  { "key": "c_user", "value": "ACCOUNT_ID", "domain": "facebook.com" },
+  { "key": "xs", "value": "SESSION_VALUE", "domain": "facebook.com" }
+]
+```
 
-<img src="https://capsule-render.vercel.app/api?type=rect&height=4&color=0:00E5FF,50:8B5CF6,100:00E5FF" width="88%" alt="OmegA-FCA footer divider" />
+The bot reads `account.txt` as JSON. Raw cookie headers and Netscape exports are not accepted by the current GoatBot startup path. A missing, malformed, expired or checkpointed AppState will prevent Facebook login. Resolve checkpoints through Facebook as the account owner; the bot does not bypass them.
 
-*Private session. Modular connection. Owner-controlled automation.*
+### Install and run
 
-</div>
+Requirements: Node.js 20.x and npm 7+.
+
+```bash
+npm install
+npm start
+```
+
+For Railway:
+- Connect the `fca-migration-cleanup` branch for this test.
+- Build/install command: `npm install` (or let Railway use the repository's normal Node install).
+- Start command: `npm start`.
+- No `NODE_AUTH_TOKEN` is required while the published GitHub Packages package remains public.
+- Supply `account.txt` through a secure deployment mechanism or a persistent private volume. Do not put AppState in Git, README, logs, or public environment output.
+- Use a persistent Node.js service. Verify the runtime has outbound WebSocket access and persistent storage if session files are expected.
+
+### Compatibility and test status
+
+Implemented in the current integration:
+- GoatBot imports the published package through `bot/login/omegaFca.js`.
+- The adapter accepts the AppState supplied by `login.js` and returns the callback-style login result expected by GoatBot.
+- The client facade exposes `listenMqtt`, `stopListening`, `getCurrentUserID`, and supported API methods.
+- GoatBot consumes the package's explicit `ready` event before marking the Facebook session online.
+- The runtime recovery path validates the replacement AppState account ID and waits for the candidate listener before swapping sessions.
+
+Important limitations:
+- Native Facebook MQTT broker acceptance and message delivery have **not** been confirmed with a live authorized Facebook account.
+- Event decoding and message-send wire compatibility remain experimental; Facebook may change undocumented endpoints and protocol fields.
+- The package does not yet provide complete FCA method parity or E2EE.
+- The existing humanizer configuration is not currently applied by the native package adapter.
+- A successful npm install or synthetic test does not prove Facebook authentication, MQTT receive/send, reconnect, or all bot commands work.
+
+### First-run verification
+
+After starting the bot, inspect logs in this order:
+
+1. Package loads without `MODULE_NOT_FOUND`.
+2. AppState JSON is read and validated (never print cookie values).
+3. Facebook session bootstrap succeeds.
+4. Messenger WebSocket/MQTT protocol setup completes.
+5. GoatBot receives the `ready` event and reports the account online.
+6. Send a test message only to a conversation you control; verify the bot receives and replies.
+
+If step 3 or 4 fails, keep the service logs (with cookies and tokens redacted) and stop repeated login attempts. Do not interpret the process merely staying alive as a successful Facebook connection.
 
 ---
-
+ 
 ## 🧩 Create Your First Command
 
 Create a file under `scripts/cmds/`, for example `scripts/cmds/hello.js`:
