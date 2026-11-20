@@ -1,11 +1,11 @@
 "use strict";
 
-// GoatBot now uses OmegA-FCA's first-party AppState + Messenger MQTT client.
-// No legacy FCA provider is loaded here.
+// Load the published OmegA-FCA package, just as GoatBot previously loaded
+// its FCA provider package. Keep this adapter as the compatibility boundary.
 const {
   createFacebookMqttClient,
   createGoatBotLogin
-} = require("../../vendor/omega-fca");
+} = require("@nirzon-islam/omega-fca");
 
 const client = createFacebookMqttClient({
   reconnect: {
