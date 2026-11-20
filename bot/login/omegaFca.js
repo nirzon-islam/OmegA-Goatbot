@@ -5,7 +5,7 @@
 const {
   createFacebookMqttClient,
   createGoatBotLogin
-} = require("@omega/fca");
+} = require("@nirzon-islam/omega-fca");
 
 const client = createFacebookMqttClient({
   reconnect: {
