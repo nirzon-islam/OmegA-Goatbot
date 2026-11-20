@@ -1,7 +1,8 @@
 # OmegA-FCA integration
 
 The `fca-migration-cleanup` branch routes GoatBot's login entrypoint through
-`@nirzon-islam/omega-fca` using `bot/login/omegaFca.js`.
+the vendored OmegA-FCA source at `vendor/omega-fca/`, loaded by
+`bot/login/omegaFca.js`.
 
 ## Current mode: native AppState/MQTT integration (experimental)
 
@@ -18,10 +19,12 @@ transport is production-ready:
 
 ## Package installation
 
-The dependency is `@nirzon-islam/omega-fca` from GitHub Packages. The
-repository `.npmrc` maps `@nirzon-islam` to `https://npm.pkg.github.com`.
-Set `NODE_AUTH_TOKEN` in Railway/Render to a GitHub token with
-`read:packages` access. Never commit the token or any Facebook session data.
+OmegA-FCA is vendored inside this GoatBot branch, so deployment does not
+fetch the private FCA repository or require `NODE_AUTH_TOKEN` / GitHub Packages
+authentication. The runtime dependency `ws` is installed from the public npm
+registry. The vendored copy is independent of the FCA repository's visibility;
+when the FCA source changes, sync the updated source into this branch before
+deploying. Never commit Facebook session data.
 
 ## Deploy and verify
 
