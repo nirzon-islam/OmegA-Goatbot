@@ -52,8 +52,9 @@ const titles = [
     "╚══╝  NIRZON  ╚══╝"
   ]
 ];
-const maxWidth = process.stdout.columns;
-const title = maxWidth > 0x3a ? titles[0x0] : maxWidth > 0x24 ? titles[0x1] : maxWidth > 0x1a ? titles[0x2] : titles[0x3];
+const maxWidth = process.stdout.columns || 0x50;
+// Only two banner layouts are defined; use the compact one for every narrow terminal.
+const title = maxWidth > 0x3a ? titles[0x0] : titles[0x1];
 console.log(gradient("#f5af19", "#f12711")(createLine(null, true)));
 console.log();
 for (const text of title) {
