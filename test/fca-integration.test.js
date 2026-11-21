@@ -3,7 +3,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
-  createClient,
   createFacebookMqttClient,
   createGoatBotLogin,
   normalizeMessengerDelta
@@ -11,13 +10,12 @@ const {
 const goatBotLogin = require("../bot/login/omegaFca");
 
 test("published FCA package exposes the GoatBot integration entry points", () => {
-  assert.equal(typeof createClient, "function");
   assert.equal(typeof createFacebookMqttClient, "function");
   assert.equal(typeof createGoatBotLogin, "function");
   assert.equal(typeof normalizeMessengerDelta, "function");
 });
 
-test("GoatBot adapter normalizes FCA read events to the dispatcher's read_receipt name", () => {
+test("GoatBot adapter maps FCA read events to read_receipt with legacy aliases", () => {
   const receipt = normalizeMessengerDelta({
     class: "ReadReceipt",
     messageMetadata: {
@@ -26,14 +24,15 @@ test("GoatBot adapter normalizes FCA read events to the dispatcher's read_receip
       watermarkTimestamp: 1700000000000
     }
   });
-  assert.equal(receipt.type, "read");
   const compatible = goatBotLogin.normalizeGoatBotEvent(receipt);
   assert.equal(compatible.type, "read_receipt");
-  assert.equal(compatible.reader || compatible.userID, "reader-1");
+  assert.equal(compatible.reader, "reader-1");
+  assert.equal(compatible.userID, "reader-1");
   assert.equal(compatible.threadID, "thread-1");
+  assert.equal(compatible.watermarkTimestamp, 1700000000000);
 });
 
-test("FCA quoted reply events expose the legacy nested messageReply object", () => {
+test("GoatBot adapter builds nested messageReply with legacy attachment fields", () => {
   const reply = normalizeMessengerDelta({
     class: "NewMessage",
     messageMetadata: {
@@ -54,43 +53,45 @@ test("FCA quoted reply events expose the legacy nested messageReply object", () 
       }]
     }
   });
-  assert.equal(reply.type, "message_reply");
-  assert.equal(reply.messageReply.messageID, "quoted-1");
-  assert.equal(reply.messageReply.senderID, "quoted-sender");
-  assert.equal(reply.messageReply.attachments[0].type, "photo");
-  assert.equal(reply.messageReply.attachments[0].url, "https://cdn.example/quoted.jpg");
+  const compatible = goatBotLogin.normalizeGoatBotEvent(reply);
+  assert.equal(compatible.type, "message_reply");
+  assert.equal(compatible.messageReply.messageID, "quoted-1");
+  assert.equal(compatible.messageReply.senderID, "quoted-sender");
+  assert.equal(compatible.messageReply.body, "quoted body");
+  assert.equal(compatible.messageReply.attachments[0].type, "photo");
+  assert.equal(compatible.messageReply.attachments[0].url, "https://cdn.example/quoted.jpg");
+  assert.equal(compatible.messageReply.attachments[0].ID, "photo-1");
 });
 
-test("legacy sendMessage third-argument reply ID is preserved by the FCA facade", async () => {
+test("GoatBot adapter shifts a third-argument reply ID into FCA's fourth argument", async () => {
   let received;
-  const client = createClient({
-    authenticate: async () => ({
-      getCurrentUserID: async () => "123456",
-      sendMessage: async input => {
-        received = input;
-        return { messageID: "sent-1" };
-      },
-      listen: () => () => {},
-      disconnect: async () => {}
-    }),
-    reconnect: { maxAttempts: 1, minDelayMs: 0, maxDelayMs: 0 }
-  });
+  const api = {
+    sendMessage: (...args) => { received = args; return Promise.resolve("sent"); }
+  };
+  const wrapped = goatBotLogin.wrapApi(api);
+  await wrapped.sendMessage("reply body", "thread-1", "quoted-1");
+  assert.deepEqual(received, ["reply body", "thread-1", undefined, "quoted-1"]);
+});
 
-  try {
-    const api = await client.login({
-      mode: "appstate",
-      appState: [
-        { key: "c_user", value: "123456" },
-        { key: "xs", value: "synthetic-session" }
-      ]
-    });
-    await api.sendMessage("reply body", "thread-1", "quoted-1");
-    assert.deepEqual(received, {
-      threadID: "thread-1",
-      message: "reply body",
-      replyToMessageID: "quoted-1"
-    });
-  } finally {
-    await client.logout();
-  }
+test("GoatBot adapter normalizes events received from listenMqtt", () => {
+  let listener;
+  const api = {
+    listenMqtt: callback => { listener = callback; return () => {}; }
+  };
+  const wrapped = goatBotLogin.wrapApi(api);
+  let received;
+  wrapped.listenMqtt((error, event) => { received = { error, event }; });
+  listener(null, {
+    type: "read",
+    rawDelta: {
+      messageMetadata: {
+        actorFbId: "reader-2",
+        threadKey: { threadFbId: "thread-2" }
+      }
+    }
+  });
+  assert.equal(received.error, null);
+  assert.equal(received.event.type, "read_receipt");
+  assert.equal(received.event.reader, "reader-2");
+  assert.equal(received.event.threadID, "thread-2");
 });
