@@ -65,6 +65,7 @@ test("legacy sendMessage third-argument reply ID is preserved by the FCA facade"
         received = input;
         return { messageID: "sent-1" };
       },
+      listen: () => () => {},
       disconnect: async () => {}
     }),
     reconnect: { maxAttempts: 1, minDelayMs: 0, maxDelayMs: 0 }
