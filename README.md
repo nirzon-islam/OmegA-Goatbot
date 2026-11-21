@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="https://readme-typing-svg.herokuapp.com?font=Orbitron&weight=800&size=34&pause=900&color=00E5FF&center=true&vCenter=true&width=760&lines=Welcome+to+OmegA+Bot;Powered+by+NirZon;Messenger+Automation+Reimagined" alt="OmegA Bot animated title" />
+<img src="https://capsule-render.vercel.app/api?type=waving&height=230&section=header&text=OmegA%20Bot&fontSize=68&fontColor=FFFFFF&fontAlignY=38&desc=MESSENGER%20AUTOMATION%20FRAMEWORK&descSize=17&descAlignY=60&animation=fadeIn&color=0:101B4B,35:4F46E5,70:0891B2,100:06B6D4" width="100%" alt="OmegA Bot colorful gradient banner" />
 
-<img src="https://capsule-render.vercel.app/api?type=venom&height=180&color=0:071A2B,45:075985,100:00D4FF&text=OMEGA%20BOT&fontColor=FFFFFF&fontSize=54&fontAlignY=52&animation=fadeIn&stroke=00E5FF&strokeWidth=1" width="100%" alt="OmegA Bot banner" />
+<img src="https://readme-typing-svg.herokuapp.com?font=Orbitron&weight=800&size=25&pause=1000&color=22D3EE&center=true&vCenter=true&width=720&lines=Automate+your+community;Powerful+commands+%26+events;Built+and+maintained+by+NirZon" alt="OmegA Bot animated tagline" />
 
 ### Facebook Messenger Bot Framework
 
@@ -15,9 +15,29 @@
 
 *Fast • Flexible • Customizable • Community-driven*
 
+[![GitHub](https://img.shields.io/badge/GitHub-OmegA--Goatbot-181717?style=flat-square&logo=github)](https://github.com/nirzon-islam/OmegA-Goatbot)
+[![Node.js](https://img.shields.io/badge/Runtime-Node.js%2020-339933?style=flat-square&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![License](https://img.shields.io/badge/License-MIT-0EA5E9?style=flat-square&logo=opensourceinitiative&logoColor=white)](LICENSE)
+[![Maintainer](https://img.shields.io/badge/Maintainer-NirZon-8B5CF6?style=flat-square)](https://github.com/nirzon-islam)
+
+</div>
+
+<div align="center">
+
+### 🧭 Explore OmegA Bot
+
+| [✨ Features](#-features) | [🚀 Quick Start](#-quick-start) | [🧠 Agent Backend](#-omegagent-backend) | [🔷 OmegA-FCA](#-omega-fca--facebook-connection) | [🧩 Commands](#-create-your-first-command) | [📜 License](#-credits--license) |
+|:---:|:---:|:---:|:---:|:---:|:---:|
+
 </div>
 
 ---
+
+<div align="center">
+
+<img src="https://capsule-render.vercel.app/api?type=rect&height=3&color=0:22D3EE,50:8B5CF6,100:EC4899" width="92%" alt="Section accent" />
+
+</div>
 
 ## ✦ About OmegA Bot
 
@@ -318,7 +338,7 @@ See the repository's `LICENSE` file for the applicable license terms.
 
 <div align="center">
 
-<img src="https://capsule-render.vercel.app/api?type=waving&height=120&section=footer&color=0:00D4FF,50:075985,100:071A2B&animation=twinkling" width="100%" alt="Animated footer" />
+<img src="https://capsule-render.vercel.app/api?type=waving&height=150&section=footer&color=0:EC4899,35:8B5CF6,70:0891B2,100:101B4B&animation=twinkling" width="100%" alt="OmegA Bot colorful footer" />
 
 **OmegA Bot · Developed with care by NirZon**
 
