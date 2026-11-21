@@ -39,6 +39,7 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: npm run test:secure-session
+      - run: npm run test:fca-integration
       - run: node --check bot/login/login.js
       - run: node --check bot/login/omegaFca.js
       - run: node -e "const login = require('./bot/login/omegaFca'); if (typeof login !== 'function') process.exit(1)"
