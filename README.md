@@ -1,5 +1,11 @@
 <div align="center">
 
+<img src="assets/OmegA-Goatbot_%20Neon%20Crowned%20Duo.png" width="100%" alt="OmegA-Goatbot crowned anime duo banner featuring OmegA and RiyA" />
+
+</div>
+
+<div align="center">
+
 <img src="https://capsule-render.vercel.app/api?type=waving&height=270&section=header&text=OmegA%20Bot&fontSize=76&fontColor=FFFFFF&fontAlignY=36&desc=MESSENGER%20AUTOMATION%20%E2%80%A2%20SMART%20COMMUNITIES%20%E2%80%A2%20NIRZON&descSize=16&descAlignY=59&animation=twinkling&color=0:090E2B,18:312E81,38:6D28D9,58:DB2777,78:0891B2,100:06B6D4" width="100%" alt="OmegA Bot vivid neon gradient banner" />
 
 <img src="https://readme-typing-svg.herokuapp.com?font=Orbitron&weight=800&size=27&pause=850&color=F0ABFC&center=true&vCenter=true&width=760&lines=Automate+your+community;Powerful+commands+%26+events;One+framework.+Endless+possibilities.;Built+with+%E2%9D%A4+by+NirZon" alt="OmegA Bot animated neon tagline" />
