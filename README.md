@@ -1,24 +1,27 @@
 <div align="center">
 
-<img src="https://capsule-render.vercel.app/api?type=waving&height=230&section=header&text=OmegA%20Bot&fontSize=68&fontColor=FFFFFF&fontAlignY=38&desc=MESSENGER%20AUTOMATION%20FRAMEWORK&descSize=17&descAlignY=60&animation=fadeIn&color=0:101B4B,35:4F46E5,70:0891B2,100:06B6D4" width="100%" alt="OmegA Bot colorful gradient banner" />
+<img src="https://capsule-render.vercel.app/api?type=waving&height=270&section=header&text=OmegA%20Bot&fontSize=76&fontColor=FFFFFF&fontAlignY=36&desc=MESSENGER%20AUTOMATION%20%E2%80%A2%20SMART%20COMMUNITIES%20%E2%80%A2%20NIRZON&descSize=16&descAlignY=59&animation=twinkling&color=0:090E2B,18:312E81,38:6D28D9,58:DB2777,78:0891B2,100:06B6D4" width="100%" alt="OmegA Bot vivid neon gradient banner" />
 
-<img src="https://readme-typing-svg.herokuapp.com?font=Orbitron&weight=800&size=25&pause=1000&color=22D3EE&center=true&vCenter=true&width=720&lines=Automate+your+community;Powerful+commands+%26+events;Built+and+maintained+by+NirZon" alt="OmegA Bot animated tagline" />
+<img src="https://readme-typing-svg.herokuapp.com?font=Orbitron&weight=800&size=27&pause=850&color=F0ABFC&center=true&vCenter=true&width=760&lines=Automate+your+community;Powerful+commands+%26+events;One+framework.+Endless+possibilities.;Built+with+%E2%9D%A4+by+NirZon" alt="OmegA Bot animated neon tagline" />
+
+<img src="https://capsule-render.vercel.app/api?type=rect&height=5&color=0:22D3EE,20:6366F1,40:EC4899,60:F97316,80:A3E635,100:22D3EE" width="88%" alt="Rainbow neon divider" />
 
 ### Facebook Messenger Bot Framework
 
 **A customized Goat Bot V2 project — developed and maintained by NirZon.**
 
-![Node.js](https://img.shields.io/badge/Node.js-20.x-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-2563EB?style=for-the-badge)
-![Maintainer](https://img.shields.io/badge/Maintained%20by-NirZon-7C3AED?style=for-the-badge)
-![Project](https://img.shields.io/badge/Project-OmegA%20Bot-0891B2?style=for-the-badge)
+![Node.js](https://img.shields.io/badge/Node.js-20.x-22C55E?style=for-the-badge&logo=nodedotjs&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-06B6D4?style=for-the-badge&logo=opensourceinitiative&logoColor=white)
+![Maintainer](https://img.shields.io/badge/Maintained%20by-NirZon-A855F7?style=for-the-badge&logo=github&logoColor=white)
+![Project](https://img.shields.io/badge/Project-OmegA%20Bot-EC4899?style=for-the-badge&logo=rocket&logoColor=white)
+![Platform](https://img.shields.io/badge/Platform-Messenger-3B82F6?style=for-the-badge&logo=messenger&logoColor=white)
 
 *Fast • Flexible • Customizable • Community-driven*
 
-[![GitHub](https://img.shields.io/badge/GitHub-OmegA--Goatbot-181717?style=flat-square&logo=github)](https://github.com/nirzon-islam/OmegA-Goatbot)
-[![Node.js](https://img.shields.io/badge/Runtime-Node.js%2020-339933?style=flat-square&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
-[![License](https://img.shields.io/badge/License-MIT-0EA5E9?style=flat-square&logo=opensourceinitiative&logoColor=white)](LICENSE)
-[![Maintainer](https://img.shields.io/badge/Maintainer-NirZon-8B5CF6?style=flat-square)](https://github.com/nirzon-islam)
+[![GitHub](https://img.shields.io/badge/GitHub-OmegA--Goatbot-111827?style=for-the-badge&logo=github)](https://github.com/nirzon-islam/OmegA-Goatbot)
+[![Runtime](https://img.shields.io/badge/Runtime-Node.js%2020-16A34A?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![License](https://img.shields.io/badge/License-MIT-0284C7?style=for-the-badge&logo=opensourceinitiative&logoColor=white)](LICENSE)
+[![Maintainer](https://img.shields.io/badge/Maintainer-NirZon-9333EA?style=for-the-badge&logo=github)](https://github.com/nirzon-islam)
 
 </div>
 
@@ -39,11 +42,23 @@
 
 </div>
 
+<div align="center">
+
+<img src="https://capsule-render.vercel.app/api?type=rect&height=7&color=0:22D3EE,50:6366F1,100:EC4899" width="94%" alt="about rainbow section divider" />
+
+</div>
+
 ## ✦ About OmegA Bot
 
 **OmegA Bot** is a customized Facebook Messenger bot framework built on the open-source [Goat Bot V2](https://github.com/ntkhang03/Goat-Bot-V2), originally created by **NTKhang**.
 
 The project is developed and maintained by **NirZon**. It brings together modular commands, event listeners, configurable bot behavior, and optional backend integrations in one extensible framework.
+
+<div align="center">
+
+<img src="https://capsule-render.vercel.app/api?type=rect&height=7&color=0:F97316,50:EC4899,100:8B5CF6" width="94%" alt="features rainbow section divider" />
+
+</div>
 
 ## ⚡ Features
 
@@ -59,6 +74,12 @@ The project is developed and maintained by **NirZon**. It brings together modula
 > **Facebook connection status:** This branch is wired to the public npm package `@nirzon-islam/omega-fca`. Its AppState login and GoatBot callback adapter are implemented, but the native Facebook MQTT protocol is experimental and has not yet been verified against a live authorized account. Treat first deployment as a controlled test, not a production-ready release.
 
 ---
+
+<div align="center">
+
+<img src="https://capsule-render.vercel.app/api?type=rect&height=7&color=0:06B6D4,50:3B82F6,100:6366F1" width="94%" alt="quick-start rainbow section divider" />
+
+</div>
 
 ## 🚀 Quick Start
 
@@ -94,6 +115,12 @@ npm run dev
 
 ---
 
+<div align="center">
+
+<img src="https://capsule-render.vercel.app/api?type=rect&height=7&color=0:14B8A6,50:0EA5E9,100:6366F1" width="94%" alt="security rainbow section divider" />
+
+</div>
+
 ## 🔧 Configuration & Security
 
 - Set your bot administrator UID and command prefix in the project's configuration.
@@ -101,6 +128,12 @@ npm run dev
 - Never commit `account.txt`, session files, or production environment files.
 - Use a private repository or deployment secret manager for sensitive configuration.
 - If a Facebook login challenge or checkpoint appears, resolve it through the account owner's official login flow. Never attempt to bypass security checks.
+
+<div align="center">
+
+<img src="https://capsule-render.vercel.app/api?type=rect&height=7&color=0:6366F1,50:8B5CF6,100:EC4899" width="94%" alt="deployment rainbow section divider" />
+
+</div>
 
 ## ☁️ Deployment
 
@@ -127,6 +160,12 @@ Install Node.js 20.x, clone the repository, run `npm install`, configure the bot
 <img src="https://readme-typing-svg.herokuapp.com?font=Orbitron&weight=700&size=25&pause=1000&color=A78BFA&center=true&vCenter=true&width=650&lines=OMEGA+AGENT+SYSTEM;Your+Bot.+Your+Control.;AI-Powered+Management+Layer" alt="OmegA Agent animated heading" />
 
 <img src="https://capsule-render.vercel.app/api?type=rect&height=4&color=0:00E5FF,50:8B5CF6,100:00E5FF" width="85%" alt="Agent section divider" />
+
+<div align="center">
+
+<img src="https://capsule-render.vercel.app/api?type=rect&height=7&color=0:8B5CF6,50:EC4899,100:F97316" width="94%" alt="agent rainbow section divider" />
+
+</div>
 
 ### 🧠 OmegA Agent Backend
 **A separate control center for AI-assisted bot management**
@@ -199,6 +238,12 @@ OmegA Agent Backend (Render)
 </div>
 
 ---
+
+<div align="center">
+
+<img src="https://capsule-render.vercel.app/api?type=rect&height=7&color=0:06B6D4,50:3B82F6,100:8B5CF6" width="94%" alt="fca rainbow section divider" />
+
+</div>
 
 ## 🔷 OmegA-FCA · Facebook connection
 
@@ -282,6 +327,12 @@ If step 3 or 4 fails, keep the service logs (with cookies and tokens redacted) a
 
 ---
  
+<div align="center">
+
+<img src="https://capsule-render.vercel.app/api?type=rect&height=7&color=0:22C55E,50:06B6D4,100:3B82F6" width="94%" alt="commands rainbow section divider" />
+
+</div>
+
 ## 🧩 Create Your First Command
 
 Create a file under `scripts/cmds/`, for example `scripts/cmds/hello.js`:
@@ -318,6 +369,12 @@ The exact available APIs and event fields depend on the connection provider and 
 
 ---
 
+<div align="center">
+
+<img src="https://capsule-render.vercel.app/api?type=rect&height=7&color=0:EC4899,50:8B5CF6,100:3B82F6" width="94%" alt="contact rainbow section divider" />
+
+</div>
+
 ## 🔗 Project & Contact
 
 - **OmegA Bot:** https://github.com/nirzon-islam/OmegA-Goatbot
@@ -327,6 +384,12 @@ The exact available APIs and event fields depend on the connection provider and 
 - **Original Goat Bot V2:** https://github.com/ntkhang03/Goat-Bot-V2
 - **Node.js:** https://nodejs.org/
 - **Railway:** https://railway.com/
+
+<div align="center">
+
+<img src="https://capsule-render.vercel.app/api?type=rect&height=7&color=0:F97316,50:EC4899,100:8B5CF6" width="94%" alt="credits rainbow section divider" />
+
+</div>
 
 ## 📜 Credits & License
 
