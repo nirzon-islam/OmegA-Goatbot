@@ -45,14 +45,13 @@
     "sqlite3": "^5.0.5",
     "totp-generator": "^0.0.13",
     "yt-search": "^2.13.1",
-    "@nirzon-islam/omega-fca": "0.1.6-rc.1"
+    "@nirzon-islam/omega-fca": "latest"
   },
   "scripts": {
     "start": "node index.js",
     "dev": "NODE_ENV=development node index.js",
     "prod": "NODE_ENV=production node index.js",
-    "test:secure-session": "node --test bot/login/secureSession.test.js",
-    "prestart": "npm install @nirzon-islam/omega-fca@latest --no-save --package-lock=false"
+    "test:secure-session": "node --test bot/login/secureSession.test.js"
   },
   "author": "NirZon",
   "license": "MIT",
