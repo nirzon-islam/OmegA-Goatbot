@@ -1,82 +1,104 @@
-<%~ includeFile("partials/header.eta", { user: user }) %>
-<%~ includeFile("partials/message.eta") %>
+<%~ includeFile("partials/header.eta", {
+	user: user
+}); %>
+<%~ includeFile("partials/message.eta"); %>
+<%~ includeFile("partials/title.eta", {
+	icon: "fas fa-home",
+	title: "Home"
+}); %>
 
-<main class="omega-home">
-  <section class="omega-hero">
-    <div class="omega-hero-glow omega-glow-one"></div>
-    <div class="omega-hero-glow omega-glow-two"></div>
-    <div class="omega-hero-content">
-      <span class="omega-eyebrow"><i class="fas fa-bolt"></i> OMEGA GOATBOT CONTROL CENTER</span>
-      <h1>Welcome to <span>GoatBot</span></h1>
-      <p>Your community, your rules. Manage conversations, automate moderation and keep every group running smoothly.</p>
-      <div class="omega-hero-actions">
-        <a class="btn omega-btn-primary" href="/dashboard"><i class="fas fa-gauge-high me-2"></i>Open Dashboard</a>
-        <% if (global.botID) { %>
-          <button class="btn omega-btn-glass" id="addme"><i class="fab fa-facebook-messenger me-2"></i>Add bot to chat</button>
-        <% } else { %>
-          <span class="btn omega-btn-offline"><i class="fas fa-circle-exclamation me-2"></i>Bot is currently offline</span>
-        <% } %>
-      </div>
-      <div class="omega-live-state"><span class="omega-live-dot"></span><%= global.botID ? "Bot connection available" : "Waiting for bot connection" %></div>
-    </div>
-    <div class="omega-hero-art" aria-hidden="true">
-      <div class="omega-orbit orbit-a"></div><div class="omega-orbit orbit-b"></div>
-      <div class="omega-bot-mark"><img src="/images/logo-non-bg.png" alt=""></div>
-      <span class="omega-float-icon float-one"><i class="fas fa-shield-halved"></i></span>
-      <span class="omega-float-icon float-two"><i class="fas fa-wand-magic-sparkles"></i></span>
-      <span class="omega-float-icon float-three"><i class="fas fa-comments"></i></span>
-    </div>
-  </section>
+<h1 class="text-center mt-3">Welcome to Goat Bot!</h1>
 
-  <section class="omega-stats-grid" aria-label="Bot statistics">
-    <article class="omega-stat-card stat-purple">
-      <div class="omega-stat-icon"><i class="fas fa-layer-group"></i></div>
-      <div><span class="omega-stat-label">Connected groups</span><strong><%= global.db.allThreadData.length %></strong><small>Communities using GoatBot</small></div>
-    </article>
-    <article class="omega-stat-card stat-blue">
-      <div class="omega-stat-icon"><i class="fas fa-users"></i></div>
-      <div><span class="omega-stat-label">Total users</span><strong><%= global.db.allUserData.length %></strong><small>Across all communities</small></div>
-    </article>
-    <article class="omega-stat-card stat-green">
-      <div class="omega-stat-icon"><i class="fas fa-shield-heart"></i></div>
-      <div><span class="omega-stat-label">Moderation</span><strong>Active</strong><small>Tools ready to configure</small></div>
-    </article>
-  </section>
+<ul class="text-center d-block list-unstyled">
+	<li> <i class="fas fa-user-shield"></i> Moderation</li>
+	<li> <i class="fas fa-terminal"></i> Custom commands</li>
+</ul>
 
-  <section class="omega-section-heading">
-    <div><span class="omega-kicker">CONTROL YOUR COMMUNITY</span><h2>Everything in one place</h2><p>Useful tools to make group management easier.</p></div>
-    <a href="/dashboard" class="omega-text-link">Explore dashboard <i class="fas fa-arrow-right ms-1"></i></a>
-  </section>
+<div class="text-center mb-3">
+<% if (global.botID) { %>
+	<button class="btn btn-phoenix-primary btn-block rounded-5" id="addme">
+		Thêm bot vào box chat của bạn
+	</button>
+<% } else { %>
+	<button class="btn btn-phoenix-danger btn-block rounded-5">
+		Hiện tại bot đang offline
+	</button>
+<% } %>
+</div>
 
-  <section class="omega-feature-grid">
-    <a class="omega-feature-card feature-violet" href="/dashboard">
-      <span class="omega-feature-icon"><i class="fas fa-shield-halved"></i></span><span class="omega-feature-tag">SAFETY</span>
-      <h3>Smart moderation</h3><p>Manage group settings and keep conversations under control with moderation tools.</p><span class="omega-card-arrow"><i class="fas fa-arrow-up-right-from-square"></i></span>
-    </a>
-    <a class="omega-feature-card feature-cyan" href="/dashboard">
-      <span class="omega-feature-icon"><i class="fas fa-terminal"></i></span><span class="omega-feature-tag">AUTOMATION</span>
-      <h3>Custom commands</h3><p>Create useful commands and make repetitive group tasks easier.</p><span class="omega-card-arrow"><i class="fas fa-arrow-up-right-from-square"></i></span>
-    </a>
-    <a class="omega-feature-card feature-pink" href="/dashboard">
-      <span class="omega-feature-icon"><i class="fas fa-hand-sparkles"></i></span><span class="omega-feature-tag">ENGAGEMENT</span>
-      <h3>Welcome experience</h3><p>Configure greetings and farewell messages for your community members.</p><span class="omega-card-arrow"><i class="fas fa-arrow-up-right-from-square"></i></span>
-    </a>
-    <a class="omega-feature-card feature-orange" href="/stats">
-      <span class="omega-feature-icon"><i class="fas fa-chart-line"></i></span><span class="omega-feature-tag">INSIGHTS</span>
-      <h3>Bot statistics</h3><p>Get a quick overview of bot activity, usage and runtime information.</p><span class="omega-card-arrow"><i class="fas fa-arrow-up-right-from-square"></i></span>
-    </a>
-  </section>
+<hr>
 
-  <section class="omega-bottom-banner">
-    <div><span class="omega-kicker">READY WHEN YOU ARE</span><h2>Make your group management simpler.</h2><p>Open your dashboard and configure the tools your community needs.</p></div>
-    <a href="/dashboard" class="btn omega-btn-primary">Go to dashboard <i class="fas fa-arrow-right ms-2"></i></a>
-  </section>
-</main>
+<!-- go to /dashboard -->
+<section id="about" class="py-5" onclick="window.location.href='/dashboard'" style="cursor: pointer;">
+	<div class="container">
+		<div class="row">
+			<div class="col-lg-8 mx-auto">
+				<h2 class="text-center mb-4">Dễ dàng sử dụng</h2>
+				<p class="text-center">Tại đây bạn có thể tùy chỉnh lời chào thành viên mới, tạm biệt thành viên rời khỏi
+					box, v.v. và nhiều hơn nữa với bảng điều khiển dễ sử dụng và trực quan nhất!</p>
+			</div>
+		</div>
+	</div>
+</section>
 
-<script>
+<section id="rent-api" class="bg-light py-5" onclick="window.location.href='/dashboard'" style="cursor: pointer;">
+	<div class="container">
+		<div class="row">
+			<div class="col-lg-8 mx-auto">
+				<h2 class="text-center mb-4">Gửi lời chào khi có người dùng mới tham gia vào nhóm chat</h2>
+				<p class="text-center">Tận dụng thông điệp chào mừng để thông báo cho những người mới đến về các quy tắc
+					nhóm chat, hoặc các sự kiện đang diễn ra của bạn. Bạn có thể thiết kế thiệp chào mừng của riêng
+					bạn hoặc giữ nó đơn giản.</p>
+			</div>
+		</div>
+	</div>
+</section>
+
+<section id="contact" class="py-5" onclick="window.location.href='/dashboard'" style="cursor: pointer;">
+	<div class="container">
+		<div class="row">
+			<div class="col-lg-8 mx-auto">
+				<h2 class="text-center mb-4">Dễ dàng tạo các lệnh tùy chỉnh của riêng bạn</h2>
+				<p class="text-center">Goat Bot cung cấp cho bạn toàn quyền kiểm soát để tạo ra lệnh của riêng bạn.</p>
+			</div>
+		</div>
+	</div>
+</section>
+
+<section id="thanks" class="bg-light py-5" onclick="window.location.href='/dashboard'" style="cursor: pointer;">
+	<div class="container">
+		<div class="row">
+			<div class="col-lg-8 mx-auto">
+				<h2 class="text-center mb-4">Cấp độ và exp trong box chat của bạn</h2>
+				<p class="text-center">Sử dụng hệ thống chúng tôi để xác định và thưởng cho các thành viên tích cực nhất
+					trong nhóm chat của bạn.</p>
+			</div>
+		</div>
+	</div>
+</section>
+
+<section id="contact" class="py-5" onclick="window.location.href='/dashboard'" style="cursor: pointer;">
+	<div class="container">
+		<div class="row">
+			<div class="col-lg-8 mx-auto">
+				<h2 class="text-center mb-4">Người dùng</h2>
+				<p class="text-center">Hiện tại bot đã được thêm vào tổng cộng <b><%=global.db.allThreadData.length%> nhóm
+					chat</b> và được sử dụng bởi <b><%=global.db.allUserData.length%> người dùng</b>.</p>
+			</div>
+		</div>
+	</div>
+</section>
+
+
+<script type="text/javascript">
   (function() {
     const btn = $('#addme');
-    if (btn.length > 0) btn.on("click", () => window.open("https://www.facebook.com/" + "<%= global.botID %>", "_blank", "noopener"));
+		if (btn.length > 0) {
+			btn.on("click", () => {
+				window.open("https://www.facebook.com/" + "<%= global.botID %>", "_blank");
+			});
+		}
   })();
 </script>
+
 <%~ includeFile('partials/footer.eta') %>
