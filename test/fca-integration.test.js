@@ -15,7 +15,7 @@ test("published FCA package exposes the GoatBot integration entry points", () =>
   assert.equal(typeof normalizeMessengerDelta, "function");
 });
 
-test("GoatBot adapter maps FCA read events to read_receipt", () => {
+test("GoatBot adapter maps legacy FCA read events to read_receipt", () => {
   const receipt = normalizeMessengerDelta({
     class: "ReadReceipt",
     messageMetadata: {
