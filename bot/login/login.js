@@ -50,9 +50,7 @@ const titles = [
   [
     "███╗  NIRZON  ███╗",
     "╚══╝  NIRZON  ╚══╝"
-  ],
-  ["N I R Z O N"],
-  ["NIRZON"]
+  ]
 ];
 const maxWidth = process.stdout.columns;
 const title = maxWidth > 0x3a ? titles[0x0] : maxWidth > 0x24 ? titles[0x1] : maxWidth > 0x1a ? titles[0x2] : titles[0x3];
