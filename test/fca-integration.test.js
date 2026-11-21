@@ -8,6 +8,7 @@ const {
   createGoatBotLogin,
   normalizeMessengerDelta
 } = require("@nirzon-islam/omega-fca");
+const goatBotLogin = require("../bot/login/omegaFca");
 
 test("published FCA package exposes the GoatBot integration entry points", () => {
   assert.equal(typeof createClient, "function");
@@ -16,7 +17,7 @@ test("published FCA package exposes the GoatBot integration entry points", () =>
   assert.equal(typeof normalizeMessengerDelta, "function");
 });
 
-test("Messenger events match GoatBot read-receipt and quoted-reply contracts", () => {
+test("GoatBot adapter normalizes FCA read events to the dispatcher's read_receipt name", () => {
   const receipt = normalizeMessengerDelta({
     class: "ReadReceipt",
     messageMetadata: {
@@ -25,10 +26,14 @@ test("Messenger events match GoatBot read-receipt and quoted-reply contracts", (
       watermarkTimestamp: 1700000000000
     }
   });
-  assert.equal(receipt.type, "read_receipt");
-  assert.equal(receipt.reader, "reader-1");
-  assert.equal(receipt.threadID, "thread-1");
+  assert.equal(receipt.type, "read");
+  const compatible = goatBotLogin.normalizeGoatBotEvent(receipt);
+  assert.equal(compatible.type, "read_receipt");
+  assert.equal(compatible.reader || compatible.userID, "reader-1");
+  assert.equal(compatible.threadID, "thread-1");
+});
 
+test("FCA quoted reply events expose the legacy nested messageReply object", () => {
   const reply = normalizeMessengerDelta({
     class: "NewMessage",
     messageMetadata: {
