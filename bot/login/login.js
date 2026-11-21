@@ -47,7 +47,7 @@ for (const text of title) {
   const textColor = gradient("#FA8BFF", "#2BD2FF", "#2BFF88")(text);
   centerText(textColor, text.length);
 }
-let subTitle = "GoatBot V2@" + currentVersion + " - Powered by OmegA-FCA";
+let subTitle = "GoatBot V2@" + currentVersion + " - Powered by NirZon";
 const subTitleArray = [];
 if (subTitle.length > maxWidth) {
   while (subTitle.length > maxWidth) {
