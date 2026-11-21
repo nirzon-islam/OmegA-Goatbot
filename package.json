@@ -51,7 +51,8 @@
     "start": "node index.js",
     "dev": "NODE_ENV=development node index.js",
     "prod": "NODE_ENV=production node index.js",
-    "test:secure-session": "node --test bot/login/secureSession.test.js"
+    "test:secure-session": "node --test bot/login/secureSession.test.js",
+    "prestart": "npm install @nirzon-islam/omega-fca@latest --no-save --package-lock=false"
   },
   "author": "NirZon",
   "license": "MIT",
