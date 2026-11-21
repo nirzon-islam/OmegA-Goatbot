@@ -33,12 +33,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          registry-url: https://npm.pkg.github.com
-          scope: '@nirzon-islam'
       - name: Install dependencies
         run: npm install --ignore-scripts --no-audit --no-fund
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: npm run test:secure-session
       - run: npm run test:fca-integration
       - run: node --check bot/login/login.js
