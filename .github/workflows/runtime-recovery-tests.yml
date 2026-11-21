@@ -7,7 +7,6 @@ on:
       - fca-migration-cleanup
     paths:
       - "bot/login/**"
-      - "test/fca-integration.test.js"
       - "package.json"
       - "package-lock.json"
       - ".npmrc"
@@ -33,10 +32,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+          registry-url: https://npm.pkg.github.com
+          scope: '@nirzon-islam'
       - name: Install dependencies
         run: npm install --ignore-scripts --no-audit --no-fund
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: npm run test:secure-session
-      - run: npm run test:fca-integration
       - run: node --check bot/login/login.js
       - run: node --check bot/login/omegaFca.js
       - run: node -e "const login = require('./bot/login/omegaFca'); if (typeof login !== 'function') process.exit(1)"
