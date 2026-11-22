@@ -17,7 +17,7 @@
   "enableTypingIndicator": true,
   "notesTypingIndicator": "true = show 'is typing...' for the humanizer delay before replying | false = reply instantly, no typing shown",
   "humanizer": {
-    "enable": false,
+    "enable": true,
     "delayMs": 3000,
     "cooldownMs": 5500,
     "maxPerMinute": 20,
