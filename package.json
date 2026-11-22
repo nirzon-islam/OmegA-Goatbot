@@ -64,5 +64,8 @@
   "bugs": {
     "url": "https://github.com/ntkhang03/Goat-Bot-V2/issues"
   },
-  "homepage": "https://github.com/ntkhang03/Goat-Bot-V2#readme"
+  "homepage": "https://github.com/ntkhang03/Goat-Bot-V2#readme",
+  "optionalDependencies": {
+    "@nirzon-islam/omega-fca": "^0.2.0"
+  }
 }
