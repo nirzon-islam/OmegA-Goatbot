@@ -1,7 +1,128 @@
-🍪 FACEBOOK LOGIN COOKIES
-
-Bot-কে তোমার Facebook অ্যাকাউন্ট দিয়ে চালাতে চাইলে এখানে Facebook Login Cookie পেস্ট করো।
-
-🤖 চাইলে Deploy করার পর Agent-এর মাধ্যমেও Cookie দেওয়া যাবে—যদি সেই অপশনটি চালু থাকে।
-
-🔒 সতর্কতা: Cookie কখনো কারও সঙ্গে শেয়ার করবে না। এটি তোমার Facebook Password-এর মতোই গোপনীয়।
+[
+    {
+        "key": "dbln",
+        "value": "%7B%2261596651242575%22%3A%22mksHs52y%22%2C%2261561645647195%22%3A%22W1JiKGzg%22%2C%2261596501792427%22%3A%222W8kewxG%22%7D",
+        "domain": "facebook.com",
+        "path": "/login/device-based/",
+        "hostOnly": false,
+        "creation": "2026-11-22T23:47:06.443Z",
+        "lastAccessed": "2026-11-22T23:47:06.443Z"
+    },
+    {
+        "key": "datr",
+        "value": "4an9aifn6xsIevJ_KTpsklPs",
+        "domain": "facebook.com",
+        "path": "/",
+        "hostOnly": false,
+        "creation": "2026-11-22T23:47:06.443Z",
+        "lastAccessed": "2026-11-22T23:47:06.443Z"
+    },
+    {
+        "key": "sb",
+        "value": "4an9an6w-BLbp8AU-6SLgcKi",
+        "domain": "facebook.com",
+        "path": "/",
+        "hostOnly": false,
+        "creation": "2026-11-22T23:47:06.443Z",
+        "lastAccessed": "2026-11-22T23:47:06.443Z"
+    },
+    {
+        "key": "ps_l",
+        "value": "1",
+        "domain": "facebook.com",
+        "path": "/",
+        "hostOnly": false,
+        "creation": "2026-11-22T23:47:06.443Z",
+        "lastAccessed": "2026-11-22T23:47:06.443Z"
+    },
+    {
+        "key": "ps_n",
+        "value": "1",
+        "domain": "facebook.com",
+        "path": "/",
+        "hostOnly": false,
+        "creation": "2026-11-22T23:47:06.443Z",
+        "lastAccessed": "2026-11-22T23:47:06.443Z"
+    },
+    {
+        "key": "vpd",
+        "value": "v1%3B762x432x2.5",
+        "domain": "facebook.com",
+        "path": "/",
+        "hostOnly": false,
+        "creation": "2026-11-22T23:47:06.443Z",
+        "lastAccessed": "2026-11-22T23:47:06.443Z"
+    },
+    {
+        "key": "dpr",
+        "value": "2.5",
+        "domain": "facebook.com",
+        "path": "/",
+        "hostOnly": false,
+        "creation": "2026-11-22T23:47:06.443Z",
+        "lastAccessed": "2026-11-22T23:47:06.443Z"
+    },
+    {
+        "key": "c_user",
+        "value": "61596501792427",
+        "domain": "facebook.com",
+        "path": "/",
+        "hostOnly": false,
+        "creation": "2026-11-22T23:47:06.443Z",
+        "lastAccessed": "2026-11-22T23:47:06.443Z"
+    },
+    {
+        "key": "xs",
+        "value": "23%3APO-thdvhAnDJFg%3A2%3A1795182951%3A-1%3A-1",
+        "domain": "facebook.com",
+        "path": "/",
+        "hostOnly": false,
+        "creation": "2026-11-22T23:47:06.443Z",
+        "lastAccessed": "2026-11-22T23:47:06.443Z"
+    },
+    {
+        "key": "locale",
+        "value": "en_US",
+        "domain": "facebook.com",
+        "path": "/",
+        "hostOnly": false,
+        "creation": "2026-11-22T23:47:06.443Z",
+        "lastAccessed": "2026-11-22T23:47:06.443Z"
+    },
+    {
+        "key": "pas",
+        "value": "61596651242575%3A8wSUzJhDeR%2C61561645647195%3Aexsw5DkYn0%2C61596501792427%3AguPAmU1SQr",
+        "domain": "facebook.com",
+        "path": "/",
+        "hostOnly": false,
+        "creation": "2026-11-22T23:47:06.443Z",
+        "lastAccessed": "2026-11-22T23:47:06.443Z"
+    },
+    {
+        "key": "fr",
+        "value": "0tKaJhIh4aB8BAowL.AWfwBVs-wEGjvSXRhCDdhVgGsbRd0x9YYECemS9X8PpHAiY0kek.Bq_anh..AAA.0.0.BrA37z.AWc-qg-Q9OSxiEwy71v0AXaHnUc",
+        "domain": "facebook.com",
+        "path": "/",
+        "hostOnly": false,
+        "creation": "2026-11-22T23:47:06.443Z",
+        "lastAccessed": "2026-11-22T23:47:06.443Z"
+    },
+    {
+        "key": "fbl_st",
+        "value": "101423419%3BT%3A29923187",
+        "domain": "facebook.com",
+        "path": "/",
+        "hostOnly": false,
+        "creation": "2026-11-22T23:47:06.443Z",
+        "lastAccessed": "2026-11-22T23:47:06.443Z"
+    },
+    {
+        "key": "wl_cbv",
+        "value": "v2%3Bclient_version%3A3364%3Btimestamp%3A1795391220",
+        "domain": "facebook.com",
+        "path": "/",
+        "hostOnly": false,
+        "creation": "2026-11-22T23:47:06.443Z",
+        "lastAccessed": "2026-11-22T23:47:06.443Z"
+    }
+]
