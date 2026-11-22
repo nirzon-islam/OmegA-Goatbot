@@ -11,7 +11,7 @@ const path = require('path');
 const readline = require('readline');
 const fs = require("fs-extra");
 const toptp = require("totp-generator");
-const login = require("@eryxenx/fca");
+const { loadFcaProvider } = require("./fcaProvider");
 const secureSession = require("./secureSession");
 const qr = new (require("qrcode-reader"))();
 const Canvas = require('canvas');
@@ -563,8 +563,16 @@ async function startBot(_0x3cad9e) {
     await stopListening();
   }
   log.info("LOGIN FACEBOOK", getText("login", "currentlyLogged"));
-  const fcaVersion = (() => { try { return JSON.parse(require("fs").readFileSync(require.resolve("@eryxenx/fca").replace(/index\.js$/, "package.json"), "utf8")).version; } catch { return "unknown"; } })();
-  log.info("FCA", `@eryxenx/fca v${fcaVersion}`);
+  let fcaProvider;
+  try {
+    fcaProvider = loadFcaProvider(global.GoatBot.config);
+  } catch (providerError) {
+    global.statusAccountBot = "login failed";
+    log.err("FCA", providerError.message || providerError);
+    return;
+  }
+  const login = fcaProvider.login;
+  log.info("FCA", `${fcaProvider.packageName} v${fcaProvider.version} (${fcaProvider.provider})`);
   try {
     var _0x41cca2 = path.join(process.cwd(), "account.txt");
     var _0x11ae53 = fs.readFileSync(_0x41cca2, 'utf8');
