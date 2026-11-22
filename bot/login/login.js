@@ -85,7 +85,7 @@ const titles = [
   ]
 ];
 const maxWidth = process.stdout.columns;
-const title = maxWidth > 0x3a ? titles[0x0] : maxWidth > 0x24 ? titles[0x1] : maxWidth > 0x1a ? titles[0x2] : titles[0x3];
+const title = maxWidth > 0x24 ? titles[0x0] : titles[0x1];
 console.log(gradient("#f5af19", "#f12711")(createLine(null, true)));
 console.log();
 for (const text of title) {
