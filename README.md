@@ -24,7 +24,7 @@ Assalamu Alaikum! **OmegA-Goatbot** is based on [Goat Bot V2](https://github.com
 
 | Feature | Description |
 |---|---|
-| 🔌 **Custom FCA** | Uses `@eryxenx/fca` — patched fork with bug fixes and stability improvements |
+| 🔌 **Custom FCA** | Keeps `@eryxenx/fca` as default; includes a guarded, opt-in `@nirzon-islam/omega-fca` migration path |
 | ⚙️ **Handler Improvements** | No-prefix system for bot admins, smart command suggestion |
 | 🌐 **Multi-Language** | Supports EN, BN, HI, TL, AR, VI |
 | 🎨 **UI Overhaul** | Redesigned message templates with clean formatting |
@@ -345,6 +345,20 @@ only connects once, at login).
 ```
 
 ---
+
+## ◈ OmegA-FCA package migration (experimental)
+
+This branch includes an opt-in provider path for the published `@nirzon-islam/omega-fca` package.
+
+- The default remains `@eryxenx/fca`; existing deployments are unchanged.
+- `@nirzon-islam/omega-fca` is an optional dependency so the bot can continue installing while the package release is pending.
+- After the package is published and installed, set `OMEGA_FCA_PROVIDER=omega` in the deployment environment to request it.
+- The provider guard refuses the switch unless both `config.json` settings are explicitly disabled:
+  - `e2ee.enable: false` — OmegA-FCA does not yet expose the legacy `api.e2ee` Messenger integration.
+  - `humanizer.enable: false` — the GoatBot humanizer currently depends on FCA-specific methods not yet verified in OmegA-FCA.
+- To keep the current production behavior, leave `OMEGA_FCA_PROVIDER` unset (or set it to `eryxenx`).
+
+**Important:** source-level callback/API compatibility is not live Facebook validation. Do not enable the OmegA-FCA provider for production until package publication, bot regression tests, MQTT readiness/recovery checks, and an authorized Railway/VPS login test have passed.
 
 ## ◈ Command Anti-Spam (Humanizer)
 
