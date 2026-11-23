@@ -248,7 +248,7 @@ The following is a reference for commonly used settings. Keep the actual structu
   "prefix": "-",
   "adminBot": ["your_facebook_id"],
   "noPrefix": { "enable": false },
-  "e2ee": { "enable": true },
+  "e2ee": { "enable": false },
   "reactUnsend": {
     "enable": true,
     "onlyAdmin": true,
@@ -343,7 +343,7 @@ Where supported, settings can be changed from `{prefix}setting` → **Bot Behavi
 
 </div>
 
-## 💬 Support
+## 💬 Original Project & Upstream Links
 
 <div align="center">
 
