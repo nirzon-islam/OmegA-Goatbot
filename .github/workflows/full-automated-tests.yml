@@ -48,4 +48,4 @@ jobs:
           node --check agent-bridge/worker.js
 
       - name: Verify OmegA-FCA dependency declaration
-        run: node -e "const p=require('./package.json'); if (p.dependencies?.['@nirzon-islam/omega-fca'] !== '0.2.1-beta.1') process.exit(1); console.log('OmegA-FCA dependency declaration OK')"
+        run: node -e "const p=require('./package.json'); if (p.dependencies?.['@nirzon-islam/omega-fca'] !== '0.2.1-beta.2') process.exit(1); console.log('OmegA-FCA dependency declaration OK')"
