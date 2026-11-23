@@ -612,9 +612,18 @@ async function startBot(_0x3cad9e) {
     }
     let _0x54729a = false;
     let definitiveAuthFailureHandled = false;
+    let providerLoginOptions;
+    try {
+      const storedUid = (_0x812929.find(cookie => cookie && (cookie.key || cookie.name) === "c_user") || {}).value;
+      providerLoginOptions = buildFcaLoginOptions(global.GoatBot.config, String(storedUid || ""));
+    } catch (optionError) {
+      global.statusAccountBot = "login failed";
+      log.err("FCA OPTIONS", optionError.message || optionError);
+      return;
+    }
     login({
       'appState': _0x812929
-    }, buildFcaLoginOptions(global.GoatBot.config, String((_0x812929.find(cookie => cookie && (cookie.key || cookie.name) === "c_user") || {}).value || "")), async function (_0x3f689f, _0x4d5048) {
+    }, providerLoginOptions, async function (_0x3f689f, _0x4d5048) {
       if (_0x3f689f) {
         // Keep the process and Agent Bridge alive so a fresh account session
         // can be submitted without restarting or losing the recovery worker.
