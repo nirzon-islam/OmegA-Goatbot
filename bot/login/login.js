@@ -11,7 +11,7 @@ const path = require('path');
 const readline = require('readline');
 const fs = require("fs-extra");
 const toptp = require("totp-generator");
-const { loadFcaProvider } = require("./fcaProvider");
+const { loadFcaProvider, buildFcaLoginOptions } = require("./fcaProvider");
 const secureSession = require("./secureSession");
 const qr = new (require("qrcode-reader"))();
 const Canvas = require('canvas');
@@ -612,9 +612,7 @@ async function startBot(_0x3cad9e) {
     let definitiveAuthFailureHandled = false;
     login({
       'appState': _0x812929
-    }, Object.assign({}, global.GoatBot.config.optionsFca, {
-      humanize: buildHumanizeOptions(global.GoatBot.config)
-    }), async function (_0x3f689f, _0x4d5048) {
+    }, buildFcaLoginOptions(global.GoatBot.config, String((_0x812929.find(cookie => cookie && (cookie.key || cookie.name) === "c_user") || {}).value || "")), async function (_0x3f689f, _0x4d5048) {
       if (_0x3f689f) {
         // Keep the process and Agent Bridge alive so a fresh account session
         // can be submitted without restarting or losing the recovery worker.
@@ -983,9 +981,7 @@ async function startBot(_0x3cad9e) {
           previousAccount = fs.readFileSync(accountPath);
           await progress("validating", "Appstate identity and cookie structure validated");
 
-          candidateApi = await secureSession.loginCandidate(login, appState, Object.assign({}, global.GoatBot.config.optionsFca, {
-            humanize: buildHumanizeOptions(global.GoatBot.config)
-          }));
+          candidateApi = await secureSession.loginCandidate(login, appState, buildFcaLoginOptions(global.GoatBot.config, String(botId)));
           if (String(candidateApi.getCurrentUserID()) !== String(botId)) {
             throw new Error("Facebook login returned a different account ID");
           }
