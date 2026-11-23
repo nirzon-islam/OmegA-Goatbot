@@ -45,7 +45,7 @@ const {
 } = require("fs-extra");
 const handlerWhenListenHasError = require("./handlerWhenListenHasError.js");
 const checkLiveCookie = require("./checkLiveCookie.js");
-const { buildHumanizeOptions, applyHumanizerToApi } = require("./humanizerOptions.js");
+const { applyHumanizerToApi } = require("./humanizerOptions.js");
 const {
   callbackListenTime,
   storage5Message
@@ -590,7 +590,9 @@ async function startBot(_0x3cad9e) {
     var _0x41cca2 = path.join(process.cwd(), "account.txt");
     var _0x11ae53 = fs.readFileSync(_0x41cca2, 'utf8');
     var _0x372cb5 = JSON.parse(_0x11ae53);
-    log.success("APPSTATE", "Appstate Verified Successfully.");
+    const storedUid = (_0x372cb5.find(cookie => cookie && (cookie.key || cookie.name) === "c_user") || {}).value;
+    _0x372cb5 = secureSession.validateAppState(_0x11ae53, String(storedUid || ""));
+    log.success("APPSTATE", "Appstate structure and account identity validated.");
   } catch {
     return log.warn('APPSTATE', "Appstate Cookie Not Found.");
   }
