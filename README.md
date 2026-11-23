@@ -34,13 +34,13 @@
 
 | Runtime | Framework Base | Default FCA | Maintainer |
 |:---:|:---:|:---:|:---:|
-| **Node.js 20** | **Goat Bot V2** | **@eryxenx/fca** | **OmegA** |
+| **Node.js 20** | **Goat Bot V2** | **@nirzon-islam/omega-fca** | **OmegA** |
 
 </div>
 
 ## 🌌 About OmegA
 
-**OmegA-Goatbot** is a customized Facebook Messenger bot framework based on [Goat Bot V2](https://github.com/ntkhang03/Goat-Bot-V2), originally created by **NTKhang**. This fork adds custom handlers, interface improvements, automation features and an experimental migration path to the OmegA FCA package.
+**OmegA-Goatbot** is a customized Facebook Messenger bot framework based on [Goat Bot V2](https://github.com/ntkhang03/Goat-Bot-V2), originally created by **NTKhang**. This fork adds custom handlers, interface improvements, automation features and native integration with the OmegA FCA package.
 
 > 💠 Maintained and customized by **Md SalmaN (NirZon)**. Original project and fork credits are preserved below.
 
@@ -50,13 +50,13 @@
 
 | ✨ Feature | 💎 What it does |
 |:---|:---|
-| 🔌 **Custom FCA** | Keeps `@eryxenx/fca` as default, with a guarded opt-in `@nirzon-islam/omega-fca` migration path |
+| 🔌 **Custom FCA** | Uses `@nirzon-islam/omega-fca` as its only supported FCA provider |
 | ⚙️ **Handler Improvements** | Admin no-prefix system and smart command suggestions |
 | 🌐 **Multi-Language** | EN · BN · HI · TL · AR · VI |
 | 🎨 **UI Improvements** | Redesigned message templates and clean formatting |
 | 🛡️ **React Unsend** | Auto-unsend messages on configured emoji reactions |
 | 🔧 **Setting Command** | Manage supported bot settings directly from chat |
-| 🔐 **E2EE Options** | Configurable encrypted-message integration through the current FCA path |
+| 🔐 **Signal Runtime** | Optional local Signal Protocol runtime foundation; Messenger E2EE transport is not claimed as integrated |
 | 🧠 **Humanizer** | Configurable command reply delay and anti-spam cooldown |
 | 🤖 **Agent Bridge** | Optional bridge integration when its backend and bot-side configuration are available |
 
@@ -266,30 +266,29 @@ The following is a reference for commonly used settings. Keep the actual structu
 
 ### 🔐 E2EE (Encrypted Messaging)
 
-`config.e2ee.enable` controls whether the bot initializes the E2EE integration on startup.
+`config.e2ee.enable` is an opt-in switch for the local Signal runtime integration.
 
-- `true` — requests E2EE initialization through the configured FCA integration. The current setup may perform a separate Facebook login using the same session, which carries additional account risk.
-- `false` — skips E2EE initialization; the regular MQTT session remains the messaging path. Encrypted threads will not be handled by this E2EE integration.
+- `false` — normal FCA/MQTT login; no Signal runtime is initialized.
+- `true` — requires an account-bound Facebook UID plus `OMEGA_E2EE_ENCRYPTION_KEY`, `OMEGA_E2EE_DEVICE_ID` and `OMEGA_E2EE_SIGNAL_MODULE` to be configured.
 
-You can use `{prefix}setting` → **Connection (FCA / MQTT)** → **E2EE** where supported, or edit `config.json` and restart the bot. A restart is required because E2EE is initialized during login.
+**Important:** OmegA-FCA currently provides local Signal key/runtime primitives. This does not mean Facebook Messenger's private E2EE transport, group sender-key exchange, encrypted messaging or media interoperability is connected. Do not treat this as production Messenger E2EE.
 
-### 🧪 OmegA-FCA migration (experimental)
+### 🧪 OmegA-FCA integration
 
-This branch contains an opt-in provider path for `@nirzon-islam/omega-fca`.
+This branch uses **`@nirzon-islam/omega-fca` as its only supported FCA provider**. No provider selector, legacy EryXen fallback or `OMEGA_FCA_PROVIDER` environment variable is required.
 
-- Default provider remains `@eryxenx/fca`; existing deployments retain the current behavior.
-- The OmegA provider is optional and should only be enabled when the package is available in the deployment.
-- Set `OMEGA_FCA_PROVIDER=omega` to request the OmegA provider.
-- The provider guard requires `e2ee.enable: false` and `humanizer.enable: false` because those integrations currently depend on FCA-specific behavior not yet verified on OmegA-FCA.
-- Leave the variable unset (or set it to `eryxenx`) to retain the default provider.
+- Install with `npm install`; the dependency is declared in `package.json`.
+- The bot loads OmegA-FCA directly through `bot/login/fcaProvider.js`.
+- Normal login does not require any FCA-specific environment variables.
+- Optional local Signal runtime configuration is separate and only required when `e2ee.enable` is explicitly turned on.
 
 <blockquote>
-<strong>⚠️ Experimental:</strong> Source-level compatibility is not the same as live Facebook validation. Do not enable this provider in production until package publication, regression tests, MQTT readiness/recovery checks and an authorized Railway/VPS login test have passed.
+<strong>⚠️ Validation:</strong> Passing source and unit tests does not replace an authorized live Facebook login/MQTT test on Railway or a VPS.
 </blockquote>
 
 ### 🧠 Command Anti-Spam (Humanizer)
 
-The current `@eryxenx/fca` humanizer can delay command replies, show typing during the delay and enforce per-thread cooldowns. Plain chat messages are not delayed by the command humanizer.
+OmegA-FCA's HumanizerController can delay configured command replies, manage typing-indicator lifecycle and enforce per-thread/global rate limits. Plain chat messages are not delayed by the command humanizer.
 
 Example settings:
 
