@@ -49,11 +49,7 @@ function loadFcaProvider(_config = {}, loadPackage = require) {
  * Facebook Messenger's private E2EE transport is wired or interoperable.
  */
 function buildFcaLoginOptions(config = {}, accountId = "", env = process.env, loadModule = require) {
-  const { buildHumanizeOptions } = require("./humanizerOptions");
-  const options = {
-    ...(config.optionsFca || {}),
-    humanize: buildHumanizeOptions(config)
-  };
+  const options = { ...(config.optionsFca || {}) };
   if (config.e2ee?.enable !== true) return options;
 
   if (!/^\d{5,30}$/.test(String(accountId))) {
