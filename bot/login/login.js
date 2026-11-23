@@ -1,4 +1,4 @@
-process.stdout.write("\x1b]2;EryXenX Ultra Edition\x07");
+process.stdout.write("\x1b]2;OmegA GoatBot\x07");
 function decode(_0x3eea0c) {
   _0x3eea0c = Buffer.from(_0x3eea0c, 'hex').toString('utf-8');
   _0x3eea0c = Buffer.from(_0x3eea0c, "hex").toString('utf-8');
@@ -636,10 +636,8 @@ async function startBot(_0x3cad9e) {
         log.warn("SESSION GUARD", "Could not start: " + (sgErr.message || sgErr));
       }
 
-      // ✅ E2EE — auto-connected inside @eryxenx/fca (loginHelper.js) already;
-      // calling connectE2EE() again here would open a second, redundant
-      // connection on the same bridge and can race with the listener that
-      // @eryxenx/fca already wired into api.listenMqtt. Nothing to do here.
+      // OmegA-FCA exposes its optional local Signal runtime on api.e2ee.
+      // This is not a claim that Messenger's private E2EE transport is connected.
       if (_0x4d5048.e2ee && typeof _0x4d5048.e2ee.isConnected === "function") {
         log.info("E2EE", _0x4d5048.e2ee.isConnected() ? "Signal Protocol connected" : "Not connected yet (non-fatal)");
       }
