@@ -1,160 +1,80 @@
 <div align="center">
 
-<img src="dashboard/images/OmegA-Goatbot_Neon%20Duo.png" alt="OmegA GoatBot Neon Duo" width="100%" />
+<img src="dashboard/images/OmegA-Goatbot_Neon%20Duo.png" alt="OmegA GoatBot — Neon Duo" width="100%" />
 
 <br/>
 
 # <span style="color:#00F5FF">OmegA</span> <span style="color:#FF36D7">GOATBOT</span>
 
-### ⚡ NEON POWER • SMART AUTOMATION • MESSENGER FRAMEWORK ⚡
+### ⚡ NEON POWER · SMART AUTOMATION · MESSENGER FRAMEWORK ⚡
 
-![OmegA](https://img.shields.io/badge/OmegA-NEON%20EDITION-00F5FF?style=for-the-badge&labelColor=090018)
-![Messenger](https://img.shields.io/badge/FACEBOOK-MESSENGER-FF36D7?style=for-the-badge&labelColor=090018)
-![Node](https://img.shields.io/badge/NODE.JS-20.x-7B2CFF?style=for-the-badge&labelColor=090018)
+<p>
+  <img src="https://img.shields.io/badge/NEON-EDITION-00F5FF?style=for-the-badge&labelColor=090018" />
+  <img src="https://img.shields.io/badge/NODE.JS-20.x-7B2CFF?style=for-the-badge&logo=nodedotjs&logoColor=white&labelColor=090018" />
+  <img src="https://img.shields.io/badge/PLATFORM-FACEBOOK_MESSENGER-FF36D7?style=for-the-badge&logo=messenger&logoColor=white&labelColor=090018" />
+</p>
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<p>
+  <a href="#-features"><strong>FEATURES</strong></a> ·
+  <a href="#-quick-start"><strong>QUICK START</strong></a> ·
+  <a href="#-deployment"><strong>DEPLOYMENT</strong></a> ·
+  <a href="#-documentation"><strong>DOCS</strong></a> ·
+  <a href="#-support"><strong>SUPPORT</strong></a>
+</p>
 
-</div>
-
-
-  <source media="(prefers-color-scheme: dark)" srcset="https://readme-typing-svg.herokuapp.com?font=JetBrains+Mono&weight=700&size=18&duration=3000&pause=800&color=00FFD1&background=00000000&center=true&vCenter=true&width=700&lines=GoatBot-Pro;Facebook+Messenger+Bot+Framework;Built+on+Goat+Bot+V2+%E2%80%94+Modified+by+EryXenX;Fast+%E2%80%A2+Smart+%E2%80%A2+Reliable+%E2%80%A2+Powerful" />
-  <source media="(prefers-color-scheme: light)" srcset="https://readme-typing-svg.herokuapp.com?font=JetBrains+Mono&weight=700&size=18&duration=3000&pause=800&color=0E7C86&background=00000000&center=true&vCenter=true&width=700&lines=GoatBot-Pro;Facebook+Messenger+Bot+Framework;Built+on+Goat+Bot+V2+%E2%80%94+Modified+by+EryXenX;Fast+%E2%80%A2+Smart+%E2%80%A2+Reliable+%E2%80%A2+Powerful" />
-  <img src="https://readme-typing-svg.herokuapp.com?font=JetBrains+Mono&weight=700&size=18&duration=3000&pause=800&color=0E7C86&background=00000000&center=true&vCenter=true&width=700&lines=GoatBot-Pro;Facebook+Messenger+Bot+Framework;Built+on+Goat+Bot+V2+%E2%80%94+Modified+by+EryXenX;Fast+%E2%80%A2+Smart+%E2%80%A2+Reliable+%E2%80%A2+Powerful" />
-</picture>
-
-<br/>
-
-![Version](https://img.shields.io/badge/Version-7.1.0-0E7C86?style=for-the-badge&logo=github&logoColor=white)
-![Node](https://img.shields.io/badge/Node.js-20.x-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
-![Base](https://img.shields.io/badge/Based_on-Goat_Bot_V2-FF6B6B?style=for-the-badge&logo=github&logoColor=white)
-![Fork](https://img.shields.io/badge/Fork_by-EryXenX-6E40C9?style=for-the-badge&logo=github&logoColor=white)
-![FCA](https://img.shields.io/badge/FCA-%40eryxenx%2Ffca-0E7C86?style=for-the-badge&logoColor=white)
+<img src="https://readme-typing-svg.herokuapp.com?font=JetBrains+Mono&weight=700&size=16&duration=2800&pause=700&color=00F5FF&center=true&vCenter=true&width=650&lines=Welcome+to+OmegA-Goatbot;Built+for+Messenger+Automation;Fast+%E2%80%A2+Smart+%E2%80%A2+Customizable" alt="OmegA typing banner" />
 
 </div>
 
 ---
-
-## ◈ About
-
-Assalamu Alaikum! **OmegA-Goatbot** is based on [Goat Bot V2](https://github.com/ntkhang03/Goat-Bot-V2) by **ntkhang03** and includes improvements and custom features. Maintained and customized by **Md SalmaN (NirZon)**. Original fork credits are preserved below.
-
-| Feature | Description |
-|---|---|
-| 🔌 **Custom FCA** | Keeps `@eryxenx/fca` as default; includes a guarded, opt-in `@nirzon-islam/omega-fca` migration path |
-| ⚙️ **Handler Improvements** | No-prefix system for bot admins, smart command suggestion |
-| 🌐 **Multi-Language** | Supports EN, BN, HI, TL, AR, VI |
-| 🎨 **UI Overhaul** | Redesigned message templates with clean formatting |
-| 🛡️ **React Unsend** | Auto-unsend messages on specific emoji reactions |
-| 🔧 **Setting Command** | Full bot config control via chat — no need to edit files manually |
-
-> ⚠️ For educational purposes only. Any misuse or illegal activity is solely the user's responsibility.
-
-
-## ◈ সহজ Setup Guide (বাংলা)
-
-### যা লাগবে
-- GitHub account
-- Node.js 20 (Local setup-এর জন্য)
-- Facebook account-এর valid login cookies
-- Railway অথবা VPS
-- Agent ব্যবহার করতে চাইলে Agent Backend ও MongoDB
-
-### 1. GoatBot চালু করো
-
-Repository clone/download করে project folder-এ terminal খুলে চালাও:
-
-```bash
-npm install
-```
-
-Facebook login cookies JSON array format-এ project-এর root folder-এর `account.txt` ফাইলে রাখো। তারপর `config.json`-এ নিজের Facebook UID `adminBot`-এ এবং পছন্দের prefix সেট করো।
-
-Bot চালু করো:
-
-```bash
-npm start
-```
-
-### 2. Railway-তে Deploy
-
-1. [Railway](https://railway.com/) খুলে **New Project → Deploy from GitHub Repo** নির্বাচন করো।
-2. `OmegA-Goatbot` repository connect করো।
-3. **Settings → Deploy**-এ Start Command হিসেবে দাও:
-
-```bash
-npm start
-```
-
-4. **Variables** tab-এ গিয়ে মনে রাখবে:
-
-```env
-PORT
-```
-
-Railway নিজে থেকেই `PORT` তৈরি করে দেয়—সাধারণত আলাদা করে value বসানোর দরকার নেই। এই repository-র বর্তমান code-এ `PORT` ছাড়া Railway-এর জন্য অন্য কোনো custom Environment Variable বাধ্যতামূলক নয়। তাই অকারণে `MONGODB_URI`, `COOKIE` বা অন্য variable যোগ কোরো না।
-
-5. Facebook login-এর জন্য project-এর `account.txt` ফাইলে cookies JSON array format-এ দিতে হবে। Bot-এর settings যেমন prefix ও admin UID `config.json` থেকে নিয়ন্ত্রণ করা হয়।
-6. **Deploy** করো এবং **Deployments → View Logs** থেকে login ও startup status দেখো।
-
-VPS-এও `npm install` এবং `npm start` চালাতে পারো। Bot সবসময় চালু রাখতে process manager ব্যবহার করতে পারো।
-
-**Render ব্যবহার কোরো না:** এই bot-এর persistent MQTT/WebSocket connection এবং filesystem session storage দরকার, যা Render-এ compatible নয়।
-
-### 3. Agent Backend (ঐচ্ছিক)
-
-Agent ব্যবহার করতে চাইলে [Agent Backend](https://github.com/nirzon-islam/Agent-Backend) আলাদাভাবে Render Web Service হিসেবে deploy করো। সেখানে MongoDB URI, Admin login এবং অন্তত একটি AI provider-এর API key configure করতে হবে। বিস্তারিত variable list ও setup ওই repository-র README / setup guide-এ দেওয়া আছে।
-
-**নোট:** শুধু Agent Backend deploy করলেই GoatBot-এর সঙ্গে connection তৈরি হবে না। GoatBot-এর ব্যবহৃত branch-এ Agent integration support থাকতে হবে এবং প্রয়োজনীয় bridge configuration থাকতে হবে।
-
-### দরকারি লিংক
-- [OmegA-Goatbot Repository](https://github.com/nirzon-islam/OmegA-Goatbot)
-- [Agent Backend](https://github.com/nirzon-islam/Agent-Backend)
-- [Railway](https://railway.com/)
-- [Render](https://render.com/)
-- [MongoDB Atlas](https://www.mongodb.com/atlas)
-- [Node.js](https://nodejs.org/)
-
-### নিরাপত্তা
-- `account.txt`-এর cookies, API key, database URI বা password কাউকে দেবে না।
-- এগুলো কখনো GitHub-এ upload কোরো না।
-- নিজের Facebook UID ছাড়া অন্য কাউকে bot admin কোরো না।
-
----
-
-## ◈ Support
 
 <div align="center">
 
-[![Messenger Group](https://img.shields.io/badge/Join%20Support%20Group-0084FF?style=for-the-badge&logo=messenger&logoColor=white)](https://m.me/j/AbayU2oh5OPVLvZm/?send_source=gc%3Acopy_invite_link_c)
-[![Facebook](https://img.shields.io/badge/Facebook-1877F2?style=for-the-badge&logo=facebook&logoColor=white)](https://facebook.com/EryXenX)
-[![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/EryXenX)
-[![YouTube](https://img.shields.io/badge/YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://youtube.com/@EryXenX)
-[![Telegram](https://img.shields.io/badge/Telegram-0088CC?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/EryXenX_Official)
-[![Instagram](https://img.shields.io/badge/Instagram-E4405F?style=for-the-badge&logo=instagram&logoColor=white)](https://instagram.com/EryXenX)
+### ◈ PROJECT SNAPSHOT
+
+| Runtime | Framework Base | Default FCA | Maintainer |
+|:---:|:---:|:---:|:---:|
+| **Node.js 20** | **Goat Bot V2** | **@eryxenx/fca** | **OmegA** |
 
 </div>
 
----
+## 🌌 About OmegA
 
-## ◈ Setup Tutorial
+**OmegA-Goatbot** is a customized Facebook Messenger bot framework based on [Goat Bot V2](https://github.com/ntkhang03/Goat-Bot-V2), originally created by **NTKhang**. This fork adds custom handlers, interface improvements, automation features and an experimental migration path to the OmegA FCA package.
+
+> 💠 Maintained and customized by **Md SalmaN (NirZon)**. Original project and fork credits are preserved below.
+
+## 🚀 Features
 
 <div align="center">
 
-### 📹 Watch Before You Start
-
-<a href="https://youtu.be/gPf_BFhQz_w?si=-iknmkmFd_NcRahY">
-  <img src="https://img.youtube.com/vi/gPf_BFhQz_w/maxresdefault.jpg" alt="GoatBot-Pro Setup Tutorial" width="680" />
-</a>
-
-<br/>
-
-[![Watch Tutorial](https://img.shields.io/badge/▶%20Watch%20Full%20Setup%20Tutorial-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://youtu.be/gPf_BFhQz_w?si=-iknmkmFd_NcRahY)
+| ✨ Feature | 💎 What it does |
+|:---|:---|
+| 🔌 **Custom FCA** | Keeps `@eryxenx/fca` as default, with a guarded opt-in `@nirzon-islam/omega-fca` migration path |
+| ⚙️ **Handler Improvements** | Admin no-prefix system and smart command suggestions |
+| 🌐 **Multi-Language** | EN · BN · HI · TL · AR · VI |
+| 🎨 **UI Improvements** | Redesigned message templates and clean formatting |
+| 🛡️ **React Unsend** | Auto-unsend messages on configured emoji reactions |
+| 🔧 **Setting Command** | Manage supported bot settings directly from chat |
+| 🔐 **E2EE Options** | Configurable encrypted-message integration through the current FCA path |
+| 🧠 **Humanizer** | Configurable command reply delay and anti-spam cooldown |
+| 🤖 **Agent Bridge** | Optional bridge integration when its backend and bot-side configuration are available |
 
 </div>
 
----
+<sub>Feature availability depends on the active branch, configuration and connected services. Experimental features are not production guarantees.</sub>
 
-## ◈ Setup
+## ⚡ Quick Start
+
+### Requirements
+
+- Node.js **20.x**
+- npm
+- Facebook session cookies in JSON-array format
+- A GitHub account for cloning
+- Railway or a VPS for hosting
+
+### Install and run
 
 ```bash
 git clone https://github.com/nirzon-islam/OmegA-Goatbot.git
@@ -163,56 +83,71 @@ npm install
 npm start
 ```
 
-Add your Facebook cookies to `account.txt` (JSON array format from EditThisCookie), then configure `config.json`.
+### Configure your account
 
----
+1. Put your Facebook cookies in the root `account.txt` file as a JSON array.
+2. Open `config.json`.
+3. Add your Facebook UID to `adminBot` and choose your command prefix.
+4. Start the bot with `npm start`.
 
-## ◈ Running the Bot
-
-### 1. Add your admin UID
-
-In `config.json`, add your Facebook UID to `adminBot` — this is the ID
-that can control the bot from chat (admin-only commands, `{prefix}setting`,
-no-prefix commands if enabled, etc.):
+<details>
+<summary><strong>Example admin configuration</strong></summary>
 
 ```json
 "adminBot": [
-  "your_facebook_uid_here",
-  " ",
-  " "
+  "your_facebook_uid_here"
 ]
 ```
 
-### 2. Add your session cookies
+</details>
 
-Export your Facebook cookies (JSON array format, e.g. via the
-EditThisCookie browser extension) and paste them into `account.txt` at
-the project root. This is the login session the bot uses — without a
-valid `account.txt`, the bot can't log in.
+## ☁️ Deployment
 
-### 3. Deploy
+### Railway
 
-**Railway or a VPS** — both work fine:
+<div align="center">
+  <img src="https://img.shields.io/badge/RECOMMENDED-RAILWAY-7B2CFF?style=for-the-badge&logo=railway&logoColor=white" />
+</div>
+
+1. Open [Railway](https://railway.com/).
+2. Select **New Project → Deploy from GitHub Repo**.
+3. Connect your OmegA-Goatbot repository.
+4. Set the Start Command to:
+
+```bash
+npm start
+```
+
+5. Railway provides the `PORT` environment variable automatically in normal deployments; no custom value is usually needed.
+6. Ensure `account.txt` and the required config files are present through your private deployment workflow.
+7. Deploy and inspect **Deployments → View Logs** for startup and login status.
+
+**Environment note:** The current repository code uses `PORT` for the uptime endpoint. Do not add guessed variables such as `MONGODB_URI` or `COOKIE` unless a specific enabled integration requires them.
+
+### VPS
 
 ```bash
 npm install
 npm start
 ```
 
-On Railway, just connect the repo and it builds/runs the same way. On a
-VPS, run it directly or under a process manager (`pm2 start index.js`,
-`screen`, `tmux`, etc.) so it stays alive after you disconnect.
+You can use a process manager such as PM2, screen or tmux to keep the process running after disconnecting.
 
-**Render — does not work.** Render's platform is not compatible with how
-this bot runs (persistent MQTT/WebSocket connection + filesystem writes
-for session/appstate). Don't deploy this on Render — use Railway or a VPS
-instead.
+### Hosting compatibility
 
----
+This bot relies on persistent MQTT/WebSocket connections and filesystem session storage. The current project guidance is to use **Railway or a VPS**, not Render, for the bot process.
 
-## ◈ Command Structure
+### Optional Agent Backend
 
-Commands go in `scripts/cmds/yourcommand.js`.
+The [Agent Backend](https://github.com/nirzon-islam/Agent-Backend) can be deployed separately as a Render Web Service when you want to use the optional agent system. Configure its MongoDB URI, admin login and at least one AI provider key according to that repository's setup guide.
+
+> Agent Backend deployment alone does not connect it to GoatBot. The selected GoatBot branch must include Agent Bridge support and its matching bridge configuration.
+
+## 📚 Documentation
+
+### Command structure
+
+Create command files inside `scripts/cmds/yourcommand.js`.
 
 ```js
 module.exports = {
@@ -222,8 +157,8 @@ module.exports = {
     author: "YourName",
     countDown: 5,
     role: 0,
-    shortDescription: "...",
-    longDescription: "...",
+    shortDescription: "A short description",
+    longDescription: "A longer description",
     category: "fun",
     guide: "{prefix}commandname [args]"
   },
@@ -253,24 +188,20 @@ module.exports = {
 };
 ```
 
----
+### Permission roles
 
-## ◈ Permission Roles
-
-| Value | Who can use |
-|---|---|
+| Role | Permission |
+|:---:|:---|
 | `0` | Everyone |
 | `1` | Group admins only |
-| `2` | Bot admins only (set in `config.json`) |
+| `2` | Bot admins only (configured in `config.json`) |
 
----
-
-## ◈ API Reference
+### API quick reference
 
 ```js
 message.reply("text")
 api.sendMessage("text", threadID)
-api.sendMessage({ body: "text", attachment }, tid)
+api.sendMessage({ body: "text", attachment }, threadID)
 api.setMessageReaction("✅", event.messageID, () => {}, true)
 api.unsendMessage(messageID)
 api.getCurrentUserID()
@@ -278,12 +209,11 @@ await api.getThreadInfo(threadID)
 await api.getUserInfo(userID)
 ```
 
----
-
-## ◈ onReply Pattern
+### onReply pattern
 
 ```js
 const sent = await message.reply("What's your name?");
+
 global.GoatBot.onReply.set(sent.messageID, {
   commandName: "mycommand",
   messageID: sent.messageID,
@@ -297,9 +227,7 @@ onReply: async function ({ api, event, Reply, message }) {
 }
 ```
 
----
-
-## ◈ Event Types
+### Event types
 
 ```js
 switch (event.logMessageType) {
@@ -311,9 +239,9 @@ switch (event.logMessageType) {
 }
 ```
 
----
+## 🎛️ Configuration
 
-## ◈ config.json Key Options
+The following is a reference for commonly used settings. Keep the actual structure in your repository's `config.json` and verify option names against the active code before changing them.
 
 ```json
 {
@@ -336,86 +264,109 @@ switch (event.logMessageType) {
 }
 ```
 
-### E2EE (Encrypted Messaging)
+### 🔐 E2EE (Encrypted Messaging)
 
-`config.e2ee.enable` controls whether the bot connects Facebook's E2EE
-(Signal Protocol encrypted threads) layer on startup.
+`config.e2ee.enable` controls whether the bot initializes the E2EE integration on startup.
 
-- `true` — E2EE connects on login. Needed if you want the bot to send/receive
-  in end-to-end encrypted threads. This runs a second, independent login to
-  Facebook using the same session, which carries extra account-flagging risk
-  (see below).
-- `false` — E2EE is skipped entirely, bot runs on the regular MQTT session
-  only. Safer against account flags/logouts; encrypted threads just won't
-  work with the bot.
+- `true` — requests E2EE initialization through the configured FCA integration. The current setup may perform a separate Facebook login using the same session, which carries additional account risk.
+- `false` — skips E2EE initialization; the regular MQTT session remains the messaging path. Encrypted threads will not be handled by this E2EE integration.
 
-**Toggle it from chat** — `{prefix}setting` → **Connection (FCA / MQTT)**
-→ **E2EE**. This flips `config.e2ee.enable` and saves `config.json`
-automatically, but **needs a bot restart** to actually take effect (E2EE
-only connects once, at login).
+You can use `{prefix}setting` → **Connection (FCA / MQTT)** → **E2EE** where supported, or edit `config.json` and restart the bot. A restart is required because E2EE is initialized during login.
 
-**Or edit `config.json` directly** and restart the bot:
+### 🧪 OmegA-FCA migration (experimental)
 
-```json
-"e2ee": { "enable": false }
-```
+This branch contains an opt-in provider path for `@nirzon-islam/omega-fca`.
 
----
+- Default provider remains `@eryxenx/fca`; existing deployments retain the current behavior.
+- The OmegA provider is optional and should only be enabled when the package is available in the deployment.
+- Set `OMEGA_FCA_PROVIDER=omega` to request the OmegA provider.
+- The provider guard requires `e2ee.enable: false` and `humanizer.enable: false` because those integrations currently depend on FCA-specific behavior not yet verified on OmegA-FCA.
+- Leave the variable unset (or set it to `eryxenx`) to retain the default provider.
 
-## ◈ OmegA-FCA package migration (experimental)
+<blockquote>
+<strong>⚠️ Experimental:</strong> Source-level compatibility is not the same as live Facebook validation. Do not enable this provider in production until package publication, regression tests, MQTT readiness/recovery checks and an authorized Railway/VPS login test have passed.
+</blockquote>
 
-This branch includes an opt-in provider path for the published `@nirzon-islam/omega-fca` package.
+### 🧠 Command Anti-Spam (Humanizer)
 
-- The default remains `@eryxenx/fca`; existing deployments are unchanged.
-- `@nirzon-islam/omega-fca` is an optional dependency so the bot can continue installing while the package release is pending.
-- After the package is published and installed, set `OMEGA_FCA_PROVIDER=omega` in the deployment environment to request it.
-- The provider guard refuses the switch unless both `config.json` settings are explicitly disabled:
-  - `e2ee.enable: false` — OmegA-FCA does not yet expose the legacy `api.e2ee` Messenger integration.
-  - `humanizer.enable: false` — the GoatBot humanizer currently depends on FCA-specific methods not yet verified in OmegA-FCA.
-- To keep the current production behavior, leave `OMEGA_FCA_PROVIDER` unset (or set it to `eryxenx`).
+The current `@eryxenx/fca` humanizer can delay command replies, show typing during the delay and enforce per-thread cooldowns. Plain chat messages are not delayed by the command humanizer.
 
-**Important:** source-level callback/API compatibility is not live Facebook validation. Do not enable the OmegA-FCA provider for production until package publication, bot regression tests, MQTT readiness/recovery checks, and an authorized Railway/VPS login test have passed.
-
-## ◈ Command Anti-Spam (Humanizer)
-
-Every command reply goes through `@eryxenx/fca`'s built-in humanizer —
-the bot waits a delay before replying to a command, shows the typing
-indicator for exactly that window, and enforces a per-thread cooldown so
-command spam gets dropped instead of flooding replies. Plain chat
-(non-commands) is untouched — no delay, no typing.
-
-The delay is set from `config.json`, so you can make replies faster or
-slower (or turn the delay off entirely) without touching the code:
+Example settings:
 
 ```json
 "humanizer": {
-  "enable": true,      // false = reply instantly, no delay, no typing
-  "delayMs": 3000,     // how long to wait (and show typing) before replying
-  "cooldownMs": 5500,  // min gap between two accepted commands, per thread
-  "maxPerMinute": 20   // global cap on accepted commands
+  "enable": true,
+  "delayMs": 3000,
+  "cooldownMs": 5500,
+  "maxPerMinute": 20
 }
 ```
 
-`delayMs` also accepts a range, e.g. `[2000, 4000]`, for a random delay.
-The typing indicator always lasts exactly the delay, so the two never
-drift apart. Change it live from chat with `{prefix}setting` →
-Bot Behavior → Typing Indicator, or edit `config.json` and restart.
+- `enable`: turn the delay behavior on or off.
+- `delayMs`: delay before a command reply; can also be a range such as `[2000, 4000]`.
+- `cooldownMs`: minimum gap between accepted commands in one thread.
+- `maxPerMinute`: global accepted-command cap.
 
-This applies automatically to:
-- normal prefixed commands (`/help`, etc.)
-- no-prefix admin commands (when `config.noPrefix.enable: true`)
-- `onChat` triggers (e.g. typing `prefix` with no `/`)
-- `onReply` flows — including multi-step ones like `{prefix}setting`'s
-  "reply with a number" menus
+Where supported, settings can be changed from `{prefix}setting` → **Bot Behavior** → **Typing Indicator**. See the FCA package documentation for additional options.
 
-No setup needed on the GoatBot side — it's active as soon as the bot logs
-in. See `@eryxenx/fca`'s own README for configuration options
-(`reactDelayMs`, `cooldownMs`, `maxPerMinute`, disabling it entirely, etc.).
+## 🎬 Setup Tutorial
+
+<div align="center">
+
+<a href="https://youtu.be/gPf_BFhQz_w?si=-iknmkmFd_NcRahY">
+  <img src="https://img.youtube.com/vi/gPf_BFhQz_w/maxresdefault.jpg" alt="OmegA GoatBot setup tutorial" width="85%" />
+</a>
+
+<br/>
+
+<a href="https://youtu.be/gPf_BFhQz_w?si=-iknmkmFd_NcRahY">
+  <img src="https://img.shields.io/badge/▶_WATCH_TUTORIAL-FF0033?style=for-the-badge&logo=youtube&logoColor=white" />
+</a>
+
+</div>
+
+## 🛡️ Security
+
+- Keep `account.txt`, Facebook cookies, API keys, database URIs and passwords private.
+- Never commit credentials or session cookies to a public repository.
+- Use a private repository and a secure deployment workflow for account data.
+- Only grant bot-admin access to trusted Facebook UIDs.
+- Use your own account and comply with applicable platform rules.
+
+## 🔗 Project Links
+
+<div align="center">
+
+<a href="https://github.com/nirzon-islam/OmegA-Goatbot"><img src="https://img.shields.io/badge/SOURCE- OmegA--Goatbot-181717?style=for-the-badge&logo=github&logoColor=white" /></a>
+<a href="https://github.com/nirzon-islam/Agent-Backend"><img src="https://img.shields.io/badge/AGENT-Agent_Backend-7B2CFF?style=for-the-badge&logo=github&logoColor=white" /></a>
+<a href="https://railway.com/"><img src="https://img.shields.io/badge/HOST-Railway-7B2CFF?style=for-the-badge&logo=railway&logoColor=white" /></a>
+<a href="https://nodejs.org/"><img src="https://img.shields.io/badge/RUNTIME-Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" /></a>
+
+</div>
+
+## 💬 Support
+
+<div align="center">
+
+<a href="https://m.me/j/AbayU2oh5OPVLvZm/?send_source=gc%3Acopy_invite_link_c"><img src="https://img.shields.io/badge/MESSENGER-SUPPORT_GROUP-0084FF?style=for-the-badge&logo=messenger&logoColor=white" /></a>
+<a href="https://facebook.com/EryXenX"><img src="https://img.shields.io/badge/FACEBOOK-PAGE-1877F2?style=for-the-badge&logo=facebook&logoColor=white" /></a>
+<a href="https://github.com/EryXenX"><img src="https://img.shields.io/badge/GITHUB-ERYXENX-181717?style=for-the-badge&logo=github&logoColor=white" /></a>
+<a href="https://youtube.com/@EryXenX"><img src="https://img.shields.io/badge/YOUTUBE-CHANNEL-FF0000?style=for-the-badge&logo=youtube&logoColor=white" /></a>
+<a href="https://t.me/EryXenX_Official"><img src="https://img.shields.io/badge/TELEGRAM-CHANNEL-0088CC?style=for-the-badge&logo=telegram&logoColor=white" /></a>
+<a href="https://instagram.com/EryXenX"><img src="https://img.shields.io/badge/INSTAGRAM-PROFILE-E4405F?style=for-the-badge&logo=instagram&logoColor=white" /></a>
+
+</div>
 
 ---
 
 <div align="center">
-  <sub>Built on the shoulders of giants · Respect Open Source · Credit your sources</sub>
-  <br/>
-  <sub><b>Original Work © NTKhang (ntkhang03) &nbsp;|&nbsp; Fork by EryXenX (Mohammad Akash)</b></sub>
+
+### 💠 BUILT WITH OPEN-SOURCE SPIRIT
+
+**Original Work © NTKhang (ntkhang03)**  
+**Original Fork © EryXenX (Mohammad Akash)**  
+**OmegA customization & maintenance · Md SalmaN (NirZon)**
+
+<sub>Respect open source · Preserve credits · Build responsibly</sub>
+
 </div>
