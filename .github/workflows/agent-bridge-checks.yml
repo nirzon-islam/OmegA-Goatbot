@@ -33,8 +33,9 @@ jobs:
           node --check bot/login/secureSession.js
           node --check bot/login/login.js
           node --check bot/login/fcaProvider.js
+          node --check bot/login/humanizerOptions.js
           node --check agent-bridge/runtime.js
           node --check scripts/cmds/agent.js
           node --check EryXenX.js
       - name: Unit tests
-        run: node --test agent-bridge/*.test.js bot/login/fcaProvider.test.js
+        run: node --test agent-bridge/*.test.js bot/login/fcaProvider.test.js bot/login/humanizerOptions.test.js
