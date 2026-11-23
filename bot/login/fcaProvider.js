@@ -62,7 +62,7 @@ function buildFcaLoginOptions(config = {}, accountId = "", env = process.env, lo
   const encodedKey = env.OMEGA_E2EE_ENCRYPTION_KEY;
   const moduleName = env.OMEGA_E2EE_SIGNAL_MODULE;
   const deviceId = Number(env.OMEGA_E2EE_DEVICE_ID);
-  if (typeof encodedKey !== "string" || !/^[A-Za-z0-9+/]{43}=$/.test(encodedKey) ||
+  if (typeof encodedKey !== "string" || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(encodedKey) ||
       !Number.isSafeInteger(deviceId) || deviceId < 1 || !moduleName) {
     throw new Error("OmegA E2EE is enabled but OMEGA_E2EE_ENCRYPTION_KEY (base64 32-byte key), OMEGA_E2EE_DEVICE_ID and OMEGA_E2EE_SIGNAL_MODULE are not configured");
   }
