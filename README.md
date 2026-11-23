@@ -34,7 +34,7 @@
 
 | Runtime | Framework Base | Default FCA | Maintainer |
 |:---:|:---:|:---:|:---:|
-| **Node.js 20** | **Goat Bot V2** | **@nirzon-islam/omega-fca** | **OmegA** |
+| **Node.js 20** | **Goat Bot V2** | **@nirzon-islam/omega-fca** | **NirZon** |
 
 </div>
 
@@ -363,7 +363,6 @@ Where supported, settings can be changed from `{prefix}setting` → **Bot Behavi
 ### 💠 BUILT WITH OPEN-SOURCE SPIRIT
 
 **Original Work © NTKhang (ntkhang03)**  
-**Original Fork © EryXenX (Mohammad Akash)**  
 **OmegA customization & maintenance · Md SalmaN (NirZon)**
 
 <sub>Respect open source · Preserve credits · Build responsibly</sub>
