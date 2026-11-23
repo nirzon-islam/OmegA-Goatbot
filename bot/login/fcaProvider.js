@@ -13,46 +13,20 @@ function packageVersion(packageName, entryPoint) {
 }
 
 /**
- * Resolve the FCA provider without silently dropping GoatBot-only features.
- *
- * OmegA-FCA 0.2.x is opt-in until its Messenger E2EE and GoatBot humanizer
- * compatibility are implemented and verified. The legacy provider remains
- * the default and fallback.
+ * OmegA-FCA is the only supported FCA provider.
+ * No environment-variable switch or legacy FCA fallback is used.
  */
-function loadFcaProvider(config = {}, env = process.env, loadPackage = require) {
-  const requested = String(env.OMEGA_FCA_PROVIDER || "eryxenx").trim().toLowerCase();
-
-  if (requested === "omega") {
-    if (config.e2ee?.enable !== false) {
-      throw new Error(
-        "OmegA-FCA provider is blocked: disable config.e2ee.enable until Messenger E2EE compatibility is verified."
-      );
-    }
-
-    if (config.humanizer?.enable !== false) {
-      throw new Error(
-        "OmegA-FCA provider is blocked: disable config.humanizer.enable until GoatBot humanizer compatibility is implemented."
-      );
-    }
-  } else if (requested !== "eryxenx") {
-    throw new Error('Unknown OMEGA_FCA_PROVIDER. Use "eryxenx" or "omega".');
-  }
-
-  const packageName = requested === "omega"
-    ? "@nirzon-islam/omega-fca"
-    : "@eryxenx/fca";
-
+function loadFcaProvider(_config = {}, loadPackage = require) {
+  const packageName = "@nirzon-islam/omega-fca";
   let login;
+
   try {
     login = loadPackage(packageName);
   } catch (error) {
-    if (requested === "omega") {
-      throw new Error(
-        "OmegA-FCA was selected but is not installed. Publish @nirzon-islam/omega-fca or install its release before enabling this provider.",
-        { cause: error }
-      );
-    }
-    throw error;
+    throw new Error(
+      "OmegA-FCA is required but is not installed. Install @nirzon-islam/omega-fca before starting GoatBot.",
+      { cause: error }
+    );
   }
 
   if (typeof login !== "function") {
@@ -64,7 +38,7 @@ function loadFcaProvider(config = {}, env = process.env, loadPackage = require) 
     version = packageVersion(packageName, require.resolve(packageName));
   } catch { }
 
-  return { login, packageName, version, provider: requested };
+  return { login, packageName, version, provider: "omega" };
 }
 
 module.exports = { loadFcaProvider };
