@@ -1,0 +1,44 @@
+name: One-time FCA Lockfile Refresh
+
+on:
+  push:
+    branches:
+      - fca-migration-cleanup
+
+permissions:
+  contents: write
+
+jobs:
+  refresh-lockfile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: fca-migration-cleanup
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Regenerate npm lockfile
+        run: npm install --package-lock-only --lockfile-version=2 --ignore-scripts
+
+      - name: Verify clean install
+        run: npm ci --ignore-scripts
+
+      - name: Run FCA regression tests
+        run: |
+          npm run test:fca-provider
+          npm run test:secure-session
+
+      - name: Commit regenerated lockfile and remove one-time workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git rm .github/workflows/refresh-fca-lock-once.yml
+          git commit -m "chore(fca): regenerate lockfile for 0.2.1-beta.2"
+          git push origin fca-migration-cleanup
