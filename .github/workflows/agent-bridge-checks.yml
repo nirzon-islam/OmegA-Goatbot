@@ -36,6 +36,6 @@ jobs:
           node --check bot/login/humanizerOptions.js
           node --check agent-bridge/runtime.js
           node --check scripts/cmds/agent.js
-          node --check EryXenX.js
+          node --check OmegA.js
       - name: Unit tests
         run: node --test agent-bridge/*.test.js bot/login/fcaProvider.test.js bot/login/humanizerOptions.test.js
