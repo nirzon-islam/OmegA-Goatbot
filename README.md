@@ -275,7 +275,7 @@ The following is a reference for commonly used settings. Keep the actual structu
 
 ### 🧪 OmegA-FCA integration
 
-This branch uses **`@nirzon-islam/omega-fca` as its only supported FCA provider**. No provider selector, legacy EryXen fallback or `OMEGA_FCA_PROVIDER` environment variable is required.
+This branch uses **`@nirzon-islam/omega-fca` as its only supported FCA provider**. No provider selector or legacy provider fallback is required.
 
 - Install with `npm install`; the dependency is declared in `package.json`.
 - The bot loads OmegA-FCA directly through `bot/login/fcaProvider.js`.
