@@ -1,0 +1,3 @@
+OmegA Canvas Cache
+
+Reserved for OmegA canvas-related cache data.
