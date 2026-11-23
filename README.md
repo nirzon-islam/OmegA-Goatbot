@@ -1,6 +1,22 @@
 <div align="center">
 
-<picture>
+<img src="dashboard/images/OmegA-Goatbot_Neon%20Duo.png" alt="OmegA GoatBot Neon Duo" width="100%" />
+
+<br/>
+
+# <span style="color:#00F5FF">OmegA</span> <span style="color:#FF36D7">GOATBOT</span>
+
+### ⚡ NEON POWER • SMART AUTOMATION • MESSENGER FRAMEWORK ⚡
+
+![OmegA](https://img.shields.io/badge/OmegA-NEON%20EDITION-00F5FF?style=for-the-badge&labelColor=090018)
+![Messenger](https://img.shields.io/badge/FACEBOOK-MESSENGER-FF36D7?style=for-the-badge&labelColor=090018)
+![Node](https://img.shields.io/badge/NODE.JS-20.x-7B2CFF?style=for-the-badge&labelColor=090018)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+</div>
+
+
   <source media="(prefers-color-scheme: dark)" srcset="https://readme-typing-svg.herokuapp.com?font=JetBrains+Mono&weight=700&size=18&duration=3000&pause=800&color=00FFD1&background=00000000&center=true&vCenter=true&width=700&lines=GoatBot-Pro;Facebook+Messenger+Bot+Framework;Built+on+Goat+Bot+V2+%E2%80%94+Modified+by+EryXenX;Fast+%E2%80%A2+Smart+%E2%80%A2+Reliable+%E2%80%A2+Powerful" />
   <source media="(prefers-color-scheme: light)" srcset="https://readme-typing-svg.herokuapp.com?font=JetBrains+Mono&weight=700&size=18&duration=3000&pause=800&color=0E7C86&background=00000000&center=true&vCenter=true&width=700&lines=GoatBot-Pro;Facebook+Messenger+Bot+Framework;Built+on+Goat+Bot+V2+%E2%80%94+Modified+by+EryXenX;Fast+%E2%80%A2+Smart+%E2%80%A2+Reliable+%E2%80%A2+Powerful" />
   <img src="https://readme-typing-svg.herokuapp.com?font=JetBrains+Mono&weight=700&size=18&duration=3000&pause=800&color=0E7C86&background=00000000&center=true&vCenter=true&width=700&lines=GoatBot-Pro;Facebook+Messenger+Bot+Framework;Built+on+Goat+Bot+V2+%E2%80%94+Modified+by+EryXenX;Fast+%E2%80%A2+Smart+%E2%80%A2+Reliable+%E2%80%A2+Powerful" />
