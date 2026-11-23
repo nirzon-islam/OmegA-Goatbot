@@ -35,7 +35,7 @@ test("builds ordinary login options with humanizer while E2EE remains opt-in", (
   const { buildFcaLoginOptions } = require("./fcaProvider");
   const options = buildFcaLoginOptions({ optionsFca: { listenEvents: true }, humanizer: { enable: false } }, "123456789", {});
   assert.equal(options.listenEvents, true);
-  assert.deepEqual(options.humanize, { enabled: false });
+  assert.equal(options.humanize, undefined);
   assert.equal(options.e2ee, undefined);
 });
 
