@@ -78,8 +78,8 @@ module.exports = async function (api, createLine) {
     threadsData, usersData, dashBoardData, globalData, sequelize
   } = controller;
 
-  log.info('DATABASE', '🧵 Thread data: OK');
-  log.info('DATABASE', '👤 User data: OK');
+  log.info('DATABASE', '🧵 Threads database loaded successfully');
+  log.info('DATABASE', '👥 Users database loaded successfully');
 
   const AUTO_SYNC_MIN_INTERVAL_MS = 6 * 60 * 60 * 1000;
   const lastAutoSyncPath = path.join(__dirname, '..', '..', 'database/data/lastAutoSync.json');
