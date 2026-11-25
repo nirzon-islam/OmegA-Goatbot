@@ -88,3 +88,40 @@ test("returns false when controller is unavailable or throws", () => {
   assert.equal(applyHumanizerToApi({ getHumanizer: () => null }, {}), false);
   assert.equal(applyHumanizerToApi({ getHumanizer: () => ({ setOptions() { throw new Error("failed"); } }) }, {}), false);
 });
+
+test("maps command registry, aliases, prefixes, and no-prefix admins", () => {
+  const previousGoatBot = global.GoatBot;
+  const previousDb = global.db;
+  global.GoatBot = {
+    commands: new Map([["help", {}], ["ping", {}]]),
+    aliases: new Map([["h", "help"], ["p", "ping"]])
+  };
+  global.db = {
+    allThreadData: [
+      { threadID: "1", settings: { prefix: "!" } },
+      { threadID: "2", settings: { prefix: ["$", "?"] } }
+    ]
+  };
+  try {
+    assert.deepEqual(buildHumanizeOptions({
+      prefix: "-",
+      noPrefix: { enable: true },
+      adminBot: [123, "456"]
+    }), {
+      enabled: true,
+      reactDelayMs: 3000,
+      cooldownMs: 5500,
+      maxPerMinute: 20,
+      perThread: true,
+      commandPrefixes: ["-", "!", "$", "?"],
+      commandNames: ["help", "ping", "h", "p"],
+      noPrefixEnabled: true,
+      noPrefixAdminIds: ["123", "456"]
+    });
+  } finally {
+    if (previousGoatBot === undefined) delete global.GoatBot;
+    else global.GoatBot = previousGoatBot;
+    if (previousDb === undefined) delete global.db;
+    else global.db = previousDb;
+  }
+});
