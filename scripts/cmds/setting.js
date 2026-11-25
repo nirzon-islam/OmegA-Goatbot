@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const { applyHumanizerToApi } = require("../login/humanizerOptions");
 
 function getPath(obj, keys) {
 	return keys.reduce((o, k) => (o == null ? o : o[k]), obj);
@@ -241,29 +242,15 @@ module.exports = {
 		}
 
 		function applyLiveHumanizer() {
-			// `config` here is a fresh read of the file, so mirror the two keys the
-			// running bot reads onto global.GoatBot.config or the next listener
-			// restart would revert the change.
 			try {
 				if (global.GoatBot.config) {
 					global.GoatBot.config.humanizer = config.humanizer;
 					global.GoatBot.config.enableTypingIndicator = config.enableTypingIndicator;
 				}
-				const fcaApi = global.GoatBot.fcaApi;
-				const h = fcaApi && typeof fcaApi.getHumanizer === "function" ? fcaApi.getHumanizer() : null;
-				if (h && typeof h.setOptions === "function") {
-					if (config.humanizer.enable === false) h.setOptions({ enabled: false });
-					else {
-						h.setOptions({
-							enabled: true,
-							reactDelayMs: config.humanizer.delayMs,
-							cooldownMs: config.humanizer.cooldownMs,
-							maxPerMinute: config.humanizer.maxPerMinute
-						});
-						h.enabled = true;
-					}
-				}
-			} catch { }
+				return applyHumanizerToApi(global.GoatBot.fcaApi || api, config);
+			} catch {
+				return false;
+			}
 		}
 
 		async function sendAndListen(text, newState, extra = {}) {
