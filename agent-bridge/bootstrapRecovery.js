@@ -69,7 +69,6 @@ async function bootstrapFacebookLogin({ botId, cookie, progress = async () => {}
     }
 
     const appState = secureSession.validateAppState(cookie, botId);
-    await progress("validating", "Facebook cookie structure and account ID validated");
 
     const fcaProvider = loadFcaProvider(global.GoatBot.config);
     await progress("provider_ready", "Using " + fcaProvider.packageName + " v" + fcaProvider.version);
