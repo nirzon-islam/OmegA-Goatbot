@@ -32,14 +32,14 @@ test("falls back to an installed compatible FCA when OmegA-FCA is unavailable", 
   assert.equal(selected.provider, "compatible");
 });
 
-test("supports explicitly configured FCA packages and default exports", () => {
+test("automatically uses an installed custom FCA package without a selector", () => {
   const login = () => {};
-  const selected = loadFcaProvider({ fcaPackage: "custom-fca" }, (name) => {
-    assert.equal(name, "custom-fca");
+  const selected = loadFcaProvider({}, (name) => {
+    assert.equal(name, "my-custom-fca");
     return { default: { login } };
-  });
+  }, () => ["my-custom-fca"]);
   assert.equal(selected.login, login);
-  assert.equal(selected.packageName, "custom-fca");
+  assert.equal(selected.packageName, "my-custom-fca");
 });
 
 test("fails clearly when no compatible FCA package is installed", () => {
@@ -49,10 +49,10 @@ test("fails clearly when no compatible FCA package is installed", () => {
   );
 });
 
-test("rejects non-callable FCA exports and reports the provider name", () => {
+test("reports a clear error when no discovered FCA package is compatible", () => {
   assert.throws(
-    () => loadFcaProvider({ fcaPackage: "broken-fca" }, () => ({})),
-    /Configured FCA package broken-fca could not be loaded/
+    () => loadFcaProvider({}, () => ({}), () => ["broken-fca"]),
+    /No compatible FCA package was found automatically/
   );
 });
 
