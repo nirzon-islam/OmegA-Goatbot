@@ -49,4 +49,6 @@ async function bootstrapFacebookLogin({ botId, cookie, progress = async () => {}
   }
 }
 
+bootstrapFacebookLogin.isBootstrap = true;
+
 module.exports = { bootstrapFacebookLogin };
