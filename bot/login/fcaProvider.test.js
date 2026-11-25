@@ -4,7 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { loadFcaProvider } = require("./fcaProvider");
 
-test("always loads OmegA-FCA without an environment variable", () => {
+test("loads the default OmegA-FCA provider when installed", () => {
   const login = () => {};
   const selected = loadFcaProvider({}, (name) => {
     assert.equal(name, "@nirzon-islam/omega-fca");
@@ -16,17 +16,43 @@ test("always loads OmegA-FCA without an environment variable", () => {
   assert.equal(selected.provider, "omega");
 });
 
-test("fails clearly when OmegA-FCA is not installed", () => {
+test("falls back to an installed compatible FCA when OmegA-FCA is unavailable", () => {
+  const login = () => {};
+  const tried = [];
+  const selected = loadFcaProvider({}, (name) => {
+    tried.push(name);
+    if (name === "facebook-chat-api") return { login };
+    const error = new Error("missing");
+    error.code = "MODULE_NOT_FOUND";
+    throw error;
+  });
+  assert.deepEqual(tried, ["@nirzon-islam/omega-fca", "@eryxenx/fca", "fca-unofficial", "facebook-chat-api"]);
+  assert.equal(selected.login, login);
+  assert.equal(selected.packageName, "facebook-chat-api");
+  assert.equal(selected.provider, "compatible");
+});
+
+test("supports explicitly configured FCA packages and default exports", () => {
+  const login = () => {};
+  const selected = loadFcaProvider({ fcaPackage: "custom-fca" }, (name) => {
+    assert.equal(name, "custom-fca");
+    return { default: { login } };
+  });
+  assert.equal(selected.login, login);
+  assert.equal(selected.packageName, "custom-fca");
+});
+
+test("fails clearly when no compatible FCA package is installed", () => {
   assert.throws(
     () => loadFcaProvider({}, () => { throw new Error("MODULE_NOT_FOUND"); }),
-    /OmegA-FCA is required but is not installed/
+    /No supported FCA package is installed/
   );
 });
 
-test("rejects non-callable OmegA-FCA exports", () => {
+test("rejects non-callable FCA exports and reports the provider name", () => {
   assert.throws(
-    () => loadFcaProvider({}, () => ({})),
-    /callable CommonJS login function/
+    () => loadFcaProvider({ fcaPackage: "broken-fca" }, () => ({})),
+    /Configured FCA package broken-fca could not be loaded/
   );
 });
 
