@@ -3,12 +3,44 @@
 const fs = require("fs");
 const path = require("path");
 
-const DEFAULT_FCA_PACKAGES = [
+const PREFERRED_FCA_PACKAGES = [
   "@nirzon-islam/omega-fca",
   "@eryxenx/fca",
   "fca-unofficial",
   "facebook-chat-api"
 ];
+
+function discoverFcaPackages(root = process.cwd()) {
+  const found = new Set(PREFERRED_FCA_PACKAGES);
+  const manifestPath = path.join(root, "package.json");
+  try {
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+    for (const section of ["dependencies", "optionalDependencies", "devDependencies"]) {
+      for (const name of Object.keys(manifest[section] || {})) {
+        if (/(^|[-/@])fca($|[-/])|facebook.*chat|chat.*api/i.test(name)) found.add(name);
+      }
+    }
+  } catch {}
+
+  // Also discover installed FCA packages even when they were added manually
+  // and are not declared in the root manifest.
+  const modulesPath = path.join(root, "node_modules");
+  try {
+    for (const entry of fs.readdirSync(modulesPath, { withFileTypes: true })) {
+      if (entry.name.startsWith("@") && entry.isDirectory()) {
+        const scopePath = path.join(modulesPath, entry.name);
+        for (const scoped of fs.readdirSync(scopePath, { withFileTypes: true })) {
+          if (!scoped.isDirectory()) continue;
+          const name = entry.name + "/" + scoped.name;
+          if (/(^|[-/@])fca($|[-/])|facebook.*chat|chat.*api/i.test(name)) found.add(name);
+        }
+      } else if (entry.isDirectory() && !entry.name.startsWith(".")) {
+        if (/(^|[-/@])fca($|[-/])|facebook.*chat|chat.*api/i.test(entry.name)) found.add(entry.name);
+      }
+    }
+  } catch {}
+  return [...found];
+}
 
 function packageVersion(packageName, entryPoint) {
   try {
@@ -40,12 +72,8 @@ function getLoginExport(loaded) {
  * common login(appState, options, callback) contract and return an API with
  * getCurrentUserID() and listenMqtt().
  */
-function loadFcaProvider(config = {}, loadPackage = require) {
-  const configured = process.env.FCA_PACKAGE || process.env.OMEGA_FCA_PACKAGE ||
-    config.fcaPackage || config.fcaProvider?.package;
-  const candidates = configured
-    ? [String(configured).trim()]
-    : DEFAULT_FCA_PACKAGES;
+function loadFcaProvider(_config = {}, loadPackage = require, discoverPackages = discoverFcaPackages) {
+  const candidates = discoverPackages();
   const failures = [];
 
   for (const packageName of candidates) {
@@ -71,10 +99,7 @@ function loadFcaProvider(config = {}, loadPackage = require) {
     }
   }
 
-  const selection = configured
-    ? "Configured FCA package " + configured + " could not be loaded."
-    : "No supported FCA package is installed.";
-  throw new Error(selection + " Install a compatible FCA package or set FCA_PACKAGE to its installed package name. Providers must expose login(appState, options, callback), getCurrentUserID() and listenMqtt(). Details: " + failures.join("; "));
+  throw new Error("No compatible FCA package was found automatically. Install any FCA package exposing login(appState, options, callback) and returning an API with getCurrentUserID() and listenMqtt(). Detected candidates: " + failures.join("; "));
 }
 
 /**
@@ -120,4 +145,4 @@ function buildFcaLoginOptions(config = {}, accountId = "", env = process.env, lo
   return options;
 }
 
-module.exports = { DEFAULT_FCA_PACKAGES, getLoginExport, loadFcaProvider, buildFcaLoginOptions };
+module.exports = { PREFERRED_FCA_PACKAGES, discoverFcaPackages, getLoginExport, loadFcaProvider, buildFcaLoginOptions };
