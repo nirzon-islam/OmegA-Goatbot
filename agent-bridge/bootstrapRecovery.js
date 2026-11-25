@@ -8,11 +8,13 @@ function waitForBotOnline(botId, timeoutMs = 60000) {
     const started = Date.now();
     const timer = setInterval(() => {
       const currentId = String(global.GoatBot?.botID || global.botID || "");
-      // startBot's login callback assigns the authenticated API and exact
-      // account ID before the first MQTT event changes statusAccountBot.
-      // Login readiness must therefore be based on that authoritative pair.
-      const ready = currentId === String(botId) &&
+      // The login callback exposes fcaApi and botID before startup finishes.
+      // Do not report success until the actual MQTT listener is installed and
+      // the first successful listener event marks the account online.
+      const ready = global.statusAccountBot === "good" &&
+        currentId === String(botId) &&
         Boolean(global.GoatBot?.fcaApi) &&
+        Boolean(global.GoatBot?.Listening) &&
         String(global.GoatBot.botID || "") === String(botId);
       if (ready) {
         clearInterval(timer);
