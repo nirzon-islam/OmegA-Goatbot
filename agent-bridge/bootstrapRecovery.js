@@ -6,7 +6,7 @@ async function bootstrapFacebookLogin({ botId, cookie, progress = async () => {}
   if (running) throw new Error("A Facebook login is already running");
   running = true;
   try {
-    if (typeof botId !== "string" || !/^\\d{5,30}$/.test(botId)) {
+    if (typeof botId !== "string" || !/^\d{5,30}$/.test(botId)) {
       throw new Error("Invalid target Facebook account ID");
     }
     if (!global.GoatBot?.config || !global.GoatBot?.config.optionsFca) {
