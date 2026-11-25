@@ -10,7 +10,7 @@ function waitForBotOnline(botId, timeoutMs = 60000) {
       const currentId = String(global.GoatBot?.botID || global.botID || "");
       const ready = global.statusAccountBot === "good" &&
         currentId === String(botId) &&
-        Boolean(global.GoatBot?.fcaApi && global.GoatBot?.Listening);
+        Boolean(global.GoatBot?.fcaApi && String(global.GoatBot.fcaApi.getCurrentUserID?.() || "") === String(botId));
       if (ready) {
         clearInterval(timer);
         resolve({ state: "online", message: "Facebook login and MQTT listener are ready" });
