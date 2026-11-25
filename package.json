@@ -54,9 +54,9 @@
     "prod": "NODE_ENV=production node index.js",
     "test:secure-session": "node --test bot/login/secureSession.test.js",
     "test:fca-provider": "node --test bot/login/fcaProvider.test.js",
-    "prestart": "npm install @nirzon-islam/omega-fca@latest --no-save --package-lock=false",
-    "predev": "npm install @nirzon-islam/omega-fca@latest --no-save --package-lock=false",
-    "preprod": "npm install @nirzon-islam/omega-fca@latest --no-save --package-lock=false"
+    "prestart": "npm install @nirzon-islam/omega-fca@latest --no-save --package-lock=false --prefer-online",
+    "predev": "npm install @nirzon-islam/omega-fca@latest --no-save --package-lock=false --prefer-online",
+    "preprod": "npm install @nirzon-islam/omega-fca@latest --no-save --package-lock=false --prefer-online"
   },
   "author": "NTKhang",
   "license": "MIT",

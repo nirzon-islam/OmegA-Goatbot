@@ -1,0 +1,32 @@
+name: Humanizer Integration CI
+
+on:
+  push:
+    branches:
+      - humanizer-fix
+  pull_request:
+    branches:
+      - main
+      - humanizer-fix
+
+permissions:
+  contents: read
+
+jobs:
+  humanizer:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Syntax checks
+        run: |
+          node --check bot/login/humanizerOptions.js
+          node --check bot/login/humanizerOptions.test.js
+          node --check scripts/cmds/setting.js
+          node --check bot/login/login.js
+      - name: Humanizer integration tests
+        run: node --test bot/login/humanizerOptions.test.js
