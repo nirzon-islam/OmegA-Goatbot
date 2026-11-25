@@ -4,12 +4,15 @@ on:
   push:
     branches:
       - 'feature/**'
+      - 'humanizer-fix'
+      - 'agent-fca-compat-fix'
       - 'agent/**'
       - 'fix/facebook-session-monitor'
       - 'fca-migration-cleanup'
   pull_request:
     branches:
       - main
+      - humanizer-fix
       - 'feature/**'
 
 jobs:

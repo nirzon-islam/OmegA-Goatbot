@@ -121,7 +121,7 @@
   "autoRestartWhenListenMqttError": true,
   "restartListenMqtt": {
     "enable": false,
-    "timeRestart": 3600000,
+    "timeRestart": 1800000,
     "delayAfterStopListening": 2000,
     "logNoti": true,
     "notes": "Restart listener every 1 hour."
@@ -168,9 +168,9 @@
     "updatePresence": true,
     "listenTyping": true,
     "logLevel": "error",
-    "selfListen": false,
+    "selfListen": true,
     "selfListenEvent": true,
-    "autoMarkDelivery": false,
+    "autoMarkDelivery": true,
     "autoReconnect": true,
     "notes": "Docs: https://github.com/ntkhang03/fb-chat-api/blob/master/DOCS.md#apisetoptionsoptions"
   }

@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - fca-migration-cleanup
+      - agent-fca-compat-fix
   pull_request:
     branches:
       - main
@@ -47,19 +48,19 @@ jobs:
           node --check agent-bridge/runtime.js
           node --check agent-bridge/worker.js
 
-      - name: Verify OmegA-FCA stable-latest dependency declaration
+      - name: Verify pinned OmegA-FCA dependency
         run: |
           node <<'NODE'
           const p = require('./package.json');
-          const dependency = p.dependencies?.['@nirzon-islam/omega-fca'];
-          if (dependency !== 'latest') {
-            throw new Error(`Expected @nirzon-islam/omega-fca dependency to be latest, got ${dependency}`);
+          const expected = '0.2.3-beta.3';
+          const actual = p.dependencies?.['@nirzon-islam/omega-fca'];
+          if (actual !== expected) {
+            throw new Error(`Expected @nirzon-islam/omega-fca ${expected}, got ${actual}`);
           }
-          for (const scriptName of ['prestart', 'predev', 'preprod']) {
-            const script = p.scripts?.[scriptName] || '';
-            if (!script.includes('@nirzon-islam/omega-fca@latest')) {
-              throw new Error(`${scriptName} must install @nirzon-islam/omega-fca@latest`);
-            }
+          const lock = require('./package-lock.json');
+          const locked = lock.packages?.['node_modules/@nirzon-islam/omega-fca']?.version;
+          if (locked !== expected) {
+            throw new Error(`Expected lockfile OmegA-FCA ${expected}, got ${locked}`);
           }
-          console.log('OmegA-FCA stable-latest dependency and startup installers OK');
+          console.log('OmegA-FCA package.json and lockfile versions match');
           NODE

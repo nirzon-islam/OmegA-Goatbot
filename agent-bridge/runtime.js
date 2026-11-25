@@ -52,7 +52,7 @@ function startBridgeWorker({ log = console, intervalMs = 3000, getAccountStatus 
       const sessionState = allowed.has(status.sessionState) ? status.sessionState :
         (allowed.has(status.state) ? status.state : "unknown");
       await client.reportAccountStatus({
-        workerState: "online",
+        workerState: worker ? "online" : "disabled",
         sessionState,
         state: sessionState,
         accountId: typeof status.accountId === "string" ? status.accountId.slice(0, 128) : "",
@@ -69,12 +69,18 @@ function startBridgeWorker({ log = console, intervalMs = 3000, getAccountStatus 
     if (!worker || running) return;
     running = true;
     try {
-      if (worker) {
+      try {
         await worker.pollOnce(5);
-        await worker.pollRecovery();
+      } catch (error) {
+        log.warn("AGENT BRIDGE", "Task queue poll failed: " + String(error.message || "unknown error"));
       }
-    } catch (error) {
-      log.warn("AGENT BRIDGE", "Poll failed: " + String(error.message || "unknown error"));
+      // Recovery has its own queue and must still be polled when normal task
+      // queue requests fail; otherwise login handoffs remain queued until expiry.
+      try {
+        await worker.pollRecovery();
+      } catch (error) {
+        log.warn("AGENT BRIDGE", "Recovery queue poll failed: " + String(error.message || "unknown error"));
+      }
     } finally {
       running = false;
     }

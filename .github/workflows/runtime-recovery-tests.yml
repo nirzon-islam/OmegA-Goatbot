@@ -5,8 +5,10 @@ on:
     branches:
       - fix/facebook-session-monitor
       - fca-migration-cleanup
+      - agent-fca-compat-fix
     paths:
       - "bot/login/**"
+      - "agent-bridge/**"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/runtime-recovery-tests.yml"
@@ -15,6 +17,7 @@ on:
       - main
     paths:
       - "bot/login/**"
+      - "agent-bridge/**"
       - "package.json"
       - "package-lock.json"
 
