@@ -29,7 +29,7 @@
     "notes": "true = only bot admins can use commands without prefix | false = everyone must use prefix"
   },
   "e2ee": {
-    "enable": false,
+    "enable": true,
     "notes": "true = connect E2EE messaging layer on startup | false = skip E2EE entirely, MQTT only"
   },
   "adminOnly": {
@@ -121,7 +121,7 @@
   "autoRestartWhenListenMqttError": true,
   "restartListenMqtt": {
     "enable": false,
-    "timeRestart": 3600000,
+    "timeRestart": 1800000,
     "delayAfterStopListening": 2000,
     "logNoti": true,
     "notes": "Restart listener every 1 hour."
@@ -168,9 +168,9 @@
     "updatePresence": true,
     "listenTyping": true,
     "logLevel": "error",
-    "selfListen": false,
+    "selfListen": true,
     "selfListenEvent": true,
-    "autoMarkDelivery": false,
+    "autoMarkDelivery": true,
     "autoReconnect": true,
     "notes": "Docs: https://github.com/ntkhang03/fb-chat-api/blob/master/DOCS.md#apisetoptionsoptions"
   }
