@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - fix/facebook-session-monitor
+      - fca-migration-cleanup
     paths:
       - "bot/login/**"
       - "package.json"
@@ -26,7 +27,9 @@ jobs:
         with:
           node-version: 20
           cache: npm
-      - run: npm install --ignore-scripts --no-audit --no-fund
+      - run: npm install --package-lock=false --ignore-scripts --no-audit --no-fund
       - run: npm run test:secure-session
+      - run: npm run test:fca-provider
+      - run: node --check bot/login/fcaProvider.js
       - run: node --check bot/login/login.js
       - run: node --check agent-bridge/worker.js

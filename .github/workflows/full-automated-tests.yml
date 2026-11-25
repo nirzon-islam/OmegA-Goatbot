@@ -1,0 +1,51 @@
+name: Full Automated Tests
+
+on:
+  push:
+    branches:
+      - fca-migration-cleanup
+  pull_request:
+    branches:
+      - main
+      - fca-migration-cleanup
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: goatbot-full-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  automated-tests:
+    name: Unit, integration and runtime checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies without lifecycle scripts
+        run: npm install --package-lock=false --ignore-scripts --no-audit --no-fund
+
+      - name: Run complete automated test suite
+        run: node --test agent-bridge/*.test.js bot/login/*.test.js test/*.test.js
+
+      - name: Syntax-check FCA integration entry points
+        run: |
+          node --check bot/login/fcaProvider.js
+          node --check bot/login/login.js
+          node --check bot/login/secureSession.js
+          node --check bot/login/humanizerOptions.js
+          node --check agent-bridge/runtime.js
+          node --check agent-bridge/worker.js
+
+      - name: Verify OmegA-FCA dependency declaration
+        run: node -e "const p=require('./package.json'); if (p.dependencies?.['@nirzon-islam/omega-fca'] !== '0.2.2') process.exit(1); console.log('OmegA-FCA dependency declaration OK')"

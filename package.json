@@ -1,14 +1,14 @@
 {
   "name": "goatbot-pro",
   "version": "7.1.5",
-  "description": "Enhanced Facebook Messenger bot framework, forked and modified by EryXenX from Goat Bot V2 (originally by NTKhang).",
+  "description": "OmegA-customized Facebook Messenger bot framework based on Goat Bot V2 (originally by NTKhang).",
   "main": "index.js",
   "engines": {
     "node": "20.x",
     "npm": ">=7.0.0"
   },
   "dependencies": {
-    "@eryxenx/fca": "^1.3.4",
+    "@nirzon-islam/omega-fca": "0.2.3-beta.1",
     "axios": "^1.4.0",
     "bcrypt": "^5.0.1",
     "body-parser": "^1.20.1",
@@ -52,7 +52,8 @@
     "start": "node index.js",
     "dev": "NODE_ENV=development node index.js",
     "prod": "NODE_ENV=production node index.js",
-    "test:secure-session": "node --test bot/login/secureSession.test.js"
+    "test:secure-session": "node --test bot/login/secureSession.test.js",
+    "test:fca-provider": "node --test bot/login/fcaProvider.test.js"
   },
   "author": "NTKhang",
   "license": "MIT",

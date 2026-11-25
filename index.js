@@ -23,7 +23,7 @@ const log = require("./logger/log.js");
 function startProject() {
 	// No `shell: true`: passing an args array through a shell is deprecated
 	// (DEP0190) and the arguments would not be escaped.
-	const child = spawn(process.execPath, ["EryXenX.js"], {
+	const child = spawn(process.execPath, ["OmegA.js"], {
 		cwd: __dirname,
 		stdio: "inherit"
 	});

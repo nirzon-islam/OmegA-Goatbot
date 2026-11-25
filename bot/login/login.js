@@ -1,4 +1,4 @@
-process.stdout.write("\x1b]2;EryXenX Ultra Edition\x07");
+process.stdout.write("\x1b]2;OmegA GoatBot\x07");
 function decode(_0x3eea0c) {
   _0x3eea0c = Buffer.from(_0x3eea0c, 'hex').toString('utf-8');
   _0x3eea0c = Buffer.from(_0x3eea0c, "hex").toString('utf-8');
@@ -11,7 +11,7 @@ const path = require('path');
 const readline = require('readline');
 const fs = require("fs-extra");
 const toptp = require("totp-generator");
-const login = require("@eryxenx/fca");
+const { loadFcaProvider, buildFcaLoginOptions } = require("./fcaProvider");
 const secureSession = require("./secureSession");
 const qr = new (require("qrcode-reader"))();
 const Canvas = require('canvas');
@@ -45,7 +45,7 @@ const {
 } = require("fs-extra");
 const handlerWhenListenHasError = require("./handlerWhenListenHasError.js");
 const checkLiveCookie = require("./checkLiveCookie.js");
-const { buildHumanizeOptions, applyHumanizerToApi } = require("./humanizerOptions.js");
+const { applyHumanizerToApi } = require("./humanizerOptions.js");
 const {
   callbackListenTime,
   storage5Message
@@ -72,14 +72,14 @@ function centerText(_0x4f9e3a, _0x5dd3db) {
 }
 const titles = [["██████╗  ██████╗  █████╗ ████████╗    ██╗   ██╗██████╗", "██╔════╝ ██╔═══██╗██╔══██╗╚══██╔══╝    ██║   ██║╚════██╗", "██║  ███╗██║   ██║███████║   ██║       ██║   ██║ █████╔╝", "██║   ██║██║   ██║██╔══██║   ██║       ╚██╗ ██╔╝██╔═══╝", "╚██████╔╝╚██████╔╝██║  ██║   ██║        ╚████╔╝ ███████╗", "╚═════╝  ╚═════╝ ╚═╝  ╚═╝   ╚═╝         ╚═══╝  ╚══════╝"], ["█▀▀ █▀█ ▄▀█ ▀█▀  █▄▄ █▀█ ▀█▀  █░█ ▀█", "█▄█ █▄█ █▀█ ░█░  █▄█ █▄█ ░█░  ▀▄▀ █▄"], ["G O A T B O T  V 2 @" + currentVersion], ["GOATBOT V2"]];
 const maxWidth = process.stdout.columns;
-const title = maxWidth > 0x3a ? titles[0x0] : maxWidth > 0x24 ? titles[0x1] : maxWidth > 0x1a ? titles[0x2] : titles[0x3];
+const title = titles[Math.floor(Math.random() * titles.length)];
 console.log(gradient("#f5af19", "#f12711")(createLine(null, true)));
 console.log();
 for (const text of title) {
   const textColor = gradient("#FA8BFF", "#2BD2FF", "#2BFF88")(text);
   centerText(textColor, text.length);
 }
-let subTitle = "GoatBot V2@" + currentVersion + "- Powered by MOHAMMAD AKASH";
+let subTitle = "OmegA GoatBot@" + currentVersion + " - Powered by OmegA";
 const subTitleArray = [];
 if (subTitle.length > maxWidth) {
   while (subTitle.length > maxWidth) {
@@ -563,13 +563,23 @@ async function startBot(_0x3cad9e) {
     await stopListening();
   }
   log.info("LOGIN FACEBOOK", getText("login", "currentlyLogged"));
-  const fcaVersion = (() => { try { return JSON.parse(require("fs").readFileSync(require.resolve("@eryxenx/fca").replace(/index\.js$/, "package.json"), "utf8")).version; } catch { return "unknown"; } })();
-  log.info("FCA", `@eryxenx/fca v${fcaVersion}`);
+  let fcaProvider;
+  try {
+    fcaProvider = loadFcaProvider(global.GoatBot.config);
+  } catch (providerError) {
+    global.statusAccountBot = "login failed";
+    log.err("FCA", providerError.message || providerError);
+    return;
+  }
+  const login = fcaProvider.login;
+  log.info("FCA", `${fcaProvider.packageName} v${fcaProvider.version} (${fcaProvider.provider})`);
   try {
     var _0x41cca2 = path.join(process.cwd(), "account.txt");
     var _0x11ae53 = fs.readFileSync(_0x41cca2, 'utf8');
     var _0x372cb5 = JSON.parse(_0x11ae53);
-    log.success("APPSTATE", "Appstate Verified Successfully.");
+    const storedUid = (_0x372cb5.find(cookie => cookie && (cookie.key || cookie.name) === "c_user") || {}).value;
+    _0x372cb5 = secureSession.validateAppState(_0x11ae53, String(storedUid || ""));
+    log.success("APPSTATE", "Appstate structure and account identity validated.");
   } catch {
     return log.warn('APPSTATE', "Appstate Cookie Not Found.");
   }
@@ -589,11 +599,18 @@ async function startBot(_0x3cad9e) {
     }
     let _0x54729a = false;
     let definitiveAuthFailureHandled = false;
+    let providerLoginOptions;
+    try {
+      const storedUid = (_0x812929.find(cookie => cookie && (cookie.key || cookie.name) === "c_user") || {}).value;
+      providerLoginOptions = buildFcaLoginOptions(global.GoatBot.config, String(storedUid || ""));
+    } catch (optionError) {
+      global.statusAccountBot = "login failed";
+      log.err("FCA OPTIONS", optionError.message || optionError);
+      return;
+    }
     login({
       'appState': _0x812929
-    }, Object.assign({}, global.GoatBot.config.optionsFca, {
-      humanize: buildHumanizeOptions(global.GoatBot.config)
-    }), async function (_0x3f689f, _0x4d5048) {
+    }, providerLoginOptions, async function (_0x3f689f, _0x4d5048) {
       if (_0x3f689f) {
         // Keep the process and Agent Bridge alive so a fresh account session
         // can be submitted without restarting or losing the recovery worker.
@@ -619,10 +636,8 @@ async function startBot(_0x3cad9e) {
         log.warn("SESSION GUARD", "Could not start: " + (sgErr.message || sgErr));
       }
 
-      // ✅ E2EE — auto-connected inside @eryxenx/fca (loginHelper.js) already;
-      // calling connectE2EE() again here would open a second, redundant
-      // connection on the same bridge and can race with the listener that
-      // @eryxenx/fca already wired into api.listenMqtt. Nothing to do here.
+      // OmegA-FCA exposes its optional local Signal runtime on api.e2ee.
+      // This is not a claim that Messenger's private E2EE transport is connected.
       if (_0x4d5048.e2ee && typeof _0x4d5048.e2ee.isConnected === "function") {
         log.info("E2EE", _0x4d5048.e2ee.isConnected() ? "Signal Protocol connected" : "Not connected yet (non-fatal)");
       }
@@ -962,9 +977,7 @@ async function startBot(_0x3cad9e) {
           previousAccount = fs.readFileSync(accountPath);
           await progress("validating", "Appstate identity and cookie structure validated");
 
-          candidateApi = await secureSession.loginCandidate(login, appState, Object.assign({}, global.GoatBot.config.optionsFca, {
-            humanize: buildHumanizeOptions(global.GoatBot.config)
-          }));
+          candidateApi = await secureSession.loginCandidate(login, appState, buildFcaLoginOptions(global.GoatBot.config, String(botId)));
           if (String(candidateApi.getCurrentUserID()) !== String(botId)) {
             throw new Error("Facebook login returned a different account ID");
           }

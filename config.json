@@ -21,7 +21,8 @@
     "delayMs": 3000,
     "cooldownMs": 5500,
     "maxPerMinute": 20,
-    "notes": "delayMs = how long the bot waits (and shows typing) before replying to a command. cooldownMs = min gap between two accepted commands per thread. maxPerMinute = global accepted-command cap. Set enable=false to reply instantly with no delay."
+    "perThread": true,
+    "notes": "delayMs = fixed delay in ms or [min, max] random delay. cooldownMs = minimum gap between accepted commands. maxPerMinute = accepted-command cap per thread when perThread=true, or global when false. Set enable=false to disable delay and humanizer typing."
   },
   "noPrefix": {
     "enable": true,
