@@ -4,7 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { loadFcaProvider } = require("./fcaProvider");
 
-test("loads the default OmegA-FCA provider when installed", () => {
+test("always loads OmegA-FCA without an environment variable", () => {
   const login = () => {};
   const selected = loadFcaProvider({}, (name) => {
     assert.equal(name, "@nirzon-islam/omega-fca");
@@ -16,43 +16,17 @@ test("loads the default OmegA-FCA provider when installed", () => {
   assert.equal(selected.provider, "omega");
 });
 
-test("falls back to an installed compatible FCA when OmegA-FCA is unavailable", () => {
-  const login = () => {};
-  const tried = [];
-  const selected = loadFcaProvider({}, (name) => {
-    tried.push(name);
-    if (name === "facebook-chat-api") return { login };
-    const error = new Error("missing");
-    error.code = "MODULE_NOT_FOUND";
-    throw error;
-  });
-  assert.deepEqual(tried, ["@nirzon-islam/omega-fca", "@eryxenx/fca", "fca-unofficial", "facebook-chat-api"]);
-  assert.equal(selected.login, login);
-  assert.equal(selected.packageName, "facebook-chat-api");
-  assert.equal(selected.provider, "compatible");
-});
-
-test("automatically uses an installed custom FCA package without a selector", () => {
-  const login = () => {};
-  const selected = loadFcaProvider({}, (name) => {
-    assert.equal(name, "my-custom-fca");
-    return { default: { login } };
-  }, () => ["my-custom-fca"]);
-  assert.equal(selected.login, login);
-  assert.equal(selected.packageName, "my-custom-fca");
-});
-
-test("fails clearly when no compatible FCA package is installed", () => {
+test("fails clearly when OmegA-FCA is not installed", () => {
   assert.throws(
     () => loadFcaProvider({}, () => { throw new Error("MODULE_NOT_FOUND"); }),
-    /Install a compatible FCA or set FCA_PACKAGE/
+    /OmegA-FCA is required but is not installed/
   );
 });
 
-test("reports a clear error when no discovered FCA package is compatible", () => {
+test("rejects non-callable OmegA-FCA exports", () => {
   assert.throws(
-    () => loadFcaProvider({}, () => ({}), () => ["broken-fca"]),
-    /Install a compatible FCA or set FCA_PACKAGE/
+    () => loadFcaProvider({}, () => ({})),
+    /callable CommonJS login function/
   );
 });
 
@@ -117,40 +91,4 @@ test("builds account-isolated E2EE runtime options from explicit environment", (
   assert.equal(options.e2ee.storagePath, require("path").join("/tmp/omega-signal", "123456789"));
   assert.equal(options.e2ee.encryptionKey.length, 32);
   assert.equal(options.e2ee.signalModule, signalModule);
-});
-
-test("uses an explicitly selected arbitrary installed FCA package", () => {
-  const login = () => {};
-  const tried = [];
-  const selected = loadFcaProvider({}, (name) => {
-    tried.push(name);
-    return { default: { login } };
-  }, () => { throw new Error("discovery must not run when explicitly selected"); }, {
-    FCA_PACKAGE: "my-private-fca"
-  });
-  assert.deepEqual(tried, ["my-private-fca"]);
-  assert.equal(selected.login, login);
-  assert.equal(selected.packageName, "my-private-fca");
-  assert.equal(selected.provider, "compatible");
-});
-
-test("supports the legacy OMEGA_FCA_PACKAGE selector", () => {
-  const login = () => {};
-  const selected = loadFcaProvider({}, () => login, () => [], {
-    OMEGA_FCA_PACKAGE: "custom-fca-adapter"
-  });
-  assert.equal(selected.packageName, "custom-fca-adapter");
-  assert.equal(selected.login, login);
-});
-
-test("does not silently fall back when an explicitly selected FCA is unavailable", () => {
-  const tried = [];
-  assert.throws(
-    () => loadFcaProvider({}, (name) => {
-      tried.push(name);
-      throw Object.assign(new Error("missing"), { code: "MODULE_NOT_FOUND" });
-    }, () => ["fallback-fca"], { FCA_PACKAGE: "missing-fca" }),
-    /selected by FCA_PACKAGE/
-  );
-  assert.deepEqual(tried, ["missing-fca"]);
 });
