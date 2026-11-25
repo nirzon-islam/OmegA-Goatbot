@@ -37,7 +37,7 @@ async function bootstrapFacebookLogin({ botId, cookie, progress = async () => {}
   const accountPath = require("path").join(process.cwd(), "account.txt");
   let accountReplaced = false;
   try {
-    if (typeof botId !== "string" || !/^\\d{5,30}$/.test(botId)) {
+    if (typeof botId !== "string" || !/^\d{5,30}$/.test(botId)) {
       throw new Error("Invalid target Facebook account ID");
     }
     const appState = secureSession.validateAppState(cookie, botId);
