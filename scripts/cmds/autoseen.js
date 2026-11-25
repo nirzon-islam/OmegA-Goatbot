@@ -94,7 +94,11 @@ module.exports = {
   // queued and processed one at a time with a randomized delay.
   onChat: async function ({ event, api }) {
     try {
-      const data = JSON.parse(fs.readFileSync(path));
+      // Read receipts are not applicable to E2EE, typing, or presence events.
+      if (!event || event.isE2EE || event.type === "typ" || event.type === "presence") return;
+      if (!event.threadID || !api || typeof api.markAsRead !== "function") return;
+
+      const data = JSON.parse(fs.readFileSync(path, "utf8"));
       if (data.status !== true) return;
       if (queuedThreads.has(event.threadID)) return;
 
@@ -102,7 +106,7 @@ module.exports = {
       seenQueue.push(event.threadID);
       processSeenQueue(api);
     } catch (e) {
-      console.error(e);
+      console.error("AUTOSEEN queue failed:", e && e.message ? e.message : e);
     }
   },
 };
