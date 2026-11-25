@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const { applyHumanizerToApi } = require("../login/humanizerOptions");
+const { applyHumanizerToApi } = require("../../bot/login/humanizerOptions");
 
 function getPath(obj, keys) {
 	return keys.reduce((o, k) => (o == null ? o : o[k]), obj);
