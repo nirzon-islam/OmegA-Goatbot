@@ -193,22 +193,9 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 		if (typeof threadData.settings.hideNotiMessage == "object")
 			hideNotiMessage = threadData.settings.hideNotiMessage;
 
-		// Mark the incoming message as read/seen before the bot replies —
-		// a real client always does this, and a bot account that only ever
-		// sends outbound messages and never sends read receipts is an easy
-		// behavioral signal for automation detection. Fire-and-forget so it
-		// never adds latency to the actual reply; skipped for E2EE threads
-		// since markAsRead isn't meaningful there. Respects the existing
-		// `autoseen` on/off toggle (scripts/cmds/autoseen.js).
-		if (!event.isE2EE && event.type !== "typ" && event.type !== "presence" && typeof api.markAsRead === "function") {
-			try {
-				const autoseenPath = path.join(__dirname, "..", "..", "scripts/cmds/cache/autoseen.json");
-				const autoseenOn = !fs.existsSync(autoseenPath) || (fs.readJsonSync(autoseenPath, { throws: false }) || { status: true }).status !== false;
-				if (autoseenOn) {
-					api.markAsRead(threadID).catch(() => {});
-				}
-			} catch { }
-		}
+		// Read receipts are queued by scripts/cmds/autoseen.js so the
+		// configured delay and on/off toggle are respected consistently.
+		// Do not mark read here: that would bypass the queue and send duplicates.
 
 		// Same idea as markAsRead above, but for the "delivered" receipt —
 		// a real client sends both automatically. Also fire-and-forget,
