@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - 'feature/**'
+      - 'humanizer-fix'
       - 'agent/**'
       - 'fix/facebook-session-monitor'
       - 'fca-migration-cleanup'
