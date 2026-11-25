@@ -8,7 +8,7 @@
     "npm": ">=7.0.0"
   },
   "dependencies": {
-    "@nirzon-islam/omega-fca": "0.2.3-beta.3",
+    "@nirzon-islam/omega-fca": "*",
     "axios": "^1.4.0",
     "bcrypt": "^5.0.1",
     "body-parser": "^1.20.1",
@@ -53,10 +53,7 @@
     "dev": "NODE_ENV=development node index.js",
     "prod": "NODE_ENV=production node index.js",
     "test:secure-session": "node --test bot/login/secureSession.test.js",
-    "test:fca-provider": "node --test bot/login/fcaProvider.test.js",
-    "prestart": "npm install @nirzon-islam/omega-fca@0.2.3-beta.3 --no-save --package-lock=false --prefer-online",
-    "predev": "npm install @nirzon-islam/omega-fca@0.2.3-beta.3 --no-save --package-lock=false --prefer-online",
-    "preprod": "npm install @nirzon-islam/omega-fca@0.2.3-beta.3 --no-save --package-lock=false --prefer-online"
+    "test:fca-provider": "node --test bot/login/fcaProvider.test.js"
   },
   "author": "NTKhang",
   "license": "MIT",
