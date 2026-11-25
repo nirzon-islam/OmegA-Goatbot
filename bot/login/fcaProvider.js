@@ -119,7 +119,7 @@ function buildFcaLoginOptions(config = {}, accountId = "", env = process.env, lo
   const options = { ...(config.optionsFca || {}) };
   if (config.e2ee?.enable !== true) return options;
 
-  if (!/^\\d{5,30}$/.test(String(accountId))) {
+  if (!/^\d{5,30}$/.test(String(accountId))) {
     throw new Error("OmegA E2EE requires a verified Facebook account ID");
   }
   const encodedKey = env.OMEGA_E2EE_ENCRYPTION_KEY;
