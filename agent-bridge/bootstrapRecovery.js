@@ -2,7 +2,7 @@
 
 const path = require("path");
 const fs = require("fs");
-const login = require("@eryxenx/fca");
+const { loadFcaProvider, buildFcaLoginOptions } = require("../bot/login/fcaProvider");
 const secureSession = require("../bot/login/secureSession");
 const { buildHumanizeOptions } = require("../bot/login/humanizerOptions");
 
@@ -71,12 +71,14 @@ async function bootstrapFacebookLogin({ botId, cookie, progress = async () => {}
     const appState = secureSession.validateAppState(cookie, botId);
     await progress("validating", "Facebook cookie structure and account ID validated");
 
+    const fcaProvider = loadFcaProvider(global.GoatBot.config);
+    await progress("provider_ready", "Using " + fcaProvider.packageName + " v" + fcaProvider.version);
+    const loginOptions = buildFcaLoginOptions(global.GoatBot.config, botId);
+    loginOptions.humanize = buildHumanizeOptions(global.GoatBot.config);
     candidateApi = await secureSession.loginCandidate(
-      login,
+      fcaProvider.login,
       appState,
-      Object.assign({}, global.GoatBot.config.optionsFca, {
-        humanize: buildHumanizeOptions(global.GoatBot.config)
-      })
+      loginOptions
     );
     if (String(candidateApi.getCurrentUserID()) !== botId) {
       throw new Error("Facebook login returned a different account ID");
