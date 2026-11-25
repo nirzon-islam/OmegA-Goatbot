@@ -9,6 +9,7 @@ const PREFERRED_FCA_PACKAGES = [
   "fca-unofficial",
   "facebook-chat-api"
 ];
+const FCA_PACKAGE_PATTERN = /(^|[-/@])fca($|[-/])|facebook.*chat|chat.*api/i;
 
 function discoverFcaPackages(root = process.cwd()) {
   const found = new Set(PREFERRED_FCA_PACKAGES);
@@ -17,13 +18,12 @@ function discoverFcaPackages(root = process.cwd()) {
     const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
     for (const section of ["dependencies", "optionalDependencies", "devDependencies"]) {
       for (const name of Object.keys(manifest[section] || {})) {
-        if (/(^|[-/@])fca($|[-/])|facebook.*chat|chat.*api/i.test(name)) found.add(name);
+        if (FCA_PACKAGE_PATTERN.test(name)) found.add(name);
       }
     }
   } catch {}
 
-  // Also discover installed FCA packages even when they were added manually
-  // and are not declared in the root manifest.
+  // Discover installed FCA packages even when they were added manually.
   const modulesPath = path.join(root, "node_modules");
   try {
     for (const entry of fs.readdirSync(modulesPath, { withFileTypes: true })) {
@@ -32,10 +32,11 @@ function discoverFcaPackages(root = process.cwd()) {
         for (const scoped of fs.readdirSync(scopePath, { withFileTypes: true })) {
           if (!scoped.isDirectory()) continue;
           const name = entry.name + "/" + scoped.name;
-          if (/(^|[-/@])fca($|[-/])|facebook.*chat|chat.*api/i.test(name)) found.add(name);
+          if (FCA_PACKAGE_PATTERN.test(name)) found.add(name);
         }
-      } else if (entry.isDirectory() && !entry.name.startsWith(".")) {
-        if (/(^|[-/@])fca($|[-/])|facebook.*chat|chat.*api/i.test(entry.name)) found.add(entry.name);
+      } else if (entry.isDirectory() && !entry.name.startsWith(".") &&
+          FCA_PACKAGE_PATTERN.test(entry.name)) {
+        found.add(entry.name);
       }
     }
   } catch {}
@@ -66,14 +67,14 @@ function getLoginExport(loaded) {
 }
 
 /**
- * Load a compatible FCA login implementation.
- * Select one explicitly with FCA_PACKAGE / OMEGA_FCA_PACKAGE, otherwise use
- * the first installed supported package. All providers must implement the
- * common login(appState, options, callback) contract and return an API with
- * getCurrentUserID() and listenMqtt().
+ * Load any installed FCA that implements the GoatBot callback-login contract.
+ * FCA_PACKAGE (or OMEGA_FCA_PACKAGE for backwards compatibility) selects an
+ * exact installed package. Without it, known/declared/installed FCA packages
+ * are discovered and tried in priority order.
  */
-function loadFcaProvider(_config = {}, loadPackage = require, discoverPackages = discoverFcaPackages) {
-  const candidates = discoverPackages();
+function loadFcaProvider(_config = {}, loadPackage = require, discoverPackages = discoverFcaPackages, env = process.env) {
+  const explicitPackage = String(env.FCA_PACKAGE || env.OMEGA_FCA_PACKAGE || "").trim();
+  const candidates = explicitPackage ? [explicitPackage] : discoverPackages();
   const failures = [];
 
   for (const packageName of candidates) {
@@ -86,7 +87,10 @@ function loadFcaProvider(_config = {}, loadPackage = require, discoverPackages =
         continue;
       }
       let version = "unknown";
-      try { version = packageVersion(packageName, require.resolve(packageName)); } catch {}
+      try {
+        const entryPoint = require.resolve(packageName);
+        version = packageVersion(packageName, entryPoint);
+      } catch {}
       return {
         login,
         packageName,
@@ -96,10 +100,14 @@ function loadFcaProvider(_config = {}, loadPackage = require, discoverPackages =
       };
     } catch (error) {
       failures.push(packageName + ": " + String(error?.code || error?.message || "load failed").slice(0, 100));
+      if (explicitPackage) break;
     }
   }
 
-  throw new Error("No compatible FCA package was found automatically. Install any FCA package exposing login(appState, options, callback) and returning an API with getCurrentUserID() and listenMqtt(). Detected candidates: " + failures.join("; "));
+  const selectionHint = explicitPackage
+    ? "The package selected by FCA_PACKAGE is not installed or does not export a compatible login function."
+    : "Install a compatible FCA or set FCA_PACKAGE to its installed package name.";
+  throw new Error(selectionHint + " Required contract: login({ appState }, options, callback), returning an API with getCurrentUserID() and listenMqtt(). Detected candidates: " + failures.join("; "));
 }
 
 /**
@@ -111,7 +119,7 @@ function buildFcaLoginOptions(config = {}, accountId = "", env = process.env, lo
   const options = { ...(config.optionsFca || {}) };
   if (config.e2ee?.enable !== true) return options;
 
-  if (!/^\d{5,30}$/.test(String(accountId))) {
+  if (!/^\\d{5,30}$/.test(String(accountId))) {
     throw new Error("OmegA E2EE requires a verified Facebook account ID");
   }
   const encodedKey = env.OMEGA_E2EE_ENCRYPTION_KEY;
