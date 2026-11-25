@@ -45,7 +45,7 @@ test("automatically uses an installed custom FCA package without a selector", ()
 test("fails clearly when no compatible FCA package is installed", () => {
   assert.throws(
     () => loadFcaProvider({}, () => { throw new Error("MODULE_NOT_FOUND"); }),
-    /The package selected by FCA_PACKAGE is not installed/
+    /Install a compatible FCA or set FCA_PACKAGE/
   );
 });
 
