@@ -47,5 +47,19 @@ jobs:
           node --check agent-bridge/runtime.js
           node --check agent-bridge/worker.js
 
-      - name: Verify OmegA-FCA dependency declaration
-        run: node -e "const p=require('./package.json'); if (p.dependencies?.['@nirzon-islam/omega-fca'] !== '0.2.2') process.exit(1); console.log('OmegA-FCA dependency declaration OK')"
+      - name: Verify OmegA-FCA stable-latest dependency declaration
+        run: |
+          node <<'NODE'
+          const p = require('./package.json');
+          const dependency = p.dependencies?.['@nirzon-islam/omega-fca'];
+          if (dependency !== 'latest') {
+            throw new Error(`Expected @nirzon-islam/omega-fca dependency to be latest, got ${dependency}`);
+          }
+          for (const scriptName of ['prestart', 'predev', 'preprod']) {
+            const script = p.scripts?.[scriptName] || '';
+            if (!script.includes('@nirzon-islam/omega-fca@latest')) {
+              throw new Error(`${scriptName} must install @nirzon-islam/omega-fca@latest`);
+            }
+          }
+          console.log('OmegA-FCA stable-latest dependency and startup installers OK');
+          NODE
