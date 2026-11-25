@@ -68,6 +68,24 @@ async function bootstrapFacebookLogin({ botId, cookie, progress = async () => {}
       throw new Error("GoatBot configuration is not ready; retry after startup");
     }
 
+    // Use GoatBot's candidate-first recovery path. It keeps the currently active
+    // MQTT listener alive until the replacement session is authenticated and ready.
+    if (typeof global.GoatBot.recoverFacebookSession !== "function") {
+      throw new Error("Safe Facebook recovery is not ready; retry after GoatBot startup");
+    }
+    const recoveryResult = await global.GoatBot.recoverFacebookSession({
+      botId,
+      cookie,
+      progress
+    });
+    global.facebookSessionStatus = {
+      state: "online",
+      accountId: botId,
+      message: recoveryResult?.message || "Facebook session active",
+      changedAt: Date.now()
+    };
+    return recoveryResult || { state: "online", message: "Facebook login completed" };
+
     const appState = secureSession.validateAppState(cookie, botId);
 
     const fcaProvider = loadFcaProvider(global.GoatBot.config);
