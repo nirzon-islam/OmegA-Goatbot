@@ -45,14 +45,14 @@ test("automatically uses an installed custom FCA package without a selector", ()
 test("fails clearly when no compatible FCA package is installed", () => {
   assert.throws(
     () => loadFcaProvider({}, () => { throw new Error("MODULE_NOT_FOUND"); }),
-    /No supported FCA package is installed/
+    /The package selected by FCA_PACKAGE is not installed/
   );
 });
 
 test("reports a clear error when no discovered FCA package is compatible", () => {
   assert.throws(
     () => loadFcaProvider({}, () => ({}), () => ["broken-fca"]),
-    /No compatible FCA package was found automatically/
+    /Install a compatible FCA or set FCA_PACKAGE/
   );
 });
 
@@ -117,4 +117,40 @@ test("builds account-isolated E2EE runtime options from explicit environment", (
   assert.equal(options.e2ee.storagePath, require("path").join("/tmp/omega-signal", "123456789"));
   assert.equal(options.e2ee.encryptionKey.length, 32);
   assert.equal(options.e2ee.signalModule, signalModule);
+});
+
+test("uses an explicitly selected arbitrary installed FCA package", () => {
+  const login = () => {};
+  const tried = [];
+  const selected = loadFcaProvider({}, (name) => {
+    tried.push(name);
+    return { default: { login } };
+  }, () => { throw new Error("discovery must not run when explicitly selected"); }, {
+    FCA_PACKAGE: "my-private-fca"
+  });
+  assert.deepEqual(tried, ["my-private-fca"]);
+  assert.equal(selected.login, login);
+  assert.equal(selected.packageName, "my-private-fca");
+  assert.equal(selected.provider, "compatible");
+});
+
+test("supports the legacy OMEGA_FCA_PACKAGE selector", () => {
+  const login = () => {};
+  const selected = loadFcaProvider({}, () => login, () => [], {
+    OMEGA_FCA_PACKAGE: "custom-fca-adapter"
+  });
+  assert.equal(selected.packageName, "custom-fca-adapter");
+  assert.equal(selected.login, login);
+});
+
+test("does not silently fall back when an explicitly selected FCA is unavailable", () => {
+  const tried = [];
+  assert.throws(
+    () => loadFcaProvider({}, (name) => {
+      tried.push(name);
+      throw Object.assign(new Error("missing"), { code: "MODULE_NOT_FOUND" });
+    }, () => ["fallback-fca"], { FCA_PACKAGE: "missing-fca" }),
+    /selected by FCA_PACKAGE/
+  );
+  assert.deepEqual(tried, ["missing-fca"]);
 });
