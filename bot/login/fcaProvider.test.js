@@ -1,3 +1,4 @@
+// CI validation branch: exercise the provider selection test suite.
 "use strict";
 
 const test = require("node:test");
