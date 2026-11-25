@@ -57,6 +57,10 @@ function createWorker({ client, execute = executeApprovedAction, recoverSession 
         typeof client.reportRecoveryProgress !== "function" || typeof client.reportRecoveryResult !== "function") {
       return { skipped: true, reason: "recovery_handler_unavailable" };
     }
+    // Keep the one-time handoff queued until login.js replaces the startup placeholder.
+    if (handler.isBootstrap === true) {
+      return { skipped: true, reason: "recovery_handler_bootstrapping" };
+    }
     recoveryRunning = true;
     let handoff;
     let botId = "";
