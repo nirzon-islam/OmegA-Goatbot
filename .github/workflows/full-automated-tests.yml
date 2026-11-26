@@ -52,7 +52,7 @@ jobs:
         run: |
           node <<'NODE'
           const p = require('./package.json');
-          const expected = '0.2.3-beta.3';
+          const expected = '0.2.3-beta.4';
           const actual = p.dependencies?.['@nirzon-islam/omega-fca'];
           if (actual !== expected) {
             throw new Error(`Expected @nirzon-islam/omega-fca ${expected}, got ${actual}`);
