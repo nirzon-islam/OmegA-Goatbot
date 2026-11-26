@@ -3,6 +3,7 @@
 const fs = require("fs");
 const path = require("path");
 const { loadOrCreateE2EEIdentity } = require("./e2eeIdentity");
+const { logE2EE } = require("./e2eeDiagnostics");
 
 function packageVersion(packageName, entryPoint) {
   try {
@@ -43,6 +44,7 @@ function buildFcaLoginOptions(config = {}, accountId = "", env = process.env) {
   const options = { ...(config.optionsFca || {}) };
   if (config.e2ee?.enable !== true) return options;
 
+  const startedAt = Date.now();
   try {
     const normalizedAccountId = String(accountId || "").trim();
     if (!/^\d{5,30}$/.test(normalizedAccountId)) {
@@ -57,7 +59,14 @@ function buildFcaLoginOptions(config = {}, accountId = "", env = process.env) {
       encryptionKey: identity.encryptionKey,
       localDeviceId: identity.localDeviceId
     };
+    logE2EE(identity.created ? "identity.created" : "identity.ready", {
+      accountId: normalizedAccountId, status: "ready", stage: "local-identity", durationMs: Date.now() - startedAt
+    });
   } catch (error) {
+    logE2EE("identity.unavailable", {
+      accountId, status: "unavailable", stage: "local-identity", durationMs: Date.now() - startedAt,
+      reason: error && error.message === "A verified Facebook account ID is not available" ? "account-id-unavailable" : "local-storage-or-identity-error"
+    });
     Object.defineProperty(options, "e2eeUnavailableReason", {
       value: String(error && error.message || "Local E2EE initialization failed").slice(0, 200),
       enumerable: false
