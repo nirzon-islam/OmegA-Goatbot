@@ -2,6 +2,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const { loadOrCreateE2EEIdentity } = require("./e2eeIdentity");
 
 function packageVersion(packageName, entryPoint) {
   try {
@@ -12,14 +13,10 @@ function packageVersion(packageName, entryPoint) {
   }
 }
 
-/**
- * OmegA-FCA is the only supported FCA provider.
- * No environment-variable switch or legacy FCA fallback is used.
- */
+/** OmegA-FCA is the only supported FCA provider. */
 function loadFcaProvider(_config = {}, loadPackage = require) {
   const packageName = "@nirzon-islam/omega-fca";
   let login;
-
   try {
     login = loadPackage(packageName);
   } catch (error) {
@@ -28,50 +25,32 @@ function loadFcaProvider(_config = {}, loadPackage = require) {
       { cause: error }
     );
   }
-
   if (typeof login !== "function") {
     throw new TypeError(packageName + " must export a callable CommonJS login function.");
   }
 
   let version = "unknown";
-  try {
-    version = packageVersion(packageName, require.resolve(packageName));
-  } catch { }
-
+  try { version = packageVersion(packageName, require.resolve(packageName)); } catch { }
   return { login, packageName, version, provider: "omega" };
 }
 
 /**
- * Preserve the reference bot's config.e2ee.enable switch.
- * Enabling the local Signal runtime requires an explicitly configured
- * compatible libsignal module, per-account storage and a 32-byte key.
+ * Build optional local Signal runtime options. The per-account encryption key
+ * and device ID are generated and persisted automatically; no Railway secrets
+ * are required for local key material. Step 2 will own Signal engine loading.
  */
 function buildFcaLoginOptions(config = {}, accountId = "", env = process.env, loadModule = require) {
   const options = { ...(config.optionsFca || {}) };
   if (config.e2ee?.enable !== true) return options;
 
-  if (!/^\d{5,30}$/.test(String(accountId))) {
-    throw new Error("OmegA E2EE requires a verified Facebook account ID");
-  }
-
-  const encodedKey = env.OMEGA_E2EE_ENCRYPTION_KEY;
   const moduleName = env.OMEGA_E2EE_SIGNAL_MODULE;
-  const deviceId = Number(env.OMEGA_E2EE_DEVICE_ID);
-  if (typeof encodedKey !== "string" ||
-      !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(encodedKey) ||
-      !Number.isSafeInteger(deviceId) || deviceId < 1 || !moduleName) {
-    throw new Error("OmegA E2EE is enabled but OMEGA_E2EE_ENCRYPTION_KEY (base64 32-byte key), OMEGA_E2EE_DEVICE_ID and OMEGA_E2EE_SIGNAL_MODULE are not configured");
-  }
-
-  const encryptionKey = Buffer.from(encodedKey, "base64");
-  if (encryptionKey.length !== 32 || encryptionKey.toString("base64") !== encodedKey) {
-    throw new Error("OMEGA_E2EE_ENCRYPTION_KEY must encode exactly 32 bytes");
+  if (!moduleName) {
+    throw new Error("OmegA E2EE Signal engine is not available yet; local identity was not initialized");
   }
 
   let signalModule;
-  try {
-    signalModule = loadModule(moduleName);
-  } catch (error) {
+  try { signalModule = loadModule(moduleName); }
+  catch (error) {
     throw new Error("Configured OMEGA_E2EE_SIGNAL_MODULE could not be loaded", { cause: error });
   }
   if (!signalModule || typeof signalModule.PrivateKey?.generate !== "function") {
@@ -79,11 +58,12 @@ function buildFcaLoginOptions(config = {}, accountId = "", env = process.env, lo
   }
 
   const storageRoot = env.OMEGA_E2EE_STORAGE_PATH || path.join(process.cwd(), "data", "e2ee");
+  const identity = loadOrCreateE2EEIdentity(accountId, storageRoot);
   options.e2ee = {
     enabled: true,
-    storagePath: path.join(path.resolve(storageRoot), String(accountId)),
-    encryptionKey,
-    localDeviceId: deviceId,
+    storagePath: identity.storagePath,
+    encryptionKey: identity.encryptionKey,
+    localDeviceId: identity.localDeviceId,
     signalModule
   };
   return options;
