@@ -2,7 +2,7 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { loadFcaProvider } = require("./fcaProvider");
+const { loadFcaProvider, buildFcaLoginOptions } = require("./fcaProvider");
 
 test("always loads OmegA-FCA without an environment variable", () => {
   const login = () => {};
@@ -10,7 +10,6 @@ test("always loads OmegA-FCA without an environment variable", () => {
     assert.equal(name, "@nirzon-islam/omega-fca");
     return login;
   });
-
   assert.equal(selected.login, login);
   assert.equal(selected.packageName, "@nirzon-islam/omega-fca");
   assert.equal(selected.provider, "omega");
@@ -30,21 +29,50 @@ test("rejects non-callable OmegA-FCA exports", () => {
   );
 });
 
-
-test("builds ordinary login options with humanizer while E2EE remains opt-in", () => {
-  const { buildFcaLoginOptions } = require("./fcaProvider");
-  const options = buildFcaLoginOptions({ optionsFca: { listenEvents: true }, humanizer: { enable: false } }, "123456789", {});
-  assert.equal(options.listenEvents, true);
-  assert.equal(options.humanize, undefined);
-  assert.equal(options.e2ee, undefined);
-});
-
-test("ignores legacy E2EE flags and does not require private environment variables", () => {
-  const { buildFcaLoginOptions } = require("./fcaProvider");
+test("keeps E2EE disabled when config.e2ee.enable is false", () => {
   const options = buildFcaLoginOptions({
-    e2ee: { enable: true },
+    e2ee: { enable: false },
     optionsFca: { listenEvents: true, autoReconnect: true }
   }, "123456789", {});
   assert.deepEqual(options, { listenEvents: true, autoReconnect: true });
   assert.equal(options.e2ee, undefined);
+});
+
+test("enables the optional Signal runtime config when config.e2ee.enable is true", () => {
+  const key = Buffer.alloc(32, 7).toString("base64");
+  const fakeSignal = { PrivateKey: { generate() {} } };
+  const options = buildFcaLoginOptions({
+    e2ee: { enable: true },
+    optionsFca: { listenEvents: true }
+  }, "123456789", {
+    OMEGA_E2EE_ENCRYPTION_KEY: key,
+    OMEGA_E2EE_DEVICE_ID: "1",
+    OMEGA_E2EE_SIGNAL_MODULE: "test-signal"
+  }, (name) => {
+    assert.equal(name, "test-signal");
+    return fakeSignal;
+  });
+  assert.equal(options.listenEvents, true);
+  assert.equal(options.e2ee.enabled, true);
+  assert.equal(options.e2ee.localDeviceId, 1);
+  assert.equal(options.e2ee.encryptionKey.length, 32);
+  assert.match(options.e2ee.storagePath, /123456789$/);
+});
+
+test("fails clearly when E2EE is enabled without its required configuration", () => {
+  assert.throws(
+    () => buildFcaLoginOptions({ e2ee: { enable: true } }, "123456789", {}),
+    /OMEGA_E2EE_ENCRYPTION_KEY/
+  );
+});
+
+test("rejects an invalid Signal encryption key", () => {
+  assert.throws(
+    () => buildFcaLoginOptions({ e2ee: { enable: true } }, "123456789", {
+      OMEGA_E2EE_ENCRYPTION_KEY: Buffer.alloc(16).toString("base64"),
+      OMEGA_E2EE_DEVICE_ID: "1",
+      OMEGA_E2EE_SIGNAL_MODULE: "test-signal"
+    }, () => ({ PrivateKey: { generate() {} } })),
+    /exactly 32 bytes/
+  );
 });
