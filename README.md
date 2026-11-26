@@ -264,14 +264,9 @@ The following is a reference for commonly used settings. Keep the actual structu
 }
 ```
 
-### 🔐 E2EE (Encrypted Messaging)
+### 🔐 E2EE
 
-`config.e2ee.enable` is an opt-in switch for the local Signal runtime integration.
-
-- `false` — normal FCA/MQTT login; no Signal runtime is initialized.
-- `true` — requires an account-bound Facebook UID plus `OMEGA_E2EE_ENCRYPTION_KEY`, `OMEGA_E2EE_DEVICE_ID` and `OMEGA_E2EE_SIGNAL_MODULE` to be configured.
-
-**Important:** OmegA-FCA currently provides local Signal key/runtime primitives. This does not mean Facebook Messenger's private E2EE transport, group sender-key exchange, encrypted messaging or media interoperability is connected. Do not treat this as production Messenger E2EE.
+The current OmegA-FCA integration follows the normal FCA/MQTT login flow. GoatBot does not initialize the unfinished local Signal-runtime scaffold, and standard login does not require any `OMEGA_E2EE_*` environment variables. Messenger E2EE transport is not advertised as a supported GoatBot feature in this integration.
 
 ### 🧪 OmegA-FCA integration
 
