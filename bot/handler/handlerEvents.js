@@ -193,9 +193,18 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 		if (typeof threadData.settings.hideNotiMessage == "object")
 			hideNotiMessage = threadData.settings.hideNotiMessage;
 
-		// Read receipts are queued by scripts/cmds/autoseen.js so the
-		// configured delay and on/off toggle are respected consistently.
-		// Do not mark read here: that would bypass the queue and send duplicates.
+		// Match the reference bot: acknowledge incoming reads from the
+		// central event handler, while respecting the AutoSeen on/off switch.
+		// This keeps read receipts independent of command-hook scheduling.
+		if (!event.isE2EE && event.type !== "typ" && event.type !== "presence" && threadID && typeof api.markAsRead === "function") {
+			try {
+				const autoseenPath = path.join(__dirname, "..", "..", "scripts/cmds/cache/autoseen.json");
+				const autoseenOn = !fs.existsSync(autoseenPath) || (fs.readJsonSync(autoseenPath, { throws: false }) || { status: true }).status !== false;
+				if (autoseenOn) {
+					Promise.resolve(api.markAsRead(threadID)).catch(() => {});
+				}
+			} catch { }
+		}
 
 		// Same idea as markAsRead above, but for the "delivered" receipt —
 		// a real client sends both automatically. Also fire-and-forget,
