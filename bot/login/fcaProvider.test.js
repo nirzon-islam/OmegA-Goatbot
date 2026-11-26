@@ -62,14 +62,21 @@ test("automatically provisions and reuses account-scoped identity without E2EE e
   }
 });
 
-test("keeps normal login options when the optional Signal engine is unavailable", () => {
-  const options = buildFcaLoginOptions({
-    e2ee: { enable: true },
-    optionsFca: { listenEvents: true, autoReconnect: true }
-  }, "123456789", {});
-  assert.deepEqual(options, { listenEvents: true, autoReconnect: true });
-  assert.match(options.e2eeUnavailableReason, /Signal engine is not available/);
-  assert.equal(options.e2ee, undefined);
+test("keeps normal login options when local identity storage is unavailable", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "goat-e2ee-storage-"));
+  const blockedPath = path.join(root, "not-a-directory");
+  fs.writeFileSync(blockedPath, "blocked");
+  try {
+    const options = buildFcaLoginOptions({
+      e2ee: { enable: true },
+      optionsFca: { listenEvents: true, autoReconnect: true }
+    }, "123456789", { OMEGA_E2EE_STORAGE_PATH: blockedPath });
+    assert.deepEqual(options, { listenEvents: true, autoReconnect: true });
+    assert.match(options.e2eeUnavailableReason, /Could not securely persist|EEXIST|ENOTDIR/);
+    assert.equal(options.e2ee, undefined);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test("skips optional E2EE for invalid account IDs without blocking normal login", () => {
