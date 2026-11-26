@@ -56,7 +56,7 @@
 | 🎨 **UI Improvements** | Redesigned message templates and clean formatting |
 | 🛡️ **React Unsend** | Auto-unsend messages on configured emoji reactions |
 | 🔧 **Setting Command** | Manage supported bot settings directly from chat |
-| 🔐 **Signal Runtime** | Optional local Signal Protocol runtime foundation; Messenger E2EE transport is not claimed as integrated |
+| 👁️ **AutoSeen** | Optional queued read receipts with configurable on/off control and staggered processing |
 | 🧠 **Humanizer** | Configurable command reply delay and anti-spam cooldown |
 | 🤖 **Agent Bridge** | Optional bridge integration when its backend and bot-side configuration are available |
 
@@ -248,7 +248,6 @@ The following is a reference for commonly used settings. Keep the actual structu
   "prefix": "-",
   "adminBot": ["your_facebook_id"],
   "noPrefix": { "enable": false },
-  "e2ee": { "enable": false },
   "reactUnsend": {
     "enable": true,
     "onlyAdmin": true,
@@ -256,7 +255,7 @@ The following is a reference for commonly used settings. Keep the actual structu
   },
   "optionsFca": {
     "listenEvents": true,
-    "autoMarkDelivery": false,
+    "autoMarkDelivery": true,
     "updatePresence": false,
     "selfListen": false,
     "autoReconnect": true
@@ -264,9 +263,9 @@ The following is a reference for commonly used settings. Keep the actual structu
 }
 ```
 
-### 🔐 E2EE
+### 🔐 Encrypted messaging (E2EE)
 
-The current OmegA-FCA integration follows the normal FCA/MQTT login flow. GoatBot does not initialize the unfinished local Signal-runtime scaffold, and standard login does not require any `OMEGA_E2EE_*` environment variables. Messenger E2EE transport is not advertised as a supported GoatBot feature in this integration.
+Messenger E2EE transport is not currently integrated or supported by this GoatBot/FCA setup. The bot uses the standard OmegA-FCA login and MQTT event flow; no E2EE configuration block or Signal-runtime environment variables are required. E2EE messages may be excluded from features that depend on ordinary thread metadata or read receipts.
 
 ### 🧪 OmegA-FCA integration
 
@@ -275,11 +274,23 @@ This branch uses **`@nirzon-islam/omega-fca` as its only supported FCA provider*
 - Install with `npm install`; the dependency is declared in `package.json`.
 - The bot loads OmegA-FCA directly through `bot/login/fcaProvider.js`.
 - Normal login does not require any FCA-specific environment variables.
-- Optional local Signal runtime configuration is separate and only required when `e2ee.enable` is explicitly turned on.
+- Messenger E2EE transport is not part of the currently supported integration.
 
 <blockquote>
 <strong>⚠️ Validation:</strong> Passing source and unit tests does not replace an authorized live Facebook login/MQTT test on Railway or a VPS.
 </blockquote>
+
+### 👁️ AutoSeen (Read Receipts)
+
+The `autoseen` command controls automatic read receipts for incoming standard Messenger messages. It queues threads and marks them as read one at a time after a randomized delay, rather than sending an immediate receipt for every event.
+
+```text
+-autoseen       # Show current status
+-autoseen on    # Enable automatic read receipts
+-autoseen off   # Disable automatic read receipts
+```
+
+The status is stored in `scripts/cmds/cache/autoseen.json`. Turning AutoSeen off also prevents already queued items from being marked as read when their delay expires. AutoSeen uses the FCA `api.markAsRead(threadID)` method; it does not alter the FCA package or its delivery-receipt option.
 
 ### 🧠 Command Anti-Spam (Humanizer)
 
@@ -299,7 +310,7 @@ Example settings:
 - `enable`: turn the delay behavior on or off.
 - `delayMs`: delay before a command reply; can also be a range such as `[2000, 4000]`.
 - `cooldownMs`: minimum gap between accepted commands in one thread.
-- `maxPerMinute`: global accepted-command cap.
+- `maxPerMinute`: accepted-command cap per thread when `perThread` is `true`, or global when `false`.
 
 Where supported, settings can be changed from `{prefix}setting` → **Bot Behavior** → **Typing Indicator**. See the FCA package documentation for additional options.
 
