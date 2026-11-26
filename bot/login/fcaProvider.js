@@ -35,37 +35,43 @@ function loadFcaProvider(_config = {}, loadPackage = require) {
 }
 
 /**
- * Build optional local Signal runtime options. The per-account encryption key
- * and device ID are generated and persisted automatically; no Railway secrets
- * are required for local key material. Step 2 will own Signal engine loading.
+ * Prepare optional local Signal runtime options. E2EE setup is deliberately
+ * fail-open: a missing engine or local-storage problem must never block normal
+ * Facebook login, MQTT, or non-encrypted bot features.
  */
 function buildFcaLoginOptions(config = {}, accountId = "", env = process.env, loadModule = require) {
   const options = { ...(config.optionsFca || {}) };
   if (config.e2ee?.enable !== true) return options;
 
-  const moduleName = env.OMEGA_E2EE_SIGNAL_MODULE;
-  if (!moduleName) {
-    throw new Error("OmegA E2EE Signal engine is not available yet; local identity was not initialized");
-  }
+  try {
+    const normalizedAccountId = String(accountId || "").trim();
+    if (!/^\d{5,30}$/.test(normalizedAccountId)) {
+      throw new Error("A verified Facebook account ID is not available");
+    }
 
-  let signalModule;
-  try { signalModule = loadModule(moduleName); }
-  catch (error) {
-    throw new Error("Configured OMEGA_E2EE_SIGNAL_MODULE could not be loaded", { cause: error });
-  }
-  if (!signalModule || typeof signalModule.PrivateKey?.generate !== "function") {
-    throw new TypeError("Configured Signal module is not compatible with OmegA-FCA");
-  }
+    const moduleName = env.OMEGA_E2EE_SIGNAL_MODULE;
+    if (!moduleName) throw new Error("Signal engine is not available yet");
 
-  const storageRoot = env.OMEGA_E2EE_STORAGE_PATH || path.join(process.cwd(), "data", "e2ee");
-  const identity = loadOrCreateE2EEIdentity(accountId, storageRoot);
-  options.e2ee = {
-    enabled: true,
-    storagePath: identity.storagePath,
-    encryptionKey: identity.encryptionKey,
-    localDeviceId: identity.localDeviceId,
-    signalModule
-  };
+    const signalModule = loadModule(moduleName);
+    if (!signalModule || typeof signalModule.PrivateKey?.generate !== "function") {
+      throw new TypeError("Configured Signal module is not compatible with OmegA-FCA");
+    }
+
+    const storageRoot = env.OMEGA_E2EE_STORAGE_PATH || path.join(process.cwd(), "data", "e2ee");
+    const identity = loadOrCreateE2EEIdentity(normalizedAccountId, storageRoot);
+    options.e2ee = {
+      enabled: true,
+      storagePath: identity.storagePath,
+      encryptionKey: identity.encryptionKey,
+      localDeviceId: identity.localDeviceId,
+      signalModule
+    };
+  } catch (error) {
+    Object.defineProperty(options, "e2eeUnavailableReason", {
+      value: String(error && error.message || "Local E2EE initialization failed").slice(0, 200),
+      enumerable: false
+    });
+  }
   return options;
 }
 
