@@ -2,6 +2,9 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
 const { loadFcaProvider, buildFcaLoginOptions } = require("./fcaProvider");
 
 test("always loads OmegA-FCA without an environment variable", () => {
@@ -23,10 +26,7 @@ test("fails clearly when OmegA-FCA is not installed", () => {
 });
 
 test("rejects non-callable OmegA-FCA exports", () => {
-  assert.throws(
-    () => loadFcaProvider({}, () => ({})),
-    /callable CommonJS login function/
-  );
+  assert.throws(() => loadFcaProvider({}, () => ({})), /callable CommonJS login function/);
 });
 
 test("keeps E2EE disabled when config.e2ee.enable is false", () => {
@@ -38,41 +38,59 @@ test("keeps E2EE disabled when config.e2ee.enable is false", () => {
   assert.equal(options.e2ee, undefined);
 });
 
-test("enables the optional Signal runtime config when config.e2ee.enable is true", () => {
-  const key = Buffer.alloc(32, 7).toString("base64");
+test("automatically provisions and reuses account-scoped E2EE identity without key/device env vars", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "goat-e2ee-provider-"));
   const fakeSignal = { PrivateKey: { generate() {} } };
-  const options = buildFcaLoginOptions({
-    e2ee: { enable: true },
-    optionsFca: { listenEvents: true }
-  }, "123456789", {
-    OMEGA_E2EE_ENCRYPTION_KEY: key,
-    OMEGA_E2EE_DEVICE_ID: "1",
+  const env = {
+    OMEGA_E2EE_STORAGE_PATH: root,
     OMEGA_E2EE_SIGNAL_MODULE: "test-signal"
-  }, (name) => {
-    assert.equal(name, "test-signal");
-    return fakeSignal;
-  });
-  assert.equal(options.listenEvents, true);
-  assert.equal(options.e2ee.enabled, true);
-  assert.equal(options.e2ee.localDeviceId, 1);
-  assert.equal(options.e2ee.encryptionKey.length, 32);
-  assert.match(options.e2ee.storagePath, /123456789$/);
+  };
+  const config = { e2ee: { enable: true }, optionsFca: { listenEvents: true } };
+  try {
+    const first = buildFcaLoginOptions(config, "123456789", env, name => {
+      assert.equal(name, "test-signal");
+      return fakeSignal;
+    });
+    const second = buildFcaLoginOptions(config, "123456789", env, () => fakeSignal);
+    const otherAccount = buildFcaLoginOptions(config, "987654321", env, () => fakeSignal);
+
+    assert.equal(first.listenEvents, true);
+    assert.equal(first.e2ee.encryptionKey.length, 32);
+    assert.ok(first.e2ee.localDeviceId > 0);
+    assert.equal(second.e2ee.localDeviceId, first.e2ee.localDeviceId);
+    assert.deepEqual(second.e2ee.encryptionKey, first.e2ee.encryptionKey);
+    assert.notEqual(otherAccount.e2ee.localDeviceId, first.e2ee.localDeviceId);
+    assert.notDeepEqual(otherAccount.e2ee.encryptionKey, first.e2ee.encryptionKey);
+
+    const identityPath = path.join(root, "123456789", "identity.json");
+    assert.equal(fs.statSync(identityPath).mode & 0o077, 0);
+    assert.ok(fs.existsSync(path.join(root, "987654321", "identity.json")));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });
 
-test("fails clearly when E2EE is enabled without its required configuration", () => {
+test("fails safely when the Signal engine is unavailable", () => {
   assert.throws(
     () => buildFcaLoginOptions({ e2ee: { enable: true } }, "123456789", {}),
-    /OMEGA_E2EE_ENCRYPTION_KEY/
+    /Signal engine is not available/
   );
 });
 
-test("rejects an invalid Signal encryption key", () => {
-  assert.throws(
-    () => buildFcaLoginOptions({ e2ee: { enable: true } }, "123456789", {
-      OMEGA_E2EE_ENCRYPTION_KEY: Buffer.alloc(16).toString("base64"),
-      OMEGA_E2EE_DEVICE_ID: "1",
-      OMEGA_E2EE_SIGNAL_MODULE: "test-signal"
-    }, () => ({ PrivateKey: { generate() {} } })),
-    /exactly 32 bytes/
-  );
+test("rejects invalid account IDs before creating identity files", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "goat-e2ee-invalid-"));
+  try {
+    assert.throws(
+      () => buildFcaLoginOptions(
+        { e2ee: { enable: true } },
+        "../not-an-account",
+        { OMEGA_E2EE_STORAGE_PATH: root, OMEGA_E2EE_SIGNAL_MODULE: "test-signal" },
+        () => ({ PrivateKey: { generate() {} } })
+      ),
+      /verified Facebook account ID/
+    );
+    assert.deepEqual(fs.readdirSync(root), []);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });
