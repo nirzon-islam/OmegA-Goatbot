@@ -13,28 +13,42 @@ function randomDelay(min, max) {
   return min + Math.floor(Math.random() * (max - min + 1));
 }
 
-async function processSeenQueue(api) {
+function isEnabled() {
+  try {
+    const data = fs.readJsonSync(path, { throws: false });
+    return !data || data.status !== false;
+  } catch {
+    return false;
+  }
+}
+
+async function processSeenQueue() {
   if (isProcessingQueue) return;
   isProcessingQueue = true;
 
-  while (seenQueue.length > 0) {
-    const threadID = seenQueue.shift();
-    queuedThreads.delete(threadID);
+  try {
+    while (seenQueue.length > 0) {
+      const item = seenQueue.shift();
+      await new Promise((resolve) => setTimeout(resolve, randomDelay(1500, 4000)));
 
-    await new Promise((r) => setTimeout(r, randomDelay(1500, 4000)));
+      // Re-check the toggle after the delay so "off" cancels pending reads.
+      if (isEnabled() && item.api && typeof item.api.markAsRead === "function") {
+        try {
+          await item.api.markAsRead(item.threadID);
+        } catch (err) {
+          console.error("AUTOSEEN markAsRead failed:", err && err.message ? err.message : err);
+        }
+      }
 
-    try {
-      await api.markAsRead(threadID);
-    } catch (err) {
-      console.error("AUTOSEEN markAsRead failed:", err && err.message ? err.message : err);
+      queuedThreads.delete(item.threadID);
+      if (seenQueue.length > 0) {
+        await new Promise((resolve) => setTimeout(resolve, randomDelay(800, 2000)));
+      }
     }
-
-    if (seenQueue.length > 0) {
-      await new Promise((r) => setTimeout(r, randomDelay(800, 2000)));
-    }
+  } finally {
+    isProcessingQueue = false;
+    if (seenQueue.length > 0) processSeenQueue();
   }
-
-  isProcessingQueue = false;
 }
 
 function box(title, rows, footer) {
@@ -52,8 +66,8 @@ function status(val) {
 module.exports = {
   config: {
     name: "autoseen",
-    version: "2.1",
-    author: "EryXenX",
+    version: "2.2",
+    author: "OmegA",
     countDown: 0,
     role: 0,
     shortDescription: "Automatic seen system",
@@ -98,13 +112,12 @@ module.exports = {
       if (!event || event.isE2EE || event.type === "typ" || event.type === "presence") return;
       if (!event.threadID || !api || typeof api.markAsRead !== "function") return;
 
-      const data = JSON.parse(fs.readFileSync(path, "utf8"));
-      if (data.status !== true) return;
+      if (!isEnabled()) return;
       if (queuedThreads.has(event.threadID)) return;
 
       queuedThreads.add(event.threadID);
-      seenQueue.push(event.threadID);
-      processSeenQueue(api);
+      seenQueue.push({ threadID: event.threadID, api });
+      processSeenQueue();
     } catch (e) {
       console.error("AUTOSEEN queue failed:", e && e.message ? e.message : e);
     }
