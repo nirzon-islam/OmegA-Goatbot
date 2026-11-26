@@ -54,8 +54,10 @@ function writeIdentityAtomic(filePath, identity) {
     // link() creates the destination atomically without replacing another process's identity.
     fs.linkSync(temporaryPath, filePath);
     fs.chmodSync(filePath, 0o600);
+    return true;
   } catch (error) {
-    if (error.code !== "EEXIST") throw error;
+    if (error.code === "EEXIST") return false;
+    throw error;
   } finally {
     if (descriptor !== undefined) try { fs.closeSync(descriptor); } catch { }
     try { fs.unlinkSync(temporaryPath); } catch { }
@@ -80,11 +82,12 @@ function loadOrCreateE2EEIdentity(accountId, storageRoot = path.join(process.cwd
     localDeviceId: crypto.randomInt(1, DEVICE_ID_MAX),
     encryptionKey: crypto.randomBytes(KEY_BYTES).toString("base64")
   };
-  try { writeIdentityAtomic(identityPath, identity); }
+  let created;
+  try { created = writeIdentityAtomic(identityPath, identity); }
   catch (error) {
-    if (error.code !== "EEXIST") throw new Error("Could not securely persist OmegA E2EE identity", { cause: error });
+    throw new Error("Could not securely persist OmegA E2EE identity", { cause: error });
   }
-  return { ...readIdentity(identityPath, normalizedAccountId), created: true };
+  return { ...readIdentity(identityPath, normalizedAccountId), created };
 }
 
 module.exports = { loadOrCreateE2EEIdentity };
