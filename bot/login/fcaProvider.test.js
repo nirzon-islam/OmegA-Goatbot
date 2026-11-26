@@ -38,21 +38,13 @@ test("keeps E2EE disabled when config.e2ee.enable is false", () => {
   assert.equal(options.e2ee, undefined);
 });
 
-test("automatically provisions and reuses account-scoped E2EE identity without key/device env vars", () => {
+test("automatically provisions and reuses account-scoped identity without E2EE environment variables", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "goat-e2ee-provider-"));
-  const fakeSignal = { PrivateKey: { generate() {} } };
-  const env = {
-    OMEGA_E2EE_STORAGE_PATH: root,
-    OMEGA_E2EE_SIGNAL_MODULE: "test-signal"
-  };
   const config = { e2ee: { enable: true }, optionsFca: { listenEvents: true } };
   try {
-    const first = buildFcaLoginOptions(config, "123456789", env, name => {
-      assert.equal(name, "test-signal");
-      return fakeSignal;
-    });
-    const second = buildFcaLoginOptions(config, "123456789", env, () => fakeSignal);
-    const otherAccount = buildFcaLoginOptions(config, "987654321", env, () => fakeSignal);
+    const first = buildFcaLoginOptions(config, "123456789", { OMEGA_E2EE_STORAGE_PATH: root });
+    const second = buildFcaLoginOptions(config, "123456789", { OMEGA_E2EE_STORAGE_PATH: root });
+    const otherAccount = buildFcaLoginOptions(config, "987654321", { OMEGA_E2EE_STORAGE_PATH: root });
 
     assert.equal(first.listenEvents, true);
     assert.equal(first.e2ee.encryptionKey.length, 32);
@@ -86,8 +78,7 @@ test("skips optional E2EE for invalid account IDs without blocking normal login"
     const options = buildFcaLoginOptions(
       { e2ee: { enable: true }, optionsFca: { listenEvents: true } },
       "../not-an-account",
-      { OMEGA_E2EE_STORAGE_PATH: root, OMEGA_E2EE_SIGNAL_MODULE: "test-signal" },
-      () => ({ PrivateKey: { generate() {} } })
+      { OMEGA_E2EE_STORAGE_PATH: root }
     );
     assert.equal(options.listenEvents, true);
     assert.match(options.e2eeUnavailableReason, /verified Facebook account ID/);
