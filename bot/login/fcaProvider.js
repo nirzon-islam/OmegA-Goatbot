@@ -35,11 +35,11 @@ function loadFcaProvider(_config = {}, loadPackage = require) {
 }
 
 /**
- * Prepare optional local Signal runtime options. E2EE setup is deliberately
- * fail-open: a missing engine or local-storage problem must never block normal
- * Facebook login, MQTT, or non-encrypted bot features.
+ * Provision local E2EE identity material automatically for the authenticated
+ * Facebook account. No Railway key/device/module variables are required.
+ * Signal runtime loading and Messenger registration are separate later steps.
  */
-function buildFcaLoginOptions(config = {}, accountId = "", env = process.env, loadModule = require) {
+function buildFcaLoginOptions(config = {}, accountId = "", env = process.env) {
   const options = { ...(config.optionsFca || {}) };
   if (config.e2ee?.enable !== true) return options;
 
@@ -49,22 +49,13 @@ function buildFcaLoginOptions(config = {}, accountId = "", env = process.env, lo
       throw new Error("A verified Facebook account ID is not available");
     }
 
-    const moduleName = env.OMEGA_E2EE_SIGNAL_MODULE;
-    if (!moduleName) throw new Error("Signal engine is not available yet");
-
-    const signalModule = loadModule(moduleName);
-    if (!signalModule || typeof signalModule.PrivateKey?.generate !== "function") {
-      throw new TypeError("Configured Signal module is not compatible with OmegA-FCA");
-    }
-
     const storageRoot = env.OMEGA_E2EE_STORAGE_PATH || path.join(process.cwd(), "data", "e2ee");
     const identity = loadOrCreateE2EEIdentity(normalizedAccountId, storageRoot);
     options.e2ee = {
       enabled: true,
       storagePath: identity.storagePath,
       encryptionKey: identity.encryptionKey,
-      localDeviceId: identity.localDeviceId,
-      signalModule
+      localDeviceId: identity.localDeviceId
     };
   } catch (error) {
     Object.defineProperty(options, "e2eeUnavailableReason", {
