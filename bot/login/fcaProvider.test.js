@@ -39,56 +39,12 @@ test("builds ordinary login options with humanizer while E2EE remains opt-in", (
   assert.equal(options.e2ee, undefined);
 });
 
-test("requires explicit account-bound Signal configuration when E2EE is enabled", () => {
+test("ignores legacy E2EE flags and does not require private environment variables", () => {
   const { buildFcaLoginOptions } = require("./fcaProvider");
-  assert.throws(
-    () => buildFcaLoginOptions({ e2ee: { enable: true } }, "123456789", {}),
-    /OMEGA_E2EE_ENCRYPTION_KEY/
-  );
-  assert.throws(
-    () => buildFcaLoginOptions({ e2ee: { enable: true } }, "", {
-      OMEGA_E2EE_ENCRYPTION_KEY: Buffer.alloc(32).toString("base64"),
-      OMEGA_E2EE_DEVICE_ID: "1",
-      OMEGA_E2EE_SIGNAL_MODULE: "signal-test"
-    }, () => ({ PrivateKey: { generate() {} } })),
-    /verified Facebook account ID/
-  );
-});
-
-test("rejects malformed keys and incompatible Signal modules", () => {
-  const { buildFcaLoginOptions } = require("./fcaProvider");
-  const env = {
-    OMEGA_E2EE_ENCRYPTION_KEY: Buffer.alloc(31).toString("base64"),
-    OMEGA_E2EE_DEVICE_ID: "1",
-    OMEGA_E2EE_SIGNAL_MODULE: "signal-test"
-  };
-  assert.throws(
-    () => buildFcaLoginOptions({ e2ee: { enable: true } }, "123456789", env, () => ({ PrivateKey: { generate() {} } })),
-    /exactly 32 bytes/
-  );
-  env.OMEGA_E2EE_ENCRYPTION_KEY = Buffer.alloc(32).toString("base64");
-  assert.throws(
-    () => buildFcaLoginOptions({ e2ee: { enable: true } }, "123456789", env, () => ({})),
-    /not compatible/
-  );
-});
-
-test("builds account-isolated E2EE runtime options from explicit environment", () => {
-  const { buildFcaLoginOptions } = require("./fcaProvider");
-  const env = {
-    OMEGA_E2EE_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString("base64"),
-    OMEGA_E2EE_DEVICE_ID: "42",
-    OMEGA_E2EE_SIGNAL_MODULE: "signal-test",
-    OMEGA_E2EE_STORAGE_PATH: "/tmp/omega-signal"
-  };
-  const signalModule = { PrivateKey: { generate() {} } };
-  const options = buildFcaLoginOptions({ e2ee: { enable: true } }, "123456789", env, (name) => {
-    assert.equal(name, "signal-test");
-    return signalModule;
-  });
-  assert.equal(options.e2ee.enabled, true);
-  assert.equal(options.e2ee.localDeviceId, 42);
-  assert.equal(options.e2ee.storagePath, require("path").join("/tmp/omega-signal", "123456789"));
-  assert.equal(options.e2ee.encryptionKey.length, 32);
-  assert.equal(options.e2ee.signalModule, signalModule);
+  const options = buildFcaLoginOptions({
+    e2ee: { enable: true },
+    optionsFca: { listenEvents: true, autoReconnect: true }
+  }, "123456789", {});
+  assert.deepEqual(options, { listenEvents: true, autoReconnect: true });
+  assert.equal(options.e2ee, undefined);
 });
