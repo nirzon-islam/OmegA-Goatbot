@@ -603,10 +603,14 @@ async function startBot(_0x3cad9e) {
     try {
       const storedUid = (_0x812929.find(cookie => cookie && (cookie.key || cookie.name) === "c_user") || {}).value;
       providerLoginOptions = buildFcaLoginOptions(global.GoatBot.config, String(storedUid || ""));
+      if (global.GoatBot.config.e2ee?.enable === true && !providerLoginOptions.e2ee) {
+        log.warn("E2EE", "Local Signal setup unavailable; continuing with normal Facebook/MQTT login (" +
+          (providerLoginOptions.e2eeUnavailableReason || "not initialized") + ")");
+      }
     } catch (optionError) {
-      global.statusAccountBot = "login failed";
-      log.err("FCA OPTIONS", optionError.message || optionError);
-      return;
+      // E2EE is optional; unexpected setup errors must not block ordinary login.
+      log.warn("E2EE", "Optional local setup skipped: " + (optionError.message || optionError));
+      providerLoginOptions = { ...(global.GoatBot.config.optionsFca || {}) };
     }
     login({
       'appState': _0x812929
@@ -977,7 +981,12 @@ async function startBot(_0x3cad9e) {
           previousAccount = fs.readFileSync(accountPath);
           await progress("validating", "Appstate identity and cookie structure validated");
 
-          candidateApi = await secureSession.loginCandidate(login, appState, buildFcaLoginOptions(global.GoatBot.config, String(botId)));
+          const candidateLoginOptions = buildFcaLoginOptions(global.GoatBot.config, String(botId));
+          if (global.GoatBot.config.e2ee?.enable === true && !candidateLoginOptions.e2ee) {
+            log.warn("E2EE", "Replacement session will continue without optional local Signal runtime (" +
+              (candidateLoginOptions.e2eeUnavailableReason || "not initialized") + ")");
+          }
+          candidateApi = await secureSession.loginCandidate(login, appState, candidateLoginOptions);
           if (String(candidateApi.getCurrentUserID()) !== String(botId)) {
             throw new Error("Facebook login returned a different account ID");
           }
