@@ -70,25 +70,27 @@ test("automatically provisions and reuses account-scoped E2EE identity without k
   }
 });
 
-test("fails safely when the Signal engine is unavailable", () => {
-  assert.throws(
-    () => buildFcaLoginOptions({ e2ee: { enable: true } }, "123456789", {}),
-    /Signal engine is not available/
-  );
+test("keeps normal login options when the optional Signal engine is unavailable", () => {
+  const options = buildFcaLoginOptions({
+    e2ee: { enable: true },
+    optionsFca: { listenEvents: true, autoReconnect: true }
+  }, "123456789", {});
+  assert.deepEqual(options, { listenEvents: true, autoReconnect: true });
+  assert.match(options.e2eeUnavailableReason, /Signal engine is not available/);
+  assert.equal(options.e2ee, undefined);
 });
 
-test("rejects invalid account IDs before creating identity files", () => {
+test("skips optional E2EE for invalid account IDs without blocking normal login", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "goat-e2ee-invalid-"));
   try {
-    assert.throws(
-      () => buildFcaLoginOptions(
-        { e2ee: { enable: true } },
-        "../not-an-account",
-        { OMEGA_E2EE_STORAGE_PATH: root, OMEGA_E2EE_SIGNAL_MODULE: "test-signal" },
-        () => ({ PrivateKey: { generate() {} } })
-      ),
-      /verified Facebook account ID/
+    const options = buildFcaLoginOptions(
+      { e2ee: { enable: true }, optionsFca: { listenEvents: true } },
+      "../not-an-account",
+      { OMEGA_E2EE_STORAGE_PATH: root, OMEGA_E2EE_SIGNAL_MODULE: "test-signal" },
+      () => ({ PrivateKey: { generate() {} } })
     );
+    assert.equal(options.listenEvents, true);
+    assert.match(options.e2eeUnavailableReason, /verified Facebook account ID/);
     assert.deepEqual(fs.readdirSync(root), []);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
