@@ -54,7 +54,8 @@
     "prod": "NODE_ENV=production node index.js",
     "test:secure-session": "node --test bot/login/secureSession.test.js",
     "test:fca-provider": "node --test bot/login/fcaProvider.test.js",
-    "test:e2ee-identity": "node --test bot/login/e2eeIdentity.test.js"
+    "test:e2ee-identity": "node --test bot/login/e2eeIdentity.test.js",
+    "test:e2ee-diagnostics": "node --test bot/login/e2eeDiagnostics.test.js"
   },
   "author": "NTKhang",
   "license": "MIT",
