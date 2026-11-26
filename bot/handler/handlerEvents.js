@@ -1,5 +1,4 @@
 const fs = require("fs-extra");
-const path = require("path");
 const nullAndUndefined = [undefined, null];
 // const { config } = global.GoatBot;
 // const { utils } = global;
@@ -192,28 +191,6 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 
 		if (typeof threadData.settings.hideNotiMessage == "object")
 			hideNotiMessage = threadData.settings.hideNotiMessage;
-
-		// Match the reference bot: acknowledge incoming reads from the
-		// central event handler, while respecting the AutoSeen on/off switch.
-		// This keeps read receipts independent of command-hook scheduling.
-		if (!event.isE2EE && event.type !== "typ" && event.type !== "presence" && threadID && typeof api.markAsRead === "function") {
-			try {
-				const autoseenPath = path.join(__dirname, "..", "..", "scripts/cmds/cache/autoseen.json");
-				const autoseenOn = !fs.existsSync(autoseenPath) || (fs.readJsonSync(autoseenPath, { throws: false }) || { status: true }).status !== false;
-				if (autoseenOn) {
-					Promise.resolve(api.markAsRead(threadID)).catch(() => {});
-				}
-			} catch { }
-		}
-
-		// Same idea as markAsRead above, but for the "delivered" receipt —
-		// a real client sends both automatically. Also fire-and-forget,
-		// also invisible/instant, no user-facing delay either way.
-		if (!event.isE2EE && event.type !== "typ" && event.type !== "presence" && threadID && event.messageID && typeof api.markAsDelivered === "function") {
-			try {
-				Promise.resolve(api.markAsDelivered(threadID, event.messageID)).catch(() => {});
-			} catch { }
-		}
 
 		// Typing indicator for plain chat is intentionally not shown here —
 		// only commands get a typing indicator, driven by fca's humanizer
