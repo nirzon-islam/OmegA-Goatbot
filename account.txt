@@ -1,7 +1,119 @@
-🍪 FACEBOOK LOGIN COOKIES
-
-Bot-কে তোমার Facebook অ্যাকাউন্ট দিয়ে চালাতে চাইলে এখানে Facebook Login Cookie পেস্ট করো।
-
-🤖 চাইলে Deploy করার পর Agent-এর মাধ্যমেও Cookie দেওয়া যাবে—যদি সেই অপশনটি চালু থাকে।
-
-🔒 সতর্কতা: Cookie কখনো কারও সঙ্গে শেয়ার করবে না। এটি তোমার Facebook Password-এর মতোই গোপনীয়।
+[
+    {
+        "key": "dbln",
+        "value": "%7B%2261596651242575%22%3A%22mksHs52y%22%2C%2261561645647195%22%3A%22W1JiKGzg%22%2C%2261596501792427%22%3A%2221BR82Zd%22%7D",
+        "domain": "facebook.com",
+        "path": "/login/device-based/",
+        "hostOnly": false,
+        "creation": "2026-11-27T19:19:04.812Z",
+        "lastAccessed": "2026-11-27T19:19:04.812Z"
+    },
+    {
+        "key": "datr",
+        "value": "4an9aifn6xsIevJ_KTpsklPs",
+        "domain": "facebook.com",
+        "path": "/",
+        "hostOnly": false,
+        "creation": "2026-11-27T19:19:04.812Z",
+        "lastAccessed": "2026-11-27T19:19:04.812Z"
+    },
+    {
+        "key": "sb",
+        "value": "4an9an6w-BLbp8AU-6SLgcKi",
+        "domain": "facebook.com",
+        "path": "/",
+        "hostOnly": false,
+        "creation": "2026-11-27T19:19:04.812Z",
+        "lastAccessed": "2026-11-27T19:19:04.812Z"
+    },
+    {
+        "key": "ps_l",
+        "value": "1",
+        "domain": "facebook.com",
+        "path": "/",
+        "hostOnly": false,
+        "creation": "2026-11-27T19:19:04.812Z",
+        "lastAccessed": "2026-11-27T19:19:04.812Z"
+    },
+    {
+        "key": "ps_n",
+        "value": "1",
+        "domain": "facebook.com",
+        "path": "/",
+        "hostOnly": false,
+        "creation": "2026-11-27T19:19:04.812Z",
+        "lastAccessed": "2026-11-27T19:19:04.812Z"
+    },
+    {
+        "key": "pas",
+        "value": "61596651242575%3A8wSUzJhDeR%2C61561645647195%3Aexsw5DkYn0%2C61596501792427%3AguPAmU1SQr",
+        "domain": "facebook.com",
+        "path": "/",
+        "hostOnly": false,
+        "creation": "2026-11-27T19:19:04.812Z",
+        "lastAccessed": "2026-11-27T19:19:04.812Z"
+    },
+    {
+        "key": "vpd",
+        "value": "v1%3B762x432x2.5",
+        "domain": "facebook.com",
+        "path": "/",
+        "hostOnly": false,
+        "creation": "2026-11-27T19:19:04.812Z",
+        "lastAccessed": "2026-11-27T19:19:04.812Z"
+    },
+    {
+        "key": "c_user",
+        "value": "61596501792427",
+        "domain": "facebook.com",
+        "path": "/",
+        "hostOnly": false,
+        "creation": "2026-11-27T19:19:04.812Z",
+        "lastAccessed": "2026-11-27T19:19:04.812Z"
+    },
+    {
+        "key": "xs",
+        "value": "1%3A3fBMNAxL-rIesQ%3A2%3A1795605244%3A-1%3A-1",
+        "domain": "facebook.com",
+        "path": "/",
+        "hostOnly": false,
+        "creation": "2026-11-27T19:19:04.812Z",
+        "lastAccessed": "2026-11-27T19:19:04.812Z"
+    },
+    {
+        "key": "locale",
+        "value": "en_US",
+        "domain": "facebook.com",
+        "path": "/",
+        "hostOnly": false,
+        "creation": "2026-11-27T19:19:04.812Z",
+        "lastAccessed": "2026-11-27T19:19:04.812Z"
+    },
+    {
+        "key": "fr",
+        "value": "0tKaJhIh4aB8BAowL.AWfKA-pYVE0Q1MNNpWBkdieHylVNjHHeutBXTiaSMSk1CfqLMbM.Bq_anh..AAA.0.0.BrCdel.AWfpWn7MOAPw8JmJis8jrRbpBGQ",
+        "domain": "facebook.com",
+        "path": "/",
+        "hostOnly": false,
+        "creation": "2026-11-27T19:19:04.812Z",
+        "lastAccessed": "2026-11-27T19:19:04.812Z"
+    },
+    {
+        "key": "fbl_st",
+        "value": "101737162%3BT%3A29930119",
+        "domain": "facebook.com",
+        "path": "/",
+        "hostOnly": false,
+        "creation": "2026-11-27T19:19:04.812Z",
+        "lastAccessed": "2026-11-27T19:19:04.812Z"
+    },
+    {
+        "key": "wl_cbv",
+        "value": "v2%3Bclient_version%3A3374%3Btimestamp%3A1795807141",
+        "domain": "facebook.com",
+        "path": "/",
+        "hostOnly": false,
+        "creation": "2026-11-27T19:19:04.812Z",
+        "lastAccessed": "2026-11-27T19:19:04.812Z"
+    }
+]
