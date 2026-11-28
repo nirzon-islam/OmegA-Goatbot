@@ -48,19 +48,19 @@ jobs:
           node --check agent-bridge/runtime.js
           node --check agent-bridge/worker.js
 
-      - name: Verify pinned OmegA-FCA dependency
+      - name: Verify OmegA-FCA latest stable dependency
         run: |
           node <<'NODE'
           const p = require('./package.json');
-          const expected = '0.2.3-beta.4';
+          const expected = 'latest';
           const actual = p.dependencies?.['@nirzon-islam/omega-fca'];
           if (actual !== expected) {
-            throw new Error(`Expected @nirzon-islam/omega-fca ${expected}, got ${actual}`);
+            throw new Error(`Expected @nirzon-islam/omega-fca dist-tag ${expected}, got ${actual}`);
           }
           const lock = require('./package-lock.json');
           const locked = lock.packages?.['node_modules/@nirzon-islam/omega-fca']?.version;
-          if (locked !== expected) {
-            throw new Error(`Expected lockfile OmegA-FCA ${expected}, got ${locked}`);
+          if (!locked || /-/.test(locked)) {
+            throw new Error(`Expected a stable OmegA-FCA lockfile version, got ${locked}`);
           }
-          console.log('OmegA-FCA package.json and lockfile versions match');
+          console.log(`OmegA-FCA follows npm latest; lockfile currently resolves stable ${locked}`);
           NODE
