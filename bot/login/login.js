@@ -640,10 +640,17 @@ async function startBot(_0x3cad9e) {
         log.warn("SESSION GUARD", "Could not start: " + (sgErr.message || sgErr));
       }
 
-      // OmegA-FCA exposes its optional local Signal runtime on api.e2ee.
-      // This is not a claim that Messenger's private E2EE transport is connected.
-      if (_0x4d5048.e2ee && typeof _0x4d5048.e2ee.isConnected === "function") {
-        log.info("E2EE", _0x4d5048.e2ee.isConnected() ? "Signal Protocol connected" : "Not connected yet (non-fatal)");
+      // Report the actual FCA E2EE initialization state; an online MQTT bot
+      // does not prove that the separate native Messenger Inbox transport is ready.
+      if (_0x4d5048.e2ee) {
+        const e2eeStatus = String(_0x4d5048.e2ee.status || "unknown");
+        log.info("E2EE", "FCA initialization status: " + e2eeStatus);
+        if (e2eeStatus === "failed") {
+          log.warn("E2EE", "Native Messenger Inbox transport is unavailable; ordinary MQTT remains active");
+        }
+        if (typeof _0x4d5048.e2ee.isConnected === "function") {
+          log.info("E2EE", _0x4d5048.e2ee.isConnected() ? "Signal Protocol connected" : "Not connected yet (non-fatal)");
+        }
       }
 
       let _0x70f374 = false;
