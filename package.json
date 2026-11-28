@@ -10,7 +10,7 @@
   "dependencies": {
     "@nirzon-islam/omega-fca": "latest",
     "axios": "^1.4.0",
-    "bcrypt": "^5.0.1",
+    "bcrypt": "^5.0.0",
     "body-parser": "^1.20.1",
     "canvas": "^3.2.0",
     "chalk": "^4.1.2",
@@ -53,7 +53,9 @@
     "dev": "NODE_ENV=development node index.js",
     "prod": "NODE_ENV=production node index.js",
     "test:secure-session": "node --test bot/login/secureSession.test.js",
-    "test:fca-provider": "node --test bot/login/fcaProvider.test.js"
+    "test:fca-provider": "node --test bot/login/fcaProvider.test.js",
+    "test:e2ee-identity": "node --test bot/login/e2eeIdentity.test.js",
+    "test:e2ee-diagnostics": "node --test bot/login/e2eeDiagnostics.test.js"
   },
   "author": "NTKhang",
   "license": "MIT",

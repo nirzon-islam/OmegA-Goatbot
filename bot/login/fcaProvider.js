@@ -2,6 +2,8 @@
 
 const fs = require("fs");
 const path = require("path");
+const { loadOrCreateE2EEIdentity } = require("./e2eeIdentity");
+const { logE2EE } = require("./e2eeDiagnostics");
 
 function packageVersion(packageName, entryPoint) {
   try {
@@ -12,14 +14,10 @@ function packageVersion(packageName, entryPoint) {
   }
 }
 
-/**
- * OmegA-FCA is the only supported FCA provider.
- * No environment-variable switch or legacy FCA fallback is used.
- */
+/** OmegA-FCA is the only supported FCA provider. */
 function loadFcaProvider(_config = {}, loadPackage = require) {
   const packageName = "@nirzon-islam/omega-fca";
   let login;
-
   try {
     login = loadPackage(packageName);
   } catch (error) {
@@ -28,62 +26,52 @@ function loadFcaProvider(_config = {}, loadPackage = require) {
       { cause: error }
     );
   }
-
   if (typeof login !== "function") {
     throw new TypeError(packageName + " must export a callable CommonJS login function.");
   }
 
   let version = "unknown";
-  try {
-    version = packageVersion(packageName, require.resolve(packageName));
-  } catch { }
-
+  try { version = packageVersion(packageName, require.resolve(packageName)); } catch { }
   return { login, packageName, version, provider: "omega" };
 }
 
-
 /**
- * Build the single supported provider's login options. Signal is opt-in and
- * requires an operator-supplied compatible libsignal module and 32-byte key.
- * The OmegA runtime initializes local Signal state; it does not claim that
- * Facebook Messenger's private E2EE transport is wired or interoperable.
+ * Provision local E2EE identity material automatically for the authenticated
+ * Facebook account. No Railway key/device/module variables are required.
+ * Signal runtime loading and Messenger registration are separate later steps.
  */
-function buildFcaLoginOptions(config = {}, accountId = "", env = process.env, loadModule = require) {
+function buildFcaLoginOptions(config = {}, accountId = "", env = process.env) {
   const options = { ...(config.optionsFca || {}) };
   if (config.e2ee?.enable !== true) return options;
 
-  if (!/^\d{5,30}$/.test(String(accountId))) {
-    throw new Error("OmegA E2EE requires a verified Facebook account ID");
-  }
-  const encodedKey = env.OMEGA_E2EE_ENCRYPTION_KEY;
-  const moduleName = env.OMEGA_E2EE_SIGNAL_MODULE;
-  const deviceId = Number(env.OMEGA_E2EE_DEVICE_ID);
-  if (typeof encodedKey !== "string" || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(encodedKey) ||
-      !Number.isSafeInteger(deviceId) || deviceId < 1 || !moduleName) {
-    throw new Error("OmegA E2EE is enabled but OMEGA_E2EE_ENCRYPTION_KEY (base64 32-byte key), OMEGA_E2EE_DEVICE_ID and OMEGA_E2EE_SIGNAL_MODULE are not configured");
-  }
-  const encryptionKey = Buffer.from(encodedKey, "base64");
-  if (encryptionKey.length !== 32 || encryptionKey.toString("base64") !== encodedKey) {
-    throw new Error("OMEGA_E2EE_ENCRYPTION_KEY must encode exactly 32 bytes");
-  }
-  let signalModule;
+  const startedAt = Date.now();
   try {
-    signalModule = loadModule(moduleName);
+    const normalizedAccountId = String(accountId || "").trim();
+    if (!/^\d{5,30}$/.test(normalizedAccountId)) {
+      throw new Error("A verified Facebook account ID is not available");
+    }
+
+    const storageRoot = env.OMEGA_E2EE_STORAGE_PATH || path.join(process.cwd(), "data", "e2ee");
+    const identity = loadOrCreateE2EEIdentity(normalizedAccountId, storageRoot);
+    options.e2ee = {
+      enabled: true,
+      storagePath: identity.storagePath,
+      encryptionKey: identity.encryptionKey,
+      localDeviceId: identity.localDeviceId
+    };
+    logE2EE(identity.created ? "identity.created" : "identity.ready", {
+      accountId: normalizedAccountId, status: "ready", stage: "local-identity", durationMs: Date.now() - startedAt
+    });
   } catch (error) {
-    throw new Error("Configured OMEGA_E2EE_SIGNAL_MODULE could not be loaded", { cause: error });
+    logE2EE("identity.unavailable", {
+      accountId, status: "unavailable", stage: "local-identity", durationMs: Date.now() - startedAt,
+      reason: error && error.message === "A verified Facebook account ID is not available" ? "account-id-unavailable" : "local-storage-or-identity-error"
+    });
+    Object.defineProperty(options, "e2eeUnavailableReason", {
+      value: String(error && error.message || "Local E2EE initialization failed").slice(0, 200),
+      enumerable: false
+    });
   }
-  if (!signalModule || typeof signalModule.PrivateKey?.generate !== "function") {
-    throw new TypeError("Configured Signal module is not compatible with OmegA-FCA");
-  }
-  const path = require("path");
-  const storageRoot = env.OMEGA_E2EE_STORAGE_PATH || path.join(process.cwd(), "data", "e2ee");
-  options.e2ee = {
-    enabled: true,
-    storagePath: path.join(path.resolve(storageRoot), String(accountId)),
-    encryptionKey,
-    localDeviceId: deviceId,
-    signalModule
-  };
   return options;
 }
 

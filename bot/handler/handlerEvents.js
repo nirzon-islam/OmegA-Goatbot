@@ -1,5 +1,4 @@
 const fs = require("fs-extra");
-const path = require("path");
 const nullAndUndefined = [undefined, null];
 // const { config } = global.GoatBot;
 // const { utils } = global;
@@ -192,19 +191,6 @@ module.exports = function (api, threadModel, userModel, dashBoardModel, globalMo
 
 		if (typeof threadData.settings.hideNotiMessage == "object")
 			hideNotiMessage = threadData.settings.hideNotiMessage;
-
-		// Read receipts are queued by scripts/cmds/autoseen.js so the
-		// configured delay and on/off toggle are respected consistently.
-		// Do not mark read here: that would bypass the queue and send duplicates.
-
-		// Same idea as markAsRead above, but for the "delivered" receipt —
-		// a real client sends both automatically. Also fire-and-forget,
-		// also invisible/instant, no user-facing delay either way.
-		if (!event.isE2EE && event.type !== "typ" && event.type !== "presence" && threadID && event.messageID && typeof api.markAsDelivered === "function") {
-			try {
-				Promise.resolve(api.markAsDelivered(threadID, event.messageID)).catch(() => {});
-			} catch { }
-		}
 
 		// Typing indicator for plain chat is intentionally not shown here —
 		// only commands get a typing indicator, driven by fca's humanizer
