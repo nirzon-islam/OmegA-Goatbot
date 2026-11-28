@@ -3,6 +3,7 @@ name: Full Automated Tests
 on:
   push:
     branches:
+      - main
       - fca-migration-cleanup
       - agent-fca-compat-fix
   pull_request:
